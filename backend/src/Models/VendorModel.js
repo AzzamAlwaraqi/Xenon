@@ -1,10 +1,6 @@
 const mongoose = require("mongoose");
 
 const VendorSchema = new mongoose.Schema({
-    vendor_id: {
-        type: String,
-        required: true
-    },
     vendor_name: {
         type: String,
         required: true
@@ -12,7 +8,6 @@ const VendorSchema = new mongoose.Schema({
     vendor_email: {
         type: String,
         required: true,
-        ref: "user"
     },
     vendor_password: {
         type: String,
@@ -21,7 +16,6 @@ const VendorSchema = new mongoose.Schema({
     vendor_mobile: {
         type: String,
         required: true,
-        ref: "user"
     },
     vendor_address: {
         type: String,
@@ -34,7 +28,6 @@ const VendorSchema = new mongoose.Schema({
     vendor_state: {
         type: String,
         required: true,
-        ref: "user"
     },
     vendor_pincode: {
         type: String,
@@ -60,6 +53,11 @@ const VendorSchema = new mongoose.Schema({
         required: true,
         enum: ["individual", "company"],
         default: "individual"
+    },
+    vendor_owner_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "user"
     },
     vendor_owner_name: {
         type: String,

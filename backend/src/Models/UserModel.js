@@ -21,6 +21,7 @@ const UserSchema = new mongoose.Schema({
         required: true,
         enum: ["male", "female"]
     },
+
     mobileNumber: {
         type: String,
         min: 10,
@@ -46,6 +47,10 @@ const UserSchema = new mongoose.Schema({
         enum: ["admin", "user", "vendor"],
         default: "user"
     },
+    DateOfBirth:{
+        type: Date,
+        required: true
+    },
     isActive: {
         type: Boolean,
         default: true
@@ -55,14 +60,6 @@ const UserSchema = new mongoose.Schema({
         default: Date.now
     },
     updatedAt: {
-        type: Date,
-        default: Date.now
-    },
-    oldPassword: {
-        type: String,
-        default: ""
-    },
-    passwordChangeDate: {
         type: Date,
         default: Date.now
     }
