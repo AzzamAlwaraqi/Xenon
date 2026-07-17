@@ -1,133 +1,106 @@
-const validate = require("../utils/Validation");
+const joi = require("joi");
 
-exports.createPackageValidate = async (req, res, next) => {
-    const { package_name, package_price, package_description, startDate, endDate, package_type, package_status } = req.body;
-    if (!package_name || !package_price || !package_description || !startDate || !endDate || !package_type || !package_status) {
-        return res.status(400).json({
+exports.createPackageValidate = (req, res) => {
+    const schema = joi.object({
+        package_name: joi.string().max(100).required(),
+        package_price: joi.number().min(0).required(),
+        package_description: joi.string().max(1000).required(),
+        startDate: joi.date().min('now').required(),
+        endDate: joi.date().min('now').greater(joi.ref('startDate')).required(),
+        package_type: joi.string().valid('flight', 'hotel', 'package').required(),
+        package_status: joi.string().valid('active', 'inactive').required()
+    });
+
+    const { error } = schema.validate(req.body);
+
+    if (error) {
+        res.status(400).json({
             status: "fail",
-            message: "All fields are required"
-        })
-    }
-    if(startDate > endDate){
-        return res.status(400).json({
-            status: "fail",
-            message: "startDate must be less than endDate"
-        })
-    }
-    if(package_type !== "flight" && package_type !== "hotel" && package_type !== "package"){
-        return res.status(400).json({
-            status: "fail",
-            message: "package_type must be flight or hotel or package"
-        })
+            message: error.details[0].message
+        });
+        return false;
     }
 
-    if(req.file.size > 1024 * 1024 * 5){
-        return res.status(400).json({
-            status: "fail",
-            message: "package_image size must be less than 5MB"
-        })
-    }
-    if(req.file.mimetype !== "image/jpeg" && req.file.mimetype !== "image/png"){
-        return res.status(400).json({
-            status: "fail",
-            message: "package_image must be jpeg or png"
-        })
-    }
-    if(startDate < Date.now()){
-        return res.status(400).json({
-            status: "fail",
-            message: "startDate must be greater than current date"
-        })
-    }
-    if(endDate < Date.now()){
-        return res.status(400).json({
-            status: "fail",
-            message: "endDate must be greater than current date"
-        })
-    }
-    if(package_price < 0){
-        return res.status(400).json({
-            status: "fail",
-            message: "package_price must be greater than 0"
-        })
-    }
-    if(package_status !== "active" && package_status !== "inactive"){
-        return res.status(400).json({
-            status: "fail",
-            message: "package_status must be active or inactive"
-        })
-    }
-    if(!req.file){
-        return res.status(400).json({
+    if (!req.file) {
+        res.status(400).json({
             status: "fail",
             message: "package_image is required"
-        })
+        });
+        return false;
     }
-    if(req.body.package_description.length > 1000){
-        return res.status(400).json({
+
+    if (req.file.size > 1024 * 1024 * 5) {
+        res.status(400).json({
             status: "fail",
-            message: "package_description must be less than 1000 characters"
-        })
+            message: "package_image size must be less than 5MB"
+        });
+        return false;
     }
-    if(package_name.length > 100){
-        return res.status(400).json({
+
+    if (req.file.mimetype !== "image/jpeg" && req.file.mimetype !== "image/png") {
+        res.status(400).json({
             status: "fail",
-            message: "package_name must be less than 100 characters"
-        })
+            message: "package_image must be jpeg or png"
+        });
+        return false;
     }
-    next();
+
+    return true;
 }
 
-exports.updatePackageValidate = async (req, res, next) => {
-    const { package_price, startDate, endDate, package_status } = req.body;
-   if(startDate){
-    if(startDate > endDate){
-        return res.status(400).json({
+exports.updatePackageValidate = (req, res) => {
+    const schema = joi.object({
+        package_name: joi.string().max(100),
+        package_price: joi.number().min(0),
+        package_description: joi.string().max(1000),
+        startDate: joi.date().min('now'),
+        endDate: joi.date().min('now').greater(joi.ref('startDate')),
+        package_type: joi.string().valid('flight', 'hotel', 'package'),
+        package_status: joi.string().valid('active', 'inactive')
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) {
+        res.status(400).json({
             status: "fail",
-            message: "startDate must be less than endDate"
-        })
+            message: error.details[0].message
+        });
+        return false;
     }
-    if(startDate < Date.now()){
-        return res.status(400).json({
-            status: "fail",
-            message: "startDate must be greater than current date"
-        })
+    
+    if (req.file) {
+        if (req.file.size > 1024 * 1024 * 5) {
+            res.status(400).json({
+                status: "fail",
+                message: "package_image size must be less than 5MB"
+            });
+            return false;
+        }
+        if (req.file.mimetype !== "image/jpeg" && req.file.mimetype !== "image/png") {
+            res.status(400).json({
+                status: "fail",
+                message: "package_image must be jpeg or png"
+            });
+            return false;
+        }
     }
-   }
-   if(endDate){
-    if(endDate < Date.now()){
-        return res.status(400).json({
-            status: "fail",
-            message: "endDate must be greater than current date"
-        })
-    }
-   }
-   if(package_price){
-    if(package_price < 0){
-        return res.status(400).json({
-            status: "fail",
-            message: "package_price must be greater than 0"
-        })
-    }
-   }
-   if(package_status){
-    if(package_status !== "active" && package_status !== "inactive"){
-        return res.status(400).json({
-            status: "fail",
-            message: "package_status must be active or inactive"
-        })
-    }
-   }
-   next();
+
+    return true;
 }
-exports.deletePackageValidate = async (req, res, next) => {
-    const { package_id } = req.body;
-    if(!package_id){
-        return res.status(400).json({
+
+exports.deletePackageValidate = (req, res) => {
+    const schema = joi.object({
+        package_id: joi.string().required()
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) {
+        res.status(400).json({
             status: "fail",
-            message: "package_id is required"
-        })
+            message: error.details[0].message
+        });
+        return false;
     }
-    next();
+
+    return true;
 }
-exp

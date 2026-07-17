@@ -11,15 +11,10 @@ const BookingSchema = new mongoose.Schema({
         required: true,
         ref: "vendor"
     },
-    service_id: {
+    package_id: {
         type: String,
         required: true,
-        ref: "service"
-    },
-    service_name: {
-        type: String,
-        required: true
-
+        ref: "package"
     },
     booking_date: {
         type: Date,

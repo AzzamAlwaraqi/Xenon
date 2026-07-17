@@ -1,16 +1,12 @@
 const app = require("./app");
-const morgan = require("morgan");
 const dotenv = require("dotenv");
+const express = require("express");
 const connectDB = require("./config/dbConfig");
-dotenv.config();
+const path = require("path");
+dotenv.config({ path: path.join(__dirname, 'config.env') });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev"));
 connectDB();
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
 });
-
-

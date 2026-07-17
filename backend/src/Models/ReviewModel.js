@@ -1,10 +1,6 @@
 const mongoose = require("mongoose");
 
 const ReviewSchema = new mongoose.Schema({
-    review_id: {
-        type: String,
-        required: true
-    },
     user_id: {
         type: String,
         required: true
