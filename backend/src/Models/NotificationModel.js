@@ -1,21 +1,23 @@
 const mongoose = require("mongoose");
 
 const NotificationSchema = new mongoose.Schema({
-    notification_id: {
-        type: String,
+    user_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
         required: true
     },
-    user_id: {
-        type: String,
-        default: ""
-    },
     vendor_id: {
-        type: String,
-        default: ""
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Vendor",
+        required: true
     },
     admin_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
+    admin_name: {
         type: String,
-        default: ""
+        ref: "User"
     },
     notification_type: {
         type: String,

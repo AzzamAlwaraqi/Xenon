@@ -20,6 +20,11 @@ exports.createClient = async (req, res, next) => {
 exports.loginClient = async (req, res, next) => {
     try{
         
+        res.status(200).json({
+            status: "success",
+            message: "Login successful",
+            data: req.user
+        });
     }
     catch(error){
         next(new AppError(error.message, 400));
@@ -27,7 +32,11 @@ exports.loginClient = async (req, res, next) => {
 }
 exports.logoutClient = async (req, res, next) => {
     try{
-
+        res.clearCookie("token");
+        res.status(200).json({
+            status: "success",
+            message: "Logout successful",
+        });
     }
     catch(error){
         next(new AppError(error.message, 400));

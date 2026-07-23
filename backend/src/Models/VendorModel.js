@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const bcrypt = require("bcrypt");
 const VendorSchema = new mongoose.Schema({
     vendor_name: {
         type: String,
@@ -12,6 +12,10 @@ const VendorSchema = new mongoose.Schema({
     vendor_password: {
         type: String,
         required: true
+    },
+    vendor_old_password:{
+        type: String,
+        default: ""
     },
     vendor_mobile: {
         type: String,
@@ -64,6 +68,14 @@ const VendorSchema = new mongoose.Schema({
         required: true,
         ref: "user"
     },
+    is_Active:{
+        type: Boolean,
+        default: true
+    },
+    deletionRequestedAt: {
+        type: Date,
+        default: null
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -73,4 +85,5 @@ const VendorSchema = new mongoose.Schema({
         default: Date.now
     }
 });
+
 module.exports = mongoose.model("Vendor", VendorSchema);

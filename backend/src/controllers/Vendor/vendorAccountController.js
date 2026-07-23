@@ -7,9 +7,7 @@ exports.loginVendor = (req, res) => {
 exports.logoutVendor = (req, res) => {
     res.send("logoutVendor");
 };
-exports.forgotPasswordVendor = (req, res) => {
-    res.send("forgotPasswordVendor");
-};
+
 exports.resetPasswordVendor = (req, res) => {
     res.send("resetPasswordVendor");
 };

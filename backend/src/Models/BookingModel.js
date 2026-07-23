@@ -24,6 +24,14 @@ const BookingSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    number_of_people: {
+        type: Number,
+        required: true
+    },
+    max_people: {
+        type: Number,
+        required: true
+    },
     status: {
         type: String,
         required: true,

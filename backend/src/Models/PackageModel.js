@@ -1,10 +1,6 @@
 const mongoose = require("mongoose");
 
 const PackageSchema = new mongoose.Schema({
-    package_id: {
-        type: String,
-        required: true
-    },
     vendor_id: {
         type: String,
         required: true

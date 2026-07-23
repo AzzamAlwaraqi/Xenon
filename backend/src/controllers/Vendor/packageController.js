@@ -1,5 +1,5 @@
 const packageValidate = require("../../validations/packageValidation");
-const Package = require("../../models/packageModel"); // Assuming there is a package model here based on 'Package.create'
+const Package = require("../../Models/PackageModel"); // Assuming there is a package model here based on 'Package.create'
 const PackageCore = require("../../services/Core/PackageCore");
 const AppError = require("../../utils/AppError");
 
