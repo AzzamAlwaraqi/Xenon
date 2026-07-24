@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
-
-const SessionSchema = new mongoose.Schema({
+const { v7: uuidv7 } = require("uuid");
+const SessionSchema = new mongoose.Schema({_id: {
+    type: mongoose.Schema.Types.UUID,
+    default: uuidv7 
+  },
     token_id: {
         type: String,
         required: true,

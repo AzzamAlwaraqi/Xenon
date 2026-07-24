@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const { v7: uuidv7 } = require("uuid");
 const VendorSchema = new mongoose.Schema({
+    _id: {
+    type: mongoose.Schema.Types.UUID,
+    default: uuidv7 
+  },
     vendor_name: {
         type: String,
         required: true

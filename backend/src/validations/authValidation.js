@@ -46,7 +46,7 @@ exports.updateProfileVendorValidation = function (Body) {
     return Schema.validate(Body, { abortEarly: false });
 };
 
-exports.changePasswordVendorValidation = function (Body) {
+exports.changePasswordValidation = function (Body) {
     const Schema = joi.object({
         old_password: joi.string().required(),
         new_password: joi.string().regex(passwordRegex).required().messages({
@@ -88,4 +88,55 @@ exports.toVendorValidation = function (body) {
     });
 
     return schema.validate(body, { abortEarly: false });
+};
+exports.logoutVendorValidation = function (body) {
+    const Schema = joi.object({
+        session_id: joi.string().regex(objectIdRegex).required().messages({
+            "string.pattern.base": "Invalid session_id format",
+            "any.required": "session_id is required for logout"
+        })
+    });
+
+    return Schema.validate(body, { abortEarly: false });
+};
+exports.resetPasswordVendorValidation = function (body) {
+    const Schema = joi.object({
+        email: joi.string().email().required(),
+        password: joi.string().regex(passwordRegex).required().messages({
+            "string.pattern.base": "Password must be at least 8 characters long, contain uppercase, lowercase, number, and special character"
+        }),
+        confirm_password: joi.string().valid(joi.ref('password')).required().messages({
+            "any.only": "Confirm password does not match new password"
+        }),
+        token: joi.string().required(),
+    });
+
+    return Schema.validate(body, { abortEarly: false });
+};
+exports.updateProfileValidation = function (Body) {
+    const Schema = joi.object({
+        name: joi.string().trim().min(2).max(100).optional(),
+        phone_no: joi.string().regex(/^[6-9]\d{9}$/).optional(),
+    }).min(1);
+
+    return Schema.validate(Body, { abortEarly: false });
+};
+exports.deleteAccountValidation = function (Body) {
+    const Schema = joi.object({
+        reason: joi.string().optional()
+    });
+
+    return Schema.validate(Body, { abortEarly: false });
+};
+exports.updatevendorValidation = function (Body) {
+    const Schema = joi.object({
+        vendor_mobile: joi.string().regex(/^[6-9]\d{9}$/).optional(),
+        vendor_address: joi.string().optional(),
+        vendor_city: joi.string().optional(),
+        vendor_state: joi.string().optional(),
+        vendor_pincode: joi.string().regex(/^[0-9]{4,10}$/).optional(),
+        vendor_country: joi.string().optional(),
+        is_Active: joi.boolean().optional()
+    }).min(1);
+    return Schema.validate(Body, { abortEarly: false, stripUnknown: true });
 };

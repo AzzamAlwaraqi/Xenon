@@ -14,12 +14,15 @@
   "type": "commonjs",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
     "cors": "^2.8.6",
     "dockerode": "^5.0.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "joi": "^18.2.3",
     "mongoose": "^9.7.4",
-    "morgan": "^1.11.0"
+    "morgan": "^1.11.0",
+    "nodemailer": "^9.0.3",
+    "uuidv4": "^6.2.13"
   }
 }

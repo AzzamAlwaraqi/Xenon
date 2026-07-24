@@ -1,4 +1,6 @@
 const AppError = require('../../../utils/AppError');
+const multer = require("multer");
+const sharp = require("sharp");
 exports.getAllPackages = async function (req, res) {
     try{
     const packages = await Package.find();

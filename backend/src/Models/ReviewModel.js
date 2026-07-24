@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
-
+const { v7: uuidv7 } = require("uuid");
 const ReviewSchema = new mongoose.Schema({
+    _id: {
+    type: mongoose.Schema.Types.UUID,
+    default: uuidv7 
+  },
     user_id: {
         type: String,
         required: true

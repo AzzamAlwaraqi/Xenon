@@ -1,8 +1,15 @@
 const vendorAuthCore = require("../../services/Core/Vendor/vendorAuthCore");
+const authValidation = require("../../validations/authValidation");
 const AppError = require("../../utils/AppError");
-exports.getVendor = async (req, res,next) => {
+
+exports.getVendor = async (req, res, next) => {
     try {
-        const vendor = await vendorAuthCore.getVendor(req.body)
+        const vendorId = req.params.id || (req.user && req.user._id) || req.body.vendorId;
+        if (!vendorId) {
+            return res.AppError("Vendor ID is required", 400);
+        }
+
+        const vendor = await vendorAuthCore.getVendorCore(vendorId);
         res.status(200).json({
             status: "success",
             data: {
@@ -10,57 +17,77 @@ exports.getVendor = async (req, res,next) => {
             }
         });
     } catch (error) {
-        next(new AppError(error.message, 500));
+        return res.AppError(error.message, error.statusCode || 500);
     }
 };
 
-exports.resetPasswordVendor = async (req, res,next) =>{
+exports.resetPasswordVendor = async (req, res, next) => {
     try {
-        if(user.role !== "vendor"){
-            throw new AppError("You are not authorized to reset password", 403);
+        const validation = authValidation.resetPasswordVendorValidation(req.body);
+        if (validation.error) {
+            return res.AppError(validation.error.details.map(d => d.message).join(", "), 400);
         }
-        if(user.isActive === false){
-            throw new AppError("Your account has been blocked", 403);
-        }
-        const isPasswordValid = await user.comparePassword(oldPassword);
-        if(!isPasswordValid){
-            throw new AppError("Invalid password", 401);
-        }
-        const updatedUser = user.findByIdAndUpdate(user._id, { password:newPassword }, { new: true });
-        return updatedUser;
+
+        const result = await vendorAuthCore.resetPasswordVendorCore(req.body);
+        res.status(200).json({
+            status: "success",
+            message: result.message
+        });
+    } catch (error) {
+        return res.AppError(error.message, error.statusCode || 500);
     }
-    catch(error){
-        next(new AppError(error.message, 400));
-    }
-}
-exports.updateProfileVendor =async (req,res,next)=>{
+};
+
+exports.updateProfileVendor = async (req, res, next) => {
     try {
-        return "updateProfileVendor not yet implemented";
-    }
-    catch(error){
-        next(new AppError(error.message, 400));
-    }
-}
-exports.changePasswordVendor = (req,res,next)=>{
-    try {
-        return "changePasswordVendor not yet implemented";
-    }
-    catch(error){
-        next(new AppError(error.message, 400));
-    }
-}
-exports.deleteProfileVendor = async (req,res,next)=>{
-    try {
-        if(user.role !== "vendor"){
-            throw new AppError("You are not authorized to delete profile", 403);
+        const user = req.user;
+        if (!user) {
+            return res.AppError("User not authenticated");
         }
-        if(user.isActive === false){
-            throw new AppError("Your account has been blocked", 403);
+
+        const updatedUser = await vendorAuthCore.updateProfileVendorCore(user, req.body);
+        res.status(200).json({
+            status: "success",
+            message: "Profile updated successfully",
+            data: {
+                user: updatedUser
+            }
+        });
+    } catch (error) {
+        return res.AppError(error.message, error.statusCode || 500);
+    }
+};
+
+exports.changePasswordVendor = async (req, res, next) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.AppError("User not authenticated");
         }
-        const updatedUser = await user.findByIdAndUpdate(user._id, { active: false }, { new: true });
-        return updatedUser;
+
+        const result = await vendorAuthCore.changePasswordCore(user, req.body);
+        res.status(200).json({
+            status: "success",
+            message: result.message
+        });
+    } catch (error) {
+        return res.AppError(error.message, error.statusCode || 500);
     }
-    catch(error){
-        throw new AppError(error.message, 400);
+};
+
+exports.deleteProfileVendor = async (req, res, next) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.AppError("User not authenticated");
+        }
+
+        const result = await vendorAuthCore.deleteMyAccountCore(user);
+        res.status(200).json({
+            status: "success",
+            message: result.message
+        });
+    } catch (error) {
+        return res.AppError(error.message, error.statusCode || 500);
     }
-}
+};

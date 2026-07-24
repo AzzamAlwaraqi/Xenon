@@ -8,7 +8,6 @@ class AppError extends Error {
         Error.captureStackTrace(this, this.constructor);
     }
 
-
     static badRequest(message = "Bad Request") {
         return new AppError(message, 400);
     }
