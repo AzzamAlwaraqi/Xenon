@@ -1,97 +1,316 @@
-# Backend Architecture & Audit Report
+# Xenon - Comprehensive Documentation & System Prompt Context
 
-This document contains the complete explanation of the backend architecture as well as the 3-phase audit you requested.
-
-## Phase 4: Backend Architecture & Explanation
-
-**1. High-Level Architecture**
-This backend is built using **Node.js** and **Express.js**. It serves as a RESTful API communicating with a MongoDB database via **Mongoose**. The system is organized using an MVC-like structure where requests are routed through Express routers (`src/Routes`), handled by specific controllers (`src/controllers`), and data is manipulated using Mongoose models (`src/Models`). It also includes Docker integration (`dockerode`) for container management.
-
-**2. Domain Entities & Models**
-The system revolves around several core entities located in `src/Models`:
-* **UserModel:** The core entity for authentication and profile management. It supports distinct roles: `admin`, `user`, and `vendor`.
-* **VendorModel:** Stores specific vendor-related data, likely extending or linked to the core User model.
-* **Client / Admin / Vendor domains:** The controllers are strictly separated into these three distinct actors (`src/controllers/Admin`, `Client`, `Vendor`).
-* **Operational Entities:** `BookingModel` (handling reservations), `PackageModel` (handling services or products offered), `ComplaintModel` (handling user issues), and `ReviewModel` (user feedback).
-* **Session:** Manages user sessions, likely for JWT or token tracking.
-
-**3. API Overview**
-The API is grouped by actors and features under `/api/v1/`:
-* `/api/v1/clients`: Handles client-specific actions like creating a client (`/create-client`), fetching/updating profiles, changing passwords, and retrieving client reviews.
-* `/api/v1/docker`: Suggests an integration to manage or interact with Docker containers dynamically from the backend.
-* Additional routes (though not yet mounted in `app.js`) exist for `adminRoutes`, `vendorRoutes`, `bookingRoutes`, `packageRoutes`, and `aiRoutes`.
-
-**4. Intended Workflow**
-A typical request (e.g., a Client updating their profile) follows this lifecycle:
-1. **Request:** The client sends an HTTP `PUT` request to `/api/v1/clients/update-profile`.
-2. **Middleware:** The request passes through global middlewares (`cors`, `express.json()`) and should pass through an `authMiddleware` to verify the user's JWT token.
-3. **Router:** The `clientRoutes.js` file routes the request to the `clientProfileController.updateprofile` function.
-4. **Controller:** The controller extracts the user ID and the fields to be updated, applies any business logic, and interacts with the `UserModel`.
-5. **Database:** Mongoose translates the operation into a MongoDB query and returns the updated document.
-6. **Response:** The controller formats the successful update into a standard JSON response or passes any errors to the `AppError` global error handler.
+Xenon is a production-grade, highly scalable travel booking and tour management backend platform. Built on top of Node.js, Express, and MongoDB/Mongoose, it establishes a reliable, secure, and transactional API surface for Clients, Vendors, and Administrators.
 
 ---
 
-## Code Audit (Phases 1-3)
+## 1. 📌 Overview & Purpose
 
-### Phase 1: Packaging & Project Structure
-1. **CLI Configuration:** The `angravity.json` configuration file is missing. Furthermore, the `package.json` has an incorrect `"main"` property pointing to `index.js`, while the server actually runs from `src/server.js`.
-2. **Directory Structure:** Folder casing is inconsistent (`Routes` and `Models` are capitalized, while `controllers` and `middlewares` are lowercase). `config.env` is placed inside the `src` directory instead of the project root.
-3. **Dependencies:** The `dev` script utilizes `nodemon`, but it is completely missing from `devDependencies` in `package.json`. Critical security packages like `bcryptjs` (for password hashing) are also missing.
+### Project Description
+Xenon is designed as a three-sided digital marketplace facilitating the discovery, management, scheduling, and reservation of travel packages and experiences. It coordinates the operations of:
+- **Clients (Tourists):** Who browse packages, create reservations, register reviews, and file complaints.
+- **Vendors (Tour operators & Agencies):** Who manage business profiles, establish travel packages, control guest capacities, and process bookings.
+- **Administrators:** Who moderate content, approve new vendors, oversee compliance/complaints, and track platform-wide analytics.
 
-### Phase 2: Application Logic Audit
-1. **Error Handling:** Controllers correctly use `next(new AppError(...))`, but the global error handler middleware (`src/middlewares/errorHandler.js`) is **never mounted** in `app.js`. Express will fall back to its default HTML error page instead of JSON.
-2. **Data Flow & Security:** In `src/Routes/clientRoutes.js`, the `/profile` route expects `req.user` and `req.token`, but there is **no authentication middleware** attached to protect it.
-3. **Incomplete Controllers:** Empty controllers like `loginClient` and `logoutClient` lack response logic and will leave client requests hanging indefinitely.
+### Problem Statement
+Modern travel booking requires high data integrity, strict concurrent reservation management, secure session tracking across devices, and transactional protection to prevent overbooking. Xenon addresses these requirements with:
+- **Atomicity:** Dynamic transaction-controlled Mongoose session management.
+- **Capacity Limits:** Automatic seat counter safeguards preventing bookings beyond vendor-defined package thresholds.
+- **Security & Validation:** Strict data structures validated via Joi and secured with role-based checks.
 
-### Phase 3: Database Integration & Integrity
-1. **Models & Schemas (Critical Vulnerability):** `src/Models/UserModel.js` defines a password field, but there is **no pre-save hook to hash this password**. In `clientAuthController.js`, the password is saved directly as plaintext.
-2. **Connection Management:** `config.env` holds plain text database credentials and is committed inside the `src/` directory. `dbConfig.js` relies on a manual string replacement for the `<PASSWORD>` field instead of a standard fully formed `DATABASE_URI`.
+---
 
-### Corrected Code Snippets
+## 2. 🛠️ Tech Stack & Architecture
 
-**1. Hashing Passwords in UserModel.js:**
-```javascript
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs"); // Ensure this is installed
+### Backend Runtime & Framework
+- **Runtime:** Node.js (Active LTS version recommended)
+- **Framework:** Express.js
+- **Routing:** Decoupled Modular Routers (`src/Routes`) routing requests through validators, role-based authentications, controllers, and core services.
 
-const UserSchema = new mongoose.Schema({
-    // ... other fields ...
-    password: { type: String, min: 8, required: true }
-});
+### Database & ORM
+- **Database:** MongoDB
+- **ODM:** Mongoose
+- **Document Identifiers (UUIDv7):** For enhanced performance, security, and chronological indexing, all database models discard standard MongoDB `ObjectId` in favor of cryptographically secure **UUIDv7** strings generated by the `uuid` package.
+- **Auto-Timestamps:** Enabled system-wide on Mongoose models using `{ timestamps: true }`, ensuring `createdAt` and `updatedAt` timestamps are automatically populated and updated.
 
-UserSchema.pre("save", async function(next) {
-    if (!this.isModified("password")) return next();
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
-});
-module.exports = mongoose.model("User", UserSchema);
+### Custom Response & Error Framework
+- **Unified Error Class (`AppError.js`):** Extends the native JavaScript `Error` class, capturing operational error flags, HTTP status codes, and stack traces. It includes static factory helpers:
+  - `AppError.badRequest(message)` (400)
+  - `AppError.unauthorized(message)` (401)
+  - `AppError.forbidden(message)` (403)
+  - `AppError.notFound(message)` (404)
+  - `AppError.conflict(message)` (409)
+  - `AppError.unprocessable(message)` (422)
+  - `AppError.internal(message)` (500)
+- **Unified Response Pattern (`res.AppError`):** Controllers return error responses by invoking `res.AppError(message, statusCode)`. This ensures consistent API error structures returned to the client.
+
+### Core vs. Integration Services
+To maintain a clean separation of concerns, the business logic is split into:
+1. **Core Services (`src/services/Core`):** Implements internal database logic, schema updates, validations, and operations (e.g., account manipulation, capacity booking calculation).
+2. **Integration Services (`src/services/Integration`):** Handles third-party service connections (e.g., SMTP engines, AI models, file hosting).
+
+---
+
+## 3. ⚙️ Implemented Features & Completed Work
+
+### A. Vendor Account & Session Management
+- **Atomic Registration:** Creating a vendor profile uses a Mongoose session transaction (`mongoose.startSession()`). It inserts the core user credentials into `UserModel` and the operational details into `VendorModel` simultaneously. If one fails, the transaction is completely rolled back.
+- **Session Tracking (`SessionModel`):** Tracks logins with device identifiers, operating system names, IP addresses, browser types, and session expiry limits. Every session is linked using a `family_id` to trace cross-device logins.
+- **Secure Authentication:** Passwords are encrypted using `bcrypt` (12 rounds). Logouts soft-delete the session by setting `is_active: false`.
+
+### B. Profile & Authorization Management
+- **Fields Modification:** Updates profile parameters (mobiles, addresses, countries, states, pincodes) using schema validations.
+- **Password Modification:** Validates the existing password via `bcrypt.compare` before writing a new password hash.
+- **Soft Deletion & Account Deactivation:** Instead of hard-deleting records, the system marks the `isDelete` flag as `true` and saves the time in `deletionRequestedAt`. Users have a 30-day grace period to restore their accounts before permanent deletion.
+
+### C. Booking & Capacity Engine
+- **Transaction-Safe Seat Booking (`vendorBookingCore.js`):**
+  - Starts a database transaction.
+  - Queries all existing bookings for a target package on the requested date that are not `'cancelled'`.
+  - Calculates the total current guests booked on that date.
+  - Checks if `currentBookedCount + newGuests` exceeds the package's `max_people` limit. If exceeded, throws a `400 Bad Request` specifying the remaining available seats.
+  - Multiplies package price by guest count to save `total_price`.
+  - Automatically flags the package status as `'inactive'` if the capacity is fully booked.
+  - Commit or abort logic ensures data consistency in concurrent bookings.
+
+### D. OTP Validation Lifecycle
+- Generates 6-digit cryptographically secure numeric codes (`crypto.randomInt`).
+- Saves codes to `OTPModel` with a strict 5-minute expiration period.
+- Tracks failed verification attempts. The OTP document is deleted after 5 failed attempts, requiring the user to request a new one.
+
+### E. Email Delivery
+- Integrates `nodemailer` sending HTML/Text mail formats.
+- Supports a mock email provider in development. If no SMTP credentials are set in environment variables (`EMAIL_HOST`/`EMAIL_USERNAME`), it fallback-logs the email and OTP details directly to the console.
+
+---
+
+## 4. 📂 Project Structure & Key Modules
+
+```text
+backend/
+├── src/
+│   ├── config/              # Server configuration and database configurations
+│   ├── controllers/         # Receives API requests, validates inputs, and triggers services
+│   │   ├── Admin/           # Admin flows (moderation, vendor approvals, analytics)
+│   │   ├── Client/          # Client flows (bookings, reviews, complaints, AI guide)
+│   │   └── Vendor/          # Vendor flows (account actions, auth actions, packages)
+│   ├── middlewares/         # Express middlewares (security headers, error handler)
+│   ├── Models/              # Mongoose database models configured with UUIDv7
+│   ├── Routes/              # Routes mapping REST paths to validations and controllers
+│   ├── services/            # Deep business logic layers
+│   │   ├── Core/            # CRUD database interactions
+│   │   │   ├── Admin/
+│   │   │   ├── Client/
+│   │   │   └── Vendor/
+│   │   └── Integration/     # External integrations (emails, storage, AI adapters)
+│   ├── utils/               # Common utilities (AppError, OTPutils, JWT helpers)
+│   ├── validations/         # Validation schemas using Joi
+│   ├── app.js               # Express application initialization
+│   └── server.js            # MongoDB connection and server startup configuration
+├── config.env               # Environment configurations
+├── package.json             # Backend dependencies and scripts
+└── prompt.md                # Full project documentation reference
 ```
 
-**2. Fixing the Error Handler in app.js:**
-```javascript
-const globalErrorHandler = require("./middlewares/errorHandler");
+---
 
-// ...
-app.use("/api/v1/clients", clientRoutes);
-app.use("/api/v1/docker", dockerRoutes);
+## 5. 🔌 Data Models & API Endpoints
 
-// Mount the error handler at the very end
-app.use(globalErrorHandler);
-module.exports = app;
-```
+### 🗄️ Database Schemas
 
-**3. Protecting Routes in clientRoutes.js:**
-```javascript
-const express = require("express");
-const { createClient } = require("../controllers/Client/clientAuthController");
-const clientProfileController = require("../controllers/Client/clientProfileController");
-const authMiddleware = require("../middlewares/authMiddleware"); 
-const router = express.Router();
+#### 1. `User` (User Accounts)
+- `_id`: `mongoose.Schema.Types.UUID` (UUIDv7, Default generator)
+- `name`: `String` (Required, Trimmed)
+- `email`: `String` (Required, Unique, Lowercase)
+- `password`: `String` (Required, Min 8 characters)
+- `gender`: `String` (Enum: `male`, `female`)
+- `mobileNumber`: `String` (Required, Unique)
+- `isDelete`: `Boolean` (Default `false`)
+- `isEmailVerified`: `Boolean` (Default `false`)
+- `recoveryEmail`: `String` (Default `""`)
+- `recoveryMobileNumber`: `String` (Default `""`)
+- `role`: `String` (Enum: `admin`, `user`, `vendor`, default `user`)
+- `DateOfBirth`: `Date` (Required)
+- `isActive`: `Boolean` (Default `true`)
+- `timestamps`: `true`
 
-router.post("/create-client", createClient);
+#### 2. `Vendor` (Vendor Profiles)
+- `_id`: `mongoose.Schema.Types.UUID` (UUIDv7)
+- `vendor_name`: `String` (Required)
+- `vendor_email`: `String` (Required, Lowercase)
+- `vendor_password`: `String` (Required)
+- `vendor_old_password`: `String` (Default `""`)
+- `vendor_mobile`: `String` (Required)
+- `vendor_address`: `String` (Required)
+- `vendor_city`: `String` (Required)
+- `vendor_state`: `String` (Required)
+- `vendor_pincode`: `String` (Required)
+- `vendor_country`: `String` (Required)
+- `vendor_status`: `String` (Enum: `active`, `inactive`, default `active`)
+- `vendor_type`: `String` (Enum: `individual`, `company`, default `individual`)
+- `vendor_owner_id`: `mongoose.Schema.Types.UUID` (Ref: User)
+- `isDelete`: `Boolean` (Default `false`)
+- `deletionRequestedAt`: `Date` (Default `null`)
+- `timestamps`: `true`
 
-// Apply auth middleware to protect all routes below
-router.use(authMiddleware); 
-router.get("/profile", clientProfileController.getprofile);
-```
+#### 3. `Booking` (Package Bookings)
+- `_id`: `mongoose.Schema.Types.UUID` (UUIDv7)
+- `user_id`: `String` (Required, Ref User)
+- `package_id`: `String` (Required, Ref Package)
+- `vendor_id`: `String` (Required, Ref Vendor)
+- `booking_date`: `Date` (Required)
+- `number_of_people`: `Number` (Min 1, Max 5, Required)
+- `is_active`: `Boolean` (Default `true`)
+- `status`: `String` (Enum: `pending`, `accepted`, `rejected`, `completed`, default `pending`)
+- `total_price`: `Number` (Required)
+- `timestamps`: `true`
+
+#### 4. `Package` (Travel/Tour Offerings)
+- `_id`: `mongoose.Schema.Types.UUID` (UUIDv7)
+- `vendor_id`: `String` (Required, Ref Vendor)
+- `title`: `String` (Required)
+- `price`: `Number` (Required, Min 0)
+- `location`: `String` (Required)
+- `max_people`: `Number` (Min 1, Max 300, default 175)
+- `status`: `String` (Enum: `active`, `inactive`, default `active`)
+- `timestamps`: `true`
+
+#### 5. `Session` (User Devices & Auth Sessions)
+- `_id`: `mongoose.Schema.Types.UUID` (UUIDv7)
+- `token_id`: `String` (Required, Hashed JWT)
+- `user_id`: `mongoose.Schema.Types.UUID` (Required, Ref User)
+- `expires_at`: `Date` (Required)
+- `ip_address`: `String` (Default `127.0.0.1`)
+- `user_agent`: `String` (Default `Unknown`)
+- `device_type`: `String` (Default `Desktop`)
+- `os_name`: `String` (Default `Unknown`)
+- `browser_name`: `String` (Default `Unknown`)
+- `device_id`: `String` (Required)
+- `is_active`: `Boolean` (Default `true`)
+- `family_id`: `String` (Required)
+- `timestamps`: `true`
+
+#### 6. `OTP` (One-Time Passwords)
+- `_id`: `mongoose.Schema.Types.UUID` (UUIDv7)
+- `email`: `String` (Optional, Lowercase)
+- `phone`: `String` (Optional)
+- `otp`: `String` (Required, 6-digit code)
+- `purpose`: `String` (Required, e.g., `verification`, `reset_password`)
+- `expiresAt`: `Date` (Required, Default 5 minutes)
+- `attempts`: `Number` (Default 0, Max 5)
+- `verifiedAt`: `Date` (Default `null`)
+- `timestamps`: `true`
+
+#### 7. `Complaint` (Client Issues)
+- `_id`: `mongoose.Schema.Types.UUID` (UUIDv7)
+- `complaint_id`: `String` (Required)
+- `user_id`: `String` (Required)
+- `details`: `String` (Required)
+- `status`: `String` (Enum: `pending`, `accepted`, `rejected`, `cancelled`, `completed`, default `pending`)
+- `timestamps`: `true`
+
+#### 8. `Review` (Feedback)
+- `_id`: `mongoose.Schema.Types.UUID` (UUIDv7)
+- `user_id`: `String` (Required)
+- `package_id`: `String` (Required)
+- `rating`: `Number` (Min 1, Max 5, Required)
+- `review_text`: `String` (Required)
+- `status`: `String` (Enum: `pending`, `accepted`, `rejected`, `cancelled`, `completed`, default `pending`)
+- `timestamps`: `true`
+
+#### 9. `Notification` (Alerts)
+- `_id`: `mongoose.Schema.Types.UUID` (UUIDv7)
+- `user_id`: `mongoose.Schema.Types.ObjectId` (Ref User)
+- `title`: `String` (Required)
+- `message`: `String` (Required)
+- `is_read`: `Boolean` (Default `false`)
+- `timestamps`: `true`
+
+---
+
+### 🌐 API Routes Details & Validation Layers
+
+#### 👤 Client Routes (`/api/v1/clients`)
+- **`POST /create-client`**
+  - **Controller:** `clientAuthController.createClient`
+  - **Validation:** Validates that the role is `"user"` and client fields are set.
+- **`GET /profile`**
+  - **Controller:** `clientProfileController.getprofile`
+- **`PUT /update-profile`**
+  - **Controller:** `clientProfileController.updateprofile`
+- **`PUT /change-password`**
+  - **Controller:** `clientProfileController.changePassword`
+- **`PUT /delete-profile`**
+  - **Controller:** `clientProfileController.deleteprofile`
+
+#### 🏢 Vendor Routes (`/api/v1/vendors` - Defined in `vendorRoutes.js`)
+- **`POST /create-vendor`** (Creates Vendor user & profile via transactions)
+  - **Controller:** `vendorAccountController.createAccount`
+  - **Validation:** `createAccountValidation` and `toVendorValidation` (Joi).
+- **`POST /login`** (Vendor login & session creation)
+  - **Controller:** `vendorAccountController.loginVendor`
+  - **Validation:** `loginAccountValidation` (Joi).
+- **`POST /logout`** (Deactivates active session)
+  - **Controller:** `vendorAccountController.logoutVendor`
+  - **Validation:** `logoutVendorValidation` (Joi).
+- **`GET /profile`** (Retrieves vendor document details)
+  - **Controller:** `vendorAuthController.getVendor`
+- **`POST /reset-password`** (Sets new password using valid OTP verification token)
+  - **Controller:** `vendorAuthController.resetPasswordVendor`
+  - **Validation:** `resetPasswordVendorValidation` (Joi).
+- **`PUT /update-profile`** (Updates vendor profile credentials)
+  - **Controller:** `vendorAuthController.updateProfileVendor`
+  - **Validation:** `updatevendorValidation` (Joi).
+- **`PUT /change-password`** (Changes active vendor password)
+  - **Controller:** `vendorAuthController.changePasswordVendor`
+  - **Validation:** `changePasswordValidation` (Joi).
+- **`PUT /delete-profile`** (Flags vendor account status as inactive)
+  - **Controller:** `vendorAuthController.deleteProfileVendor`
+
+#### 📅 Booking Routes (`/api/v1/bookings` - Defined in `bookingRoutes.js`)
+- **`POST /create-booking`** (Saves reservation and checks capacity limits)
+  - **Controller:** `bookingController.createbooking`
+  - **Validation:** `createBookingValidation` (Joi).
+- **`GET /booking/:id`** (Retrieves single booking details)
+  - **Controller:** `bookingController.getbooking`
+- **`PUT /update-booking/:id`** (Updates date or guests within capacity)
+  - **Controller:** `bookingController.updatebooking`
+  - **Validation:** `updateBookingValidation` (Joi).
+- **`PUT /delete-booking/:id`** (Deletes / cancels active booking)
+  - **Controller:** `bookingController.deletebooking`
+  - **Validation:** `deleteBookingValidation` (Joi).
+
+---
+
+## 6. 🚀 AI & Developer Guidelines for Future Work
+
+### Developer Guidelines & Coding Standards
+1. **Database Schema Setup:** Always set Schema primary keys `_id` to UUIDv7:
+   ```javascript
+   const { v7: uuidv7 } = require("uuid");
+   _id: {
+       type: mongoose.Schema.Types.UUID,
+       default: uuidv7
+   }
+   ```
+2. **Controller Responses & Errors:** Always structure controller errors to use `return res.AppError(message, statusCode)`. Do not use native Express fallback errors.
+3. **Data Integrity & Transactions:** For operations affecting multiple collections (e.g. creating bookings and deactivating packages), wrap the database operations in a Mongoose session transaction block:
+   ```javascript
+   const session = await mongoose.startSession();
+   session.startTransaction();
+   try {
+       // write queries...
+       await session.commitTransaction();
+   } catch (error) {
+       await session.abortTransaction();
+       throw error;
+   } finally {
+       session.endSession();
+   }
+   ```
+4. **Validation Separation:** Never process unvalidated body data. Always run inputs through Joi validators in the `validations` directory first.
+
+### Next Steps & Development Path
+- **Connect AI Advisor Route:** Implement the logic in `aiAdvisorController.js` and `aiService.js` to recommend travel packages based on client profiles.
+- **Implement Vendor Analytics & Moderation:** Complete the placeholder controllers under `src/controllers/Admin` (`analyticsController.js`, `vendorApprovalController.js`) to allow admins to approve new vendors and monitor platform metrics.
+- **Package Administration Endpoints:** Map routes to `PackageCore.js` to let vendors create and edit package configurations.

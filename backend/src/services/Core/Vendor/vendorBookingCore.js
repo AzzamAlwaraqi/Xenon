@@ -1,68 +1,45 @@
 const AppError = require("../../../utils/AppError");
-const Booking = require("../../../Models/BookingModel");
-exports.updateBookingCore = async function (vendor) {
-    try {
+const BookingModel = require('../../../Models/BookingModel');
+const PackageModel = require('../../../Models/PackageModel');
+const mongoose = require('mongoose');
 
-    }
-    catch (error) {
-        throw AppError(error.message, 400);
-    }
-}
-exports.getBookingCore = async function (vendor) {
+exports.getAllRequestsCore = async function (vendorId) {
     try {
-        // البحث عن كل الحجوزات المرتبطة بهذا البائع فقط
-        // (يتم ربط الحجز بالبائع إما عبر الباقة package_id أو بمعرف البائع مباشرة حسب تصميم الـ Schema لديك)
-        const bookings = await BookingModel.find({ vendor_id: vendorId })
-            .populate('package_id', 'title price location') // جلب تفاصيل الباقة المرتبطة
-            .populate('user_id', 'name email phone');      // جلب تفاصيل السائح (اختياري)
+        const requests = await BookingModel.find({ 
+            vendor_id: vendorId, 
+            status: 'pending' 
+        })
+        .populate({
+            path: 'package_id',
+            select: 'title price location max_people' 
+        })
+        .populate({
+            path: 'user_id',
+            select: 'name email phone' 
+        })
+        .sort({ createdAt: -1 }); 
 
         return {
             status: "success",
-            count: bookings.length,
-            data: bookings
+            count: requests.length,
+            data: requests
         };
 
-    } 
-    catch (error) {
+    } catch (error) {
         if (error.statusCode) throw error;
         throw new AppError(error.message || "Internal Server Error", 500);
     }
-}
-exports.createBookingCore = async function (vendor) {
-    try {
-        const {booking_id,package_id,user_id,number_of_people,booking_date}=vendor;
-        const booking=await Booking.findById(booking_id);
-        if(!booking){
-            throw AppError("Booking not found", 404);
-        }
-        const vendor = await Vendor.findById(booking.vendor_id);
-        if(!vendor){
-            throw AppError("Vendor not found", 404);
-        }
-        if(booking.vendor_id!=vendor.id){
-            throw AppError("You are not authorized to update this booking", 403);
-        }
-        booking.number_of_people=number_of_people;
-        await booking.save();
-        return booking;
-    }
-    catch (error) {
-        throw AppError(error.message, 400);
-    }
-}
-exports.deleteBookingCore = async function (vendor) {
-    try {
+};
 
-    }
-    catch (error) {
-        throw AppError(error.message, 400);
-    }
-}
-exports.getAllRequestsCore = async function (vendor) {
+exports.addNotificationCore = async function (userId,bookingId) {
     try {
-
+        
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message || "Internal Server Error", 500);
     }
-    catch (error) {
-        throw AppError(error.message, 400);
-    }
+    
+}
+exports.messageforComplaint = async function (bookingId){
+    
 }

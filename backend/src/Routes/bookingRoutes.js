@@ -9,5 +9,5 @@ router.get("/my-history", getUserHistory);
 router.get("/booking/:id", getBooking);
 router.put("/update-booking/:id", updateBooking);
 router.put("/delete-booking/:id", deleteBooking);
-//7
+//7  "/any thing, validater(authValidation),authValidatopm")
 module.exports = router;

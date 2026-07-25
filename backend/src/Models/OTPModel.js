@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
+const { MongooseStandardDate } = require("../utils/dateFormatter");
 const OTPSchema = new mongoose.Schema({
     _id: {
-    type: mongoose.Schema.Types.UUID,
-    default: uuidv7 
-  },
+        type: mongoose.Schema.Types.UUID,
+        default: uuidv7
+    },
     email: {
         type: String,
         required: false,
@@ -29,25 +30,20 @@ const OTPSchema = new mongoose.Schema({
         default: 0
     },
     expiresAt: {
-        type: Date,
+        type: MongooseStandardDate,
         default: () => new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
         index: { expires: 0 } // TTL index based on the value in expiresAt
     },
     verifiedAt: {
-        type: Date,
+        type: MongooseStandardDate,
         default: null
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
     }
+}, {
+    timestamps: true , 
+    toJSON: { getters: true, virtuals: true }, 
+    toObject: { getters: true, virtuals: true } 
 });
 
-// Enforce that at least email or phone must be provided
 OTPSchema.pre("save", function (next) {
     if (!this.email && !this.phone) {
         return next(new Error("Either email or phone must be provided for OTP"));

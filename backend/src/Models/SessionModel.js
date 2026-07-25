@@ -1,21 +1,24 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
-const SessionSchema = new mongoose.Schema({_id: {
-    type: mongoose.Schema.Types.UUID,
-    default: uuidv7 
-  },
+const { MongooseStandardDate } = require("../utils/dateFormatter");
+
+const SessionSchema = new mongoose.Schema({
+    _id: {
+        type: mongoose.Schema.Types.UUID,
+        default: uuidv7 
+    },
     token_id: {
         type: String,
         required: true,
         unique: true
     },
     user_id: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.UUID,
         ref: "User",
         required: true
     },
     expires_at: {
-        type: Date,
+        type: MongooseStandardDate, 
         required: true
     },
     ip_address: {
@@ -54,15 +57,11 @@ const SessionSchema = new mongoose.Schema({_id: {
     family_id: {
         type: String,
         required: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
     }
+}, { 
+    timestamps: true, 
+    toJSON: { getters: true, virtuals: true }, 
+    toObject: { getters: true, virtuals: true }
 });
 
 module.exports = mongoose.model("Session", SessionSchema);

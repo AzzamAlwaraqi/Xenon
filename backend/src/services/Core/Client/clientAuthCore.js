@@ -1,11 +1,11 @@
 const User = require("../../../Models/UserModel");
 const AppError = require("../../../utils/AppError");
-exports.createClientCore = async function (name, email, password, gender, mobileNumber, DateOfBirth, role) {
+exports.createClientCore = async function (name, email, password, gender, mobileNumber, DateOfBirth) {
     try {
         if(role !== "user"){
             return AppError("Invalid role", 400);
         }
-        const newUser = await User.create({ name, email, password, gender, mobileNumber, DateOfBirth, role });
+        const newUser = await User.create({ name, email, password, gender, mobileNumber, DateOfBirth });
         return newUser;
     } catch (err) {
        throw AppError(err.message, 400);

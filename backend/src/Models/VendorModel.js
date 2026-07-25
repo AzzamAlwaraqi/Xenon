@@ -1,11 +1,13 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const { MongooseStandardDate } = require("../utils/dateFormatter");
 const { v7: uuidv7 } = require("uuid");
+
 const VendorSchema = new mongoose.Schema({
     _id: {
-    type: mongoose.Schema.Types.UUID,
-    default: uuidv7 
-  },
+        type: mongoose.Schema.Types.UUID,
+        default: uuidv7
+    },
     vendor_name: {
         type: String,
         required: true
@@ -13,14 +15,11 @@ const VendorSchema = new mongoose.Schema({
     vendor_email: {
         type: String,
         required: true,
+        unique: true 
     },
     vendor_password: {
         type: String,
         required: true
-    },
-    vendor_old_password:{
-        type: String,
-        default: ""
     },
     vendor_mobile: {
         type: String,
@@ -52,11 +51,6 @@ const VendorSchema = new mongoose.Schema({
         enum: ["active", "inactive"],
         default: "active"
     },
-    user_id: {
-        type: String,
-        required: true,
-        ref: "user"
-    },
     vendor_type: {
         type: String,
         required: true,
@@ -64,31 +58,29 @@ const VendorSchema = new mongoose.Schema({
         default: "individual"
     },
     vendor_owner_id: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.UUID,
         required: true,
         ref: "user"
     },
-    vendor_owner_name: {
-        type: String,
-        required: true,
-        ref: "user"
-    },
-    is_Active:{
+    isDelete: {
         type: Boolean,
-        default: true
+        default: false
     },
     deletionRequestedAt: {
-        type: Date,
+        type: MongooseStandardDate, 
         default: null
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
     }
+}, {
+    timestamps: true, 
+    toJSON: { getters: true, virtuals: true }, 
+    toObject: { getters: true, virtuals: true }
+});
+
+    
+VendorSchema.pre('save', async function(next) {
+    if (!this.isModified('vendor_password')) return next();
+    this.vendor_password = await bcrypt.hash(this.vendor_password, 12);
+    next();
 });
 
 module.exports = mongoose.model("Vendor", VendorSchema);

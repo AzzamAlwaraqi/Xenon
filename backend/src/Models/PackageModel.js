@@ -1,57 +1,64 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
-const PackageSchema = new mongoose.Schema({
+const { MongooseStandardDate } = require("../utils/dateFormatter");
+
+const ReviewSchema = new mongoose.Schema({
     _id: {
-    type: mongoose.Schema.Types.UUID,
-    default: uuidv7 
-  },
+        type: mongoose.Schema.Types.UUID,
+        default: uuidv7
+    },
+    user_id: {
+        type: mongoose.Schema.Types.UUID,
+        required: true,
+        ref: "User"
+    },
+    review_text: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    review_rating: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5
+    },
     vendor_id: {
+        type: mongoose.Schema.Types.UUID,
+        required: true,
+        ref: "Vendor"
+    },
+    vendor_name: {
         type: String,
         required: true
     },
-    startDate: {
-        type: Date,
-        required: true
-    },
-    endDate: {
-        type: Date,
-        required: true
+    package_id: {
+        type: mongoose.Schema.Types.UUID,
+        required: true,
+        ref: "Package"
     },
     package_name: {
         type: String,
         required: true
     },
-    package_description: {
-        type: String,
-        required: true
-    },
-    package_price: {
-        type: String,
-        required: true
-    },
-    package_image: {
-        type: String,
-        required: true
-    },
-    package_status: {
+    review_status: {
         type: String,
         required: true,
-        enum: ["active", "inactive"],
-        default: "active"
+        enum: ["pending", "accepted", "rejected", "cancelled", "completed"],
+        default: "pending"
     },
-    max_people: {
-        type: Number,
-        min: [1, "Max people must be at least 1"],
-        max: [120, "Max people must be at most 120"],
-        required: true
+    isDelete: {
+        type: Boolean,
+        default: false
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
+    deletionRequestedAt: {
+        type: MongooseStandardDate,
+        default: null
     }
+}, {
+    timestamps: true,   
+    toJSON: { getters: true, virtuals: true },
+    toObject: { getters: true, virtuals: true }
 });
-module.exports = mongoose.model("Package", PackageSchema);
+
+module.exports = mongoose.model("Review", ReviewSchema);

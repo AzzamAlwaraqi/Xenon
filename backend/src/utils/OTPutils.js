@@ -1,7 +1,7 @@
 const crypto = require("crypto");
-const OTPModel = require("../../Models/OTPModel");
-const AppError = require("../../utils/AppError");
-const emailService = require("./emailService");
+const OTPModel = require("../Models/OTPModel");
+const AppError = require("./AppError");
+const emailService = require("../services/Integration/emailService");
 
 // Mock Provider - logs to console (if provider is set to 'mock')
 const mockProvider = {

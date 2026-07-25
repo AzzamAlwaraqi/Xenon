@@ -5,6 +5,7 @@ const AppError = require("../../utils/AppError");
 exports.getVendor = async (req, res, next) => {
     try {
         const vendorId = req.params.id || (req.user && req.user._id) || req.body.vendorId;
+        
         if (!vendorId) {
             return res.AppError("Vendor ID is required", 400);
         }
