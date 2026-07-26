@@ -1,6 +1,6 @@
 const packageValidate = require("../../validations/packageValidation");
 const Package = require("../../Models/PackageModel"); // Assuming there is a package model here based on 'Package.create'
-const PackageCore = require("../../services/Core/PackageCore");
+const PackageCore = require("../../services/Core/Vendor/PackageCore");
 const AppError = require("../../utils/AppError");
 
 exports.createPackage = async (req, res, next) => {

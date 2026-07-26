@@ -172,7 +172,7 @@ exports.logoutVendorCore = async function (user, body) {
         );
 
         // إذا أردت الحذف النهائي بدلاً من إلغاء التفعيل:
-        // const session = await SessionModel.findOneAndDelete({ user_id: user._id, token_id: hashedToken });
+        //const session = await SessionModel.findOneAndUpdate({ user_id: user._id, token_id: hashedToken }, { is_active: false });
 
         if (!session) {
             throw AppError.notFound("Active session not found or already logged out");

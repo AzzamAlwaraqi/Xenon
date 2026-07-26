@@ -30,12 +30,12 @@ const OTPSchema = new mongoose.Schema({
         default: 0
     },
     expiresAt: {
-        type: MongooseStandardDate,
+        ...MongooseStandardDate,
         default: () => new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
         index: { expires: 0 } // TTL index based on the value in expiresAt
     },
     verifiedAt: {
-        type: MongooseStandardDate,
+        ...MongooseStandardDate,
         default: null
     }
 }, {

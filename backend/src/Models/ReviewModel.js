@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
 const { MongooseStandardDate } = require("../utils/dateFormatter");
+const { countDocuments } = require("./VendorModel");
 const ReviewSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
@@ -16,10 +17,47 @@ const ReviewSchema = new mongoose.Schema({
     },
     review_rating: {
         type: Number,
-        required: true
+        required: true,
+        min: 1,
+        max: 5,
+        default: 4.3,
+        validate: {
+            validator: function(v) {
+                return v >= 1 && v <= 5;
+            },
+            message: "Review rating must be between 1 and 5"
+        }
+    },
+    sum_rating:{
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5,
+        default: 1,
+        validate: {
+            validator: function(v) {
+                return v >= 1 && v <= 5;
+
+            },
+            message: "Average rating must be between 1 and 5"
+        }
+    },
+    AVG_RATING:{
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5,
+        default: 1,
+        validate: {
+            validator: function(v) {
+                return v >= 1 && v <= 5 && v == this.sum_rating/countDocuments({_id:this._id}) ;
+
+            },
+            message: "Average rating must be between 1 and 5"
+        }
     },
     review_date: {
-        type: MongooseStandardDate,
+        ...MongooseStandardDate,
         required: true,
         default: Date.now()
     },
@@ -37,10 +75,6 @@ const ReviewSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    vendor_name: {
-        type: String,
-        required: true
-    },
     package_id: {
         type: String,
         required: true
@@ -52,8 +86,8 @@ const ReviewSchema = new mongoose.Schema({
     review_status: {
         type: String,
         required: true,
-        enum: ["pending", "accepted", "rejected", "cancelled", "completed"],
-        default: "pending"
+        enum: ["accepted", "rejected","in-progress"],
+        default: "in-progress"
     }
 }, {
     timestamps: true,

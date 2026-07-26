@@ -1,64 +1,70 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
-const { MongooseStandardDate } = require("../utils/dateFormatter");
-
-const ReviewSchema = new mongoose.Schema({
+const PackageSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
         default: uuidv7
     },
-    user_id: {
-        type: mongoose.Schema.Types.UUID,
-        required: true,
-        ref: "User"
-    },
-    review_text: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    review_rating: {
-        type: Number,
-        required: true,
-        min: 1,
-        max: 5
-    },
     vendor_id: {
-        type: mongoose.Schema.Types.UUID,
-        required: true,
-        ref: "Vendor"
-    },
-    vendor_name: {
         type: String,
         required: true
     },
-    package_id: {
-        type: mongoose.Schema.Types.UUID,
-        required: true,
-        ref: "Package"
+    startDate: {
+        type: Date,
+        required: true
+    },
+    endDate: {
+        type: Date,
+        required: true
     },
     package_name: {
         type: String,
         required: true
     },
-    review_status: {
+    package_description: {
+        type: String,
+        required: true
+    },
+    package_price: {
+        type: String,
+        required: true
+    },
+    package_image: {
+        type: String,
+        required: true
+    },
+    package_image_id: {
+        type: String,
+        required: true
+    },
+    package_type: {
         type: String,
         required: true,
-        enum: ["pending", "accepted", "rejected", "cancelled", "completed"],
-        default: "pending"
+        enum: ['adventure', 'cultural', 'relaxation', 'historical', 'family']
     },
-    isDelete: {
+    package_status: {
+        type: String,
+        required: true,
+        enum: ["active", "inactive"],
+        default: "active"
+    },
+    max_people: {
+        type: Number,
+        required: true,
+        default: 175,
+        min: [1, "Max people must be at least 1"],
+        max: [300, "Max people cannot exceed 300"]
+    }, isDelete: {
         type: Boolean,
         default: false
     },
     deletionRequestedAt: {
-        type: MongooseStandardDate,
+        type: Date,
         default: null
     }
 }, {
-    timestamps: true,   
+    timestamps: true,
     toJSON: { getters: true, virtuals: true },
     toObject: { getters: true, virtuals: true }
 });
-
-module.exports = mongoose.model("Review", ReviewSchema);
+module.exports = mongoose.model("Package", PackageSchema);

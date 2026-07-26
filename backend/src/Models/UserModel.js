@@ -42,7 +42,7 @@ const UserSchema = new mongoose.Schema({
         default: false
     },
     deletionRequestedAt: {
-        type: MongooseStandardDate,
+        ...MongooseStandardDate,
         default: null
     },
     isEmailVerified: {
@@ -56,7 +56,7 @@ const UserSchema = new mongoose.Schema({
         trim: true
     },
     emailChangeDate: {
-        type: MongooseStandardDate,
+        ...MongooseStandardDate,
         default: Date.now
     },
     recoveryMobileNumber: {
@@ -64,7 +64,7 @@ const UserSchema = new mongoose.Schema({
         default: ""
     },
     mobileNumberChangeDate: {
-        type: MongooseStandardDate,
+        ...MongooseStandardDate,
         default: Date.now
     },
     role: {
@@ -74,7 +74,7 @@ const UserSchema = new mongoose.Schema({
         default: "user"
     },
     DateOfBirth: {
-        type: MongooseStandardDate, 
+        ...MongooseStandardDate, 
         required: [true, 'تاريخ الميلاد مطلوب']
     },
     isActive: {

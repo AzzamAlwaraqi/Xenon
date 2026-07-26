@@ -33,7 +33,7 @@ const NotificationSchema = new mongoose.Schema({
         default: false
     },
     notification_date: {
-        type: MongooseStandardDate,
+        ...MongooseStandardDate,
         default: Date.now()
     },
     notification_time: {

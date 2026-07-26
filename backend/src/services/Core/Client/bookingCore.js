@@ -4,21 +4,21 @@ const PackageModel = require("../../../Models/PackageModel");
 const mongoose = require("mongoose");
 
 exports.createBookingCore = async function (bookingData) {
-   try {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    try {
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        if(user.role !== "user") {
+        if (user.role !== "user") {
             throw new AppError("You are not authorized to create a booking", 403);
         }
         const { package_id, user_id, vendor_id, number_of_people, booking_date, status } = bookingData;
 
-        const packageItem = await PackageModel.findOne({ 
-            _id: package_id, 
-            vendor_id: vendor_id 
+        const packageItem = await PackageModel.findOne({
+            _id: package_id,
+            vendor_id: vendor_id
         }).session(session);
 
-        if (!packageItem) 
+        if (!packageItem)
             throw new AppError("Package not found or does not belong to this vendor", 404);
 
         const existingBookings = await BookingModel.find({
@@ -75,8 +75,32 @@ exports.createBookingCore = async function (bookingData) {
     }
 };
 exports.updateBookingCore = async function (vendor) {
+    //U can update just Date and update to time but the time dynimic updated in he make update for booking just  it 
     try {
-
+        if (vendor.role !== "user") {
+            throw new AppError("You are not authorized to update this booking", 403);
+        }
+        const { bookingId, booking_date } = vendor;
+        const booking = await BookingModel.findById(bookingId);
+        if (!booking) {
+            throw new AppError("Booking not found", 404);
+        }
+        if (booking.vendor_id != vendorId) {
+            throw new AppError("You are not authorized to update this booking", 401);
+        }
+        const updatedBooking = await BookingModel.findByIdAndUpdate(bookingId, {
+            booking_date, booking_time: function () {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
+            }
+        }, { new: true });
+        return {
+            status: "success",
+            message: "Booking updated successfully",
+            data: updatedBooking
+        };
     }
     catch (error) {
         throw AppError(error.message, 400);
@@ -84,7 +108,7 @@ exports.updateBookingCore = async function (vendor) {
 }
 exports.getBookingCore = async function (vendor) {
     try {
-        if(vendor.role !== "user") {
+        if (vendor.role !== "user") {
             throw new AppError("You are not authorized to get this booking", 403);
         }
         const bookings = await BookingModel.find({ vendor_id: vendorId })
@@ -97,7 +121,7 @@ exports.getBookingCore = async function (vendor) {
             data: bookings
         };
 
-    } 
+    }
     catch (error) {
         if (error.statusCode) throw error;
         throw new AppError(error.message || "Internal Server Error", 500);
@@ -107,7 +131,7 @@ exports.getBookingCore = async function (vendor) {
 
 exports.deleteBookingCore = async function (vendor) {
     try {
-        if(vendor.role !== "user") {
+        if (vendor.role !== "user") {
             throw new AppError("You are not authorized to delete this booking", 403);
         }
         const booking = await BookingModel.findById(vendorId);

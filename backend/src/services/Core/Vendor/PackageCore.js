@@ -1,27 +1,41 @@
 const AppError = require('../../../utils/AppError');
 const APIFeatures = require('../../../utils/apiFeatures');
 const Package = require('../../../Models/PackageModel');
-const cloudinary = require('../../../utils/cloudinary');
-const FileStorgeService = require("../../../utils/FileStorgeService");
+const FileStorgeService = require("../../Integration/FileStorgeService");
 const multer = require("multer");
 const sharp = require("sharp");
+
 exports.getAllPackages = async function (req, res) {
-    try{
-    const packages = await APIFeatures(Package.find(), req.query).filter().sort().limitFields().paginate().query;
-    return packages;
-    }
-    catch(err){
-        throw AppError(err.message, 400);
+    try {
+        const features = new APIFeatures(Package.find(), req.query).filter().sort().limitFields().paginate();
+        const packages = await features.query;
+        return packages;
+    } catch (err) {
+        throw new AppError(err.message, 400);
     }
 }
 
 exports.getPackage = async function (req, res, package_id) {
-    try{
-    const package = await APIFeatures(Package.findById(package_id), req.query).filter().sort().limitFields().paginate().query;
-    return package;
-    }
-    catch(err){
-        throw AppError(err.message, 400);
+    try {
+        let query = Package.findById(package_id);
+
+        if (req.query.fields) {
+            const fields = req.query.fields.split(',').join(' ');
+            query = query.select(fields);
+        } else {
+            query = query.select('-__v');
+        }
+
+        const packageDoc = await query;
+
+        if (!packageDoc) {
+            throw new AppError('the package is not found', 404);
+        }
+
+        return packageDoc;
+
+    } catch (err) {
+        throw new AppError(err.message, 400);
     }
 }
 
@@ -29,12 +43,12 @@ exports.updatePackage = async function (req, res, package_id) {
     try {
         const existingPackage = await Package.findById(package_id);
         if (!existingPackage) {
-            throw new AppError('الباقة غير موجودة', 404);
+            throw new AppError('this package is not found ', 404);
         }
 
         const updateData = {};
         const allowedFields = [
-            'package_name', 'package_price', 'package_description', 
+            'package_name', 'package_price', 'package_description',
             'package_type', 'package_status', 'startDate', 'endDate'
         ];
 
@@ -45,7 +59,7 @@ exports.updatePackage = async function (req, res, package_id) {
         });
 
         if (req.file) {
-            
+
             if (existingPackage.package_image_id) {
                 await FileStorgeService.deleteImage(existingPackage.package_image_id);
             }
@@ -56,7 +70,7 @@ exports.updatePackage = async function (req, res, package_id) {
                 .toBuffer();
 
             const uploadResult = await FileStorgeService.uploadImageFromBuffer(
-                optimizedBuffer, 
+                optimizedBuffer,
                 "xenon/packages"
             );
 
@@ -65,20 +79,20 @@ exports.updatePackage = async function (req, res, package_id) {
         }
 
         if (Object.keys(updateData).length === 0) {
-            return existingPackage; 
+            return existingPackage;
         }
 
         const updatedPackage = await Package.findByIdAndUpdate(
-            package_id, 
-            { $set: updateData }, 
-            { 
-                new: true,          
-                runValidators: true 
+            package_id,
+            { $set: updateData },
+            {
+                new: true,
+                runValidators: true
             }
         );
 
         return updatedPackage;
-        
+
     } catch (err) {
         throw new AppError(err.message, 400);
     }
@@ -95,17 +109,17 @@ exports.deletePackageCore = async function (req, res, package_id) {
             await FileStorgeService.deleteImage(packageDoc.package_image_id);
         }
 
-        await Package.findByIdAndUpdate(package_id , { isDelete: true, deletionRequestedAt: new Date() });
+        await Package.findByIdAndUpdate(package_id, { isDelete: true, deletionRequestedAt: new Date() });
 
         return packageDoc;
-        
+
     } catch (err) {
         throw new AppError(err.message, 400);
     }
 }
 exports.createPackage = async function (req, res) {
     try {
-        const {package_name, package_price, package_description, package_type, package_status, startDate, endDate} = req.body;
+        const { package_name, package_price, package_description, package_type, package_status, startDate, endDate } = req.body;
 
         let imageUrl = '';
         let imagePublicId = '';
@@ -117,14 +131,14 @@ exports.createPackage = async function (req, res) {
                 .toBuffer();
 
             const uploadResult = await FileStorgeService.uploadImageFromBuffer(
-                optimizedBuffer, 
-                "xenon/packages" 
+                optimizedBuffer,
+                "xenon/packages"
             );
-            
+
             imageUrl = uploadResult.secure_url;
-            imagePublicId = uploadResult.public_id; 
+            imagePublicId = uploadResult.public_id;
         } else {
-             throw new AppError("image required", 400);
+            throw new AppError("image required", 400);
         }
 
         const newPackage = await Package.create({
@@ -133,14 +147,14 @@ exports.createPackage = async function (req, res) {
             package_description,
             startDate,
             endDate,
-            package_image: imageUrl, 
-            package_image_id: imagePublicId, 
+            package_image: imageUrl,
+            package_image_id: imagePublicId,
             package_type,
             package_status
         });
 
         return newPackage;
-        
+
     } catch (err) {
         throw new AppError(err.message, 400);
     }

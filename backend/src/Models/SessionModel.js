@@ -18,7 +18,7 @@ const SessionSchema = new mongoose.Schema({
         required: true
     },
     expires_at: {
-        type: MongooseStandardDate, 
+        ...MongooseStandardDate, 
         required: true
     },
     ip_address: {

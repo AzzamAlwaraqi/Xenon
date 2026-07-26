@@ -12,6 +12,7 @@ const VendorSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    
     vendor_email: {
         type: String,
         required: true,
@@ -67,7 +68,7 @@ const VendorSchema = new mongoose.Schema({
         default: false
     },
     deletionRequestedAt: {
-        type: MongooseStandardDate, 
+        ...MongooseStandardDate, 
         default: null
     }
 }, {
