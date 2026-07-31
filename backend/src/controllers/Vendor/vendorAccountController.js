@@ -66,7 +66,11 @@ exports.logoutVendor = async (req, res, next) => {
             return res.AppError("User not authenticated");
         }
 
-        const vendor = await logoutVendorCore(user, req.body);
+        const token = req.headers.authorization && req.headers.authorization.startsWith("Bearer")
+            ? req.headers.authorization.split(" ")[1]
+            : req.body.token;
+
+        const vendor = await logoutVendorCore(user, { ...req.body, token });
 
         res.status(200).json({
             status: "success",

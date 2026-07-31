@@ -4,12 +4,16 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const SessionModel = require("../../../Models/SessionModel");
 
-exports.createClientCore = async function (name, email, password, gender, mobileNumber, DateOfBirth, role = "user") {
+exports.createClientCore = async function (name, email, password, gender, mobileNumber, DateOfBirth ) {
     try {
-        if(role !== "user"){
-            throw new AppError("Invalid role", 400);
+        const user = await User.findOne({ email });
+        if(user){
+            throw new AppError("User already exists", 400);
         }
-        const newUser = await User.create({ name, email, password, gender, mobileNumber, DateOfBirth, role });
+        if(user.mobileNumber === mobileNumber){
+            throw new AppError("User already exists", 400);
+        }
+        const newUser = await User.create({ name, email, password, gender, mobileNumber, DateOfBirth, role: "user"  });
         return newUser;
     } catch (err) {
        throw new AppError(err.message, 400);
@@ -53,7 +57,21 @@ exports.logoutClientCore = async function (user, token) {
 }
 exports.updateClientCore = async function (user, updates) {
     try {
-       // Placeholder
+       const {mobileNumber,email} = user;
+       if(mobileNumber){
+        const user = await User.findOne({ mobileNumber });
+        if(user){
+            throw new AppError("User already exists", 400);
+        }
+       }
+       if(email){
+        const user = await User.findOne({ email });
+        if(user){
+            throw new AppError("User already exists", 400);
+        }
+        const update = {};
+
+       }
     }
     catch (error) {
         throw new AppError(error.message, 400);
@@ -61,7 +79,7 @@ exports.updateClientCore = async function (user, updates) {
 }
 exports.updatepasswordCore = async function (user, updates) {
     try {
-        // Placeholder
+        
     } catch (error) {
         throw new AppError(error.message, 400);
     }

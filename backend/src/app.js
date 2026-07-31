@@ -16,6 +16,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
+// Unified Response Pattern (res.AppError)
+app.use((req, res, next) => {
+    res.AppError = (message, statusCode = 500) => {
+        return res.status(statusCode).json({
+            status: `${statusCode}`.startsWith('4') ? 'fail' : 'error',
+            message: message
+        });
+    };
+    next();
+});
+
+
+
 // Routes
 app.use("/api/v1/clients", clientRoutes);
 app.use("/api/v1/vendors", vendorRoutes);
@@ -27,5 +40,8 @@ app.use("/api/v1/ai", aiRoutes);
 app.get('/', (req, res) => {
     res.send('Hello World!');
 });
+
+const errorHandler = require("./middlewares/errorHandler");
+app.use(errorHandler.Error);
 
 module.exports = app;

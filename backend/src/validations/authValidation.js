@@ -10,13 +10,20 @@ exports.createAccountValidation = function (Body) {
         password: joi.string().regex(passwordRegex).required().messages({
             "string.pattern.base": "Password must be at least 8 characters long, contain uppercase, lowercase, number, and special character"
         }),
-        phone_no: joi.string().regex(/^[6-9]\d{9}$/).required().messages({
+        phone_no: joi.string().regex(/^[0-9+()\s-]{7,20}$/).required().messages({
             "string.pattern.base": "Invalid phone number format"
         }),
-        role: joi.string().valid("vendor", "user").required()
+        role: joi.string().valid("vendor", "user").required(),
+        company_name: joi.string().trim().optional(),
+        address: joi.string().optional(),
+        city: joi.string().optional(),
+        state: joi.string().optional(),
+        pincode: joi.string().optional(),
+        country: joi.string().optional(),
+        vendor_type: joi.string().optional()
     });
 
-    return Schema.validate(Body, { abortEarly: false });
+    return Schema.validate(Body, { abortEarly: false, allowUnknown: true });
 };
 
 exports.loginAccountValidation = function (Body) {
@@ -47,6 +54,17 @@ exports.updateProfileVendorValidation = function (Body) {
 };
 
 exports.changePasswordValidation = function (Body) {
+    const data = {};
+    if (Body.old_password || Body.oldPassword) {
+        data.old_password = Body.old_password || Body.oldPassword;
+    }
+    if (Body.new_password || Body.newPassword) {
+        data.new_password = Body.new_password || Body.newPassword;
+    }
+    if (Body.confirm_password || Body.confirmPassword || Body.confiomPassword || Body.confiom_password) {
+        data.confirm_password = Body.confirm_password || Body.confirmPassword || Body.confiomPassword || Body.confiom_password;
+    }
+
     const Schema = joi.object({
         old_password: joi.string().required(),
         new_password: joi.string().regex(passwordRegex).required().messages({
@@ -57,7 +75,7 @@ exports.changePasswordValidation = function (Body) {
         })
     });
 
-    return Schema.validate(Body, { abortEarly: false });
+    return Schema.validate(data, { abortEarly: false });
 };
 
 exports.toVendorValidation = function (body) {
@@ -72,14 +90,14 @@ exports.toVendorValidation = function (body) {
         country: joi.string().required(),
         vendor_type: joi.string().required(),
 
-        owner_id: joi.string().regex(objectIdRegex).required().messages({
+        owner_id: joi.string().regex(objectIdRegex).optional().messages({
             "string.pattern.base": "Invalid owner_id format"
         }),
-        user_id: joi.string().regex(objectIdRegex).required().messages({
+        user_id: joi.string().regex(objectIdRegex).optional().messages({
             "string.pattern.base": "Invalid user_id format"
         }),
 
-        mobile: joi.string().pattern(/^[0-9+\s-]{8,15}$/).required().messages({
+        mobile: joi.string().pattern(/^[0-9+\s-]{7,20}$/).optional().messages({
             "string.pattern.base": "Invalid mobile phone number format"
         }),
 
@@ -87,17 +105,16 @@ exports.toVendorValidation = function (body) {
         email: joi.string().email().required()
     });
 
-    return schema.validate(body, { abortEarly: false });
+    return schema.validate(body, { abortEarly: false, allowUnknown: true });
 };
 exports.logoutVendorValidation = function (body) {
     const Schema = joi.object({
-        session_id: joi.string().regex(objectIdRegex).required().messages({
-            "string.pattern.base": "Invalid session_id format",
-            "any.required": "session_id is required for logout"
-        })
+        session_id: joi.string().optional(),
+        token: joi.string().optional(),
+        device_token: joi.string().optional()
     });
 
-    return Schema.validate(body, { abortEarly: false });
+    return Schema.validate(body, { abortEarly: false, allowUnknown: true });
 };
 exports.resetPasswordVendorValidation = function (body) {
     const Schema = joi.object({
@@ -130,13 +147,18 @@ exports.deleteAccountValidation = function (Body) {
 };
 exports.updatevendorValidation = function (Body) {
     const Schema = joi.object({
-        vendor_mobile: joi.string().regex(/^[6-9]\d{9}$/).optional(),
-        vendor_address: joi.string().optional(),
-        vendor_city: joi.string().optional(),
-        vendor_state: joi.string().optional(),
-        vendor_pincode: joi.string().regex(/^[0-9]{4,10}$/).optional(),
-        vendor_country: joi.string().optional(),
-        is_Active: joi.boolean().optional()
+        name: joi.string().trim().min(2).max(100).optional(),
+        company_name: joi.string().trim().min(2).max(100).optional(),
+        phone_no: joi.string().regex(/^[0-9+\s-]{7,20}$/).optional(),
+        mobile: joi.string().regex(/^[0-9+\s-]{7,20}$/).optional(),
+        address: joi.string().optional(),
+        city: joi.string().optional(),
+        state: joi.string().optional(),
+        pincode: joi.string().pattern(/^[0-9]{4,10}$/).optional().messages({
+            "string.pattern.base": "Pincode must contain digits only"
+        }),
+        country: joi.string().optional(),
+        vendor_type: joi.string().optional()
     }).min(1);
-    return Schema.validate(Body, { abortEarly: false, stripUnknown: true });
+    return Schema.validate(Body, { abortEarly: false, allowUnknown: true });
 };

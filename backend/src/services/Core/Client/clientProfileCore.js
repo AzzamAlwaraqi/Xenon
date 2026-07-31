@@ -1,4 +1,4 @@
-const AppError = require("../../utils/AppError");
+const AppError = require("../../../utils/AppError");
 
 
 exports.getAllReviewsCore = async function (user) {

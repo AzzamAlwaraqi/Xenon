@@ -6,13 +6,15 @@ const { v7: uuidv7 } = require("uuid");
 const VendorSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
-        default: uuidv7
+        default: uuidv7,
+        unique: true,
+        index: true
     },
     vendor_name: {
         type: String,
         required: true
     },
-    
+
     vendor_email: {
         type: String,
         required: true,
@@ -54,9 +56,7 @@ const VendorSchema = new mongoose.Schema({
     },
     vendor_type: {
         type: String,
-        required: true,
-        enum: ["individual", "company"],
-        default: "individual"
+        required: true
     },
     vendor_owner_id: {
         type: mongoose.Schema.Types.UUID,
@@ -78,10 +78,9 @@ const VendorSchema = new mongoose.Schema({
 });
 
     
-VendorSchema.pre('save', async function(next) {
-    if (!this.isModified('vendor_password')) return next();
+VendorSchema.pre('save', async function() {
+    if (!this.isModified('vendor_password')) return;
     this.vendor_password = await bcrypt.hash(this.vendor_password, 12);
-    next();
 });
 
 module.exports = mongoose.model("Vendor", VendorSchema);

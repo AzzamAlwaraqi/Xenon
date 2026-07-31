@@ -3,7 +3,9 @@ const { v7: uuidv7 } = require("uuid");
 const PackageSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
-        default: uuidv7
+        default: uuidv7,
+        unique: true,
+        index: true
     },
     vendor_id: {
         type: String,

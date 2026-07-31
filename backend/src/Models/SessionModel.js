@@ -5,7 +5,9 @@ const { MongooseStandardDate } = require("../utils/dateFormatter");
 const SessionSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
-        default: uuidv7 
+        default: uuidv7, 
+        unique: true,
+        index: true
     },
     token_id: {
         type: String,

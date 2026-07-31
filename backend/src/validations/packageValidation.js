@@ -2,6 +2,8 @@
 const Joi = require('joi');
 const AppError = require('../utils/AppError');
 
+const { setStandardDate } = require('../utils/dateFormatter');
+
 const createPackageSchema = Joi.object({
     package_name: Joi.string().min(3).max(100).required().messages({
         'string.empty': 'Package name is required',
@@ -14,8 +16,8 @@ const createPackageSchema = Joi.object({
     package_description: Joi.string().max(500).allow('', null),
     package_type: Joi.string().required(),
     package_status: Joi.string().valid('active', 'inactive', 'draft').default('active'),
-    startDate: Joi.date().iso().required(),
-    endDate: Joi.date().iso().min(Joi.ref('startDate')).required().messages({
+    startDate: Joi.date().required(),
+    endDate: Joi.date().min(Joi.ref('startDate')).required().messages({
         'date.min': 'End date must be after start date'
     })
 });
@@ -26,8 +28,8 @@ const updatePackageSchema = Joi.object({
     package_description: Joi.string().max(500).allow('', null),
     package_type: Joi.string(),
     package_status: Joi.string().valid('active', 'inactive', 'draft'),
-    startDate: Joi.date().iso(),
-    endDate: Joi.date().iso().min(Joi.ref('startDate'))
+    startDate: Joi.date(),
+    endDate: Joi.date().min(Joi.ref('startDate'))
 });
 
 // 3. Middleware to check package validation
@@ -49,4 +51,70 @@ exports.validateUpdatePackage = (req, res, next) => {
         return next(new AppError(errorMessage, 400));
     }
     next();
+};
+
+const packageIdSchema = Joi.object({
+    id: Joi.string().hex().length(24).required().messages({
+        'string.empty': 'ID is required',
+        'string.hex': 'Invalid ID format',
+        'string.length': 'ID must be a valid 24-character hex string',
+        'any.required': 'ID is required'
+    })
+});
+
+exports.createPackageValidate = (req, res) => {
+    if (req.body.startDate) req.body.startDate = setStandardDate(req.body.startDate);
+    if (req.body.endDate) req.body.endDate = setStandardDate(req.body.endDate);
+
+    const { error } = createPackageSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errorMessage = error.details.map(err => err.message).join(', ');
+        res.AppError(errorMessage, 400);
+        return false;
+    }
+    return true;
+};
+
+exports.getAllPackagesValidate = (req, res) => {
+    return true;
+};
+
+exports.getPackageValidate = (req, res) => {
+    const { error } = packageIdSchema.validate({ id: req.params.id }, { abortEarly: false });
+    if (error) {
+        const errorMessage = error.details.map(err => err.message).join(', ');
+        res.AppError(errorMessage, 400);
+        return false;
+    }
+    return true;
+};
+
+exports.updatePackageValidate = (req, res) => {
+    const idValidation = packageIdSchema.validate({ id: req.params.id }, { abortEarly: false });
+    if (idValidation.error) {
+        const errorMessage = idValidation.error.details.map(err => err.message).join(', ');
+        res.AppError(errorMessage, 400);
+        return false;
+    }
+    
+    if (req.body.startDate) req.body.startDate = setStandardDate(req.body.startDate);
+    if (req.body.endDate) req.body.endDate = setStandardDate(req.body.endDate);
+
+    const bodyValidation = updatePackageSchema.validate(req.body, { abortEarly: false });
+    if (bodyValidation.error) {
+        const errorMessage = bodyValidation.error.details.map(err => err.message).join(', ');
+        res.AppError(errorMessage, 400);
+        return false;
+    }
+    return true;
+};
+
+exports.deletePackageValidate = (req, res) => {
+    const { error } = packageIdSchema.validate({ id: req.params.id }, { abortEarly: false });
+    if (error) {
+        const errorMessage = error.details.map(err => err.message).join(', ');
+        res.AppError(errorMessage, 400);
+        return false;
+    }
+    return true;
 };

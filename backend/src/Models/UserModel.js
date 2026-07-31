@@ -6,7 +6,9 @@ const { v7: uuidv7 } = require("uuid");
 const UserSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
-        default: uuidv7
+        default: uuidv7,
+        unique: true,
+        index: true
     },
     name: {
         type: String,
@@ -27,7 +29,7 @@ const UserSchema = new mongoose.Schema({
     },
     gender: {
         type: String,
-        required: true,
+        required: function() { return this.role === 'user'; },
         enum: ["male", "female"]
     },
     mobileNumber: {
@@ -75,7 +77,7 @@ const UserSchema = new mongoose.Schema({
     },
     DateOfBirth: {
         ...MongooseStandardDate, 
-        required: [true, 'تاريخ الميلاد مطلوب']
+        required: [function() { return this.role === 'user'; }, 'تاريخ الميلاد مطلوب']
     },
     isActive: {
         type: Boolean,
@@ -87,10 +89,18 @@ const UserSchema = new mongoose.Schema({
     toObject: { getters: true, virtuals: true }
 });
 
-UserSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) return next();
+UserSchema.pre('save', async function() {
+    if (!this.isModified('password')) return;
     this.password = await bcrypt.hash(this.password, 12);
-    next();
 });
+
+UserSchema.methods.getJwtToken = function() {
+    const jwt = require("jsonwebtoken");
+    return jwt.sign(
+        { id: this._id, role: this.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || "90d" }
+    );
+};
 
 module.exports = mongoose.model("User", UserSchema);

@@ -32,7 +32,7 @@ exports.getProfileCore = async function (vendor) {
 }
 exports.updateProfileCore = async function (Body, id) {
     try {
-        const { name, email, password, file } = Body;
+        const { name, email,file } = Body;
         const existingVendor = await VendorModel.findById(id);
         if (!existingVendor) {
             throw new AppError("Vendor not found", 404);
@@ -50,14 +50,7 @@ exports.updateProfileCore = async function (Body, id) {
         throw AppError(error.message, 400);
     }
 }
-exports.updateProfilePictureCore = async function (vendor) {
-    try {
-        return "updateProfilePicture not yet implemented";
-    }
-    catch (error) {
-        throw AppError(error.message, 400);
-    }
-}
+
 exports.updatePasswordCore = async function (Body, id) {
     try {
         const { oldPassword, newPassword } = Body;

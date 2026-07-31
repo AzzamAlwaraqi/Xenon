@@ -6,13 +6,14 @@ const SessionModel = require("../../../Models/SessionModel");
 const authValidation = require("../../../validations/authValidation");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
+const { setStandardDate } = require("../../../utils/dateFormatter");
 
 exports.createAccountCore = async function (authUser, Body, deviceInfo = {}) {
     const dbSession = await mongoose.startSession();
     dbSession.startTransaction();
 
     try {
-        if (authUser.role !== "vendor" && authUser.role !== "admin") {
+        if (authUser && authUser.role && authUser.role !== "vendor" && authUser.role !== "admin") {
             throw new AppError("You are not authorized to create an account", 403);
         }
 
@@ -35,21 +36,21 @@ exports.createAccountCore = async function (authUser, Body, deviceInfo = {}) {
             throw new AppError("Account with this email already exists", 409);
         }
 
-        const passwordHash = await bcrypt.hash(Body.password, 12);
-
         const [newUser] = await UserModel.create([{
             name: Body.name,
             email: Body.email,
-            password: passwordHash,
+            password: Body.password,
             role: Body.role,
-            phone_no: Body.phone_no
+            mobileNumber: Body.phone_no,
+            gender: Body.gender,
+            DateOfBirth: Body.DateOfBirth ? setStandardDate(Body.DateOfBirth) : undefined
         }], { session: dbSession });
 
         const [newVendor] = await VendorModel.create([{
             vendor_name: Body.company_name || Body.name,
             vendor_email: Body.email,
-            vendor_password: passwordHash,
-            vendor_phone_no: Body.phone_no || Body.mobile,
+            vendor_password: Body.password,
+            vendor_mobile: Body.phone_no || Body.mobile,
             vendor_address: Body.address,
             vendor_city: Body.city,
             vendor_state: Body.state,
@@ -77,7 +78,8 @@ exports.createAccountCore = async function (authUser, Body, deviceInfo = {}) {
             browser_name: deviceInfo.browserName || deviceInfo.browser_name || Body.browser_name || "Unknown",
             device_id: deviceId,
             is_active: true,
-            family_id: familyId
+            family_id: familyId,
+            session_id: familyId
         }], { session: dbSession });
 
         await dbSession.commitTransaction();
@@ -138,7 +140,8 @@ exports.loginVendorCore = async function (user, Body, deviceInfo = {}) {
             browser_name: deviceInfo.browserName || deviceInfo.browser_name || Body.browser_name || "Unknown",
             device_id: deviceId,
             is_active: true,
-            family_id: familyId
+            family_id: familyId,
+            session_id: familyId
         });
 
         return { token, session };
@@ -159,6 +162,10 @@ exports.logoutVendorCore = async function (user, body) {
         const validation = authValidation.logoutVendorValidation(body);
         if (validation.error) {
             throw AppError.badRequest(validation.error.details.map(d => d.message).join(", "));
+        }
+
+        if (!body.token) {
+            throw new AppError("Token is required for logout", 400);
         }
 
         // تشفير الـ Token القادم في الـ Body لمطابقته مع المشفّر في الداتابيز

@@ -1,9 +1,9 @@
 const AppError = require('../../../utils/AppError');
+const sharp = require('sharp');
 const APIFeatures = require('../../../utils/apiFeatures');
 const Package = require('../../../Models/PackageModel');
-const FileStorgeService = require("../../Integration/FileStorgeService");
+const FileStorageService = require("../../Integration/FileStorgeService");
 const multer = require("multer");
-const sharp = require("sharp");
 
 exports.getAllPackages = async function (req, res) {
     try {
@@ -61,7 +61,7 @@ exports.updatePackage = async function (req, res, package_id) {
         if (req.file) {
 
             if (existingPackage.package_image_id) {
-                await FileStorgeService.deleteImage(existingPackage.package_image_id);
+                await FileStorageService.deleteImage(existingPackage.package_image_id);
             }
 
             const optimizedBuffer = await sharp(req.file.buffer)
@@ -69,7 +69,7 @@ exports.updatePackage = async function (req, res, package_id) {
                 .webp({ quality: 80 })
                 .toBuffer();
 
-            const uploadResult = await FileStorgeService.uploadImageFromBuffer(
+            const uploadResult = await FileStorageService.uploadImageFromBuffer(
                 optimizedBuffer,
                 "xenon/packages"
             );
@@ -106,7 +106,7 @@ exports.deletePackageCore = async function (req, res, package_id) {
         }
 
         if (packageDoc.package_image_id) {
-            await FileStorgeService.deleteImage(packageDoc.package_image_id);
+            await FileStorageService.deleteImage(packageDoc.package_image_id);
         }
 
         await Package.findByIdAndUpdate(package_id, { isDelete: true, deletionRequestedAt: new Date() });
@@ -117,20 +117,30 @@ exports.deletePackageCore = async function (req, res, package_id) {
         throw new AppError(err.message, 400);
     }
 }
-exports.createPackage = async function (req, res) {
+
+exports.createPackage = async function (req, res, next) {
     try {
-        const { package_name, package_price, package_description, package_type, package_status, startDate, endDate } = req.body;
+        const { 
+            package_name, 
+            package_price, 
+            package_description, 
+            package_type, 
+            package_status,
+            startDate, 
+            endDate 
+        } = req.body;
 
         let imageUrl = '';
         let imagePublicId = '';
 
+        // 1. التحقق من وجود الملف ومعالجته عبر Sharp + Cloudinary Buffer
         if (req.file) {
             const optimizedBuffer = await sharp(req.file.buffer)
                 .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
                 .webp({ quality: 80 })
                 .toBuffer();
 
-            const uploadResult = await FileStorgeService.uploadImageFromBuffer(
+            const uploadResult = await FileStorageService.uploadImageFromBuffer(
                 optimizedBuffer,
                 "xenon/packages"
             );
@@ -141,6 +151,7 @@ exports.createPackage = async function (req, res) {
             throw new AppError("image required", 400);
         }
 
+        // 2. إنشاء الـ Package في قاعدة البيانات
         const newPackage = await Package.create({
             package_name,
             package_price,
@@ -153,9 +164,18 @@ exports.createPackage = async function (req, res) {
             package_status
         });
 
-        return newPackage;
+        // 3. إرجاع الـ Response بتنسيق JSON (201 Created)
+        return res.status(201).json({
+            status: 'success',
+            data: {
+                package: newPackage
+            }
+        });
 
     } catch (err) {
-        throw new AppError(err.message, 400);
+        // إذا كنت تستخدم Global Error Handler في Express
+        // next(err); 
+        // أو إذا كنت تعتمد على رمي الخطأ مباشرة:
+        throw new AppError(err.message, err.statusCode || 400);
     }
-}
+};

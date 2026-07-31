@@ -4,7 +4,9 @@ const { MongooseStandardDate } = require("../utils/dateFormatter");
 const OTPSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
-        default: uuidv7
+        default: uuidv7,
+        unique: true,
+        index: true
     },
     email: {
         type: String,

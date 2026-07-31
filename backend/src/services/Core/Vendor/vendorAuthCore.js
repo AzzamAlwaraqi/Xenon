@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-const AppError = require("../../utils/AppError");
+const AppError = require("../../../utils/AppError");
 const VendorModel = require("../../../Models/VendorModel");
 const UserModel = require("../../../Models/UserModel");
 const OTPModel = require("../../../Models/OTPModel");
@@ -8,7 +8,17 @@ const vendorCore = require("./vendorAccountCore");
 const authValidation = require("../../../validations/authValidation");
 exports.getVendorCore = async function (vendorId) {
     try {
-        const vendor = await VendorModel.findById(vendorId).select("name email role vendor_role vendor_mobile vendor_address vendor_city vendor_state vendor_pincode vendor_country is_Active");
+        let vendor = await VendorModel.findById(vendorId).select("vendor_name vendor_email vendor_mobile vendor_address vendor_city vendor_state vendor_pincode vendor_country vendor_status vendor_type");
+        
+        if (!vendor) {
+            vendor = await VendorModel.findOne({
+                $or: [
+                    { vendor_owner_id: vendorId },
+                    { vendor_user_id: vendorId }
+                ]
+            }).select("vendor_name vendor_email vendor_mobile vendor_address vendor_city vendor_state vendor_pincode vendor_country vendor_status vendor_type");
+        }
+
         if (!vendor) {
             throw new AppError("Vendor not found", 404);
         }
@@ -47,14 +57,13 @@ exports.resetPasswordVendorCore = async function (Body) {
         throw new AppError("Account has been blocked or deactivated", 403);
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
     const dbSession = await mongoose.startSession();
     dbSession.startTransaction();
     try {
-        user.password = hashedPassword;
+        user.password = password;
         await user.save({ session: dbSession });
 
-        vendor.vendor_password = hashedPassword;
+        vendor.vendor_password = password;
         await vendor.save({ session: dbSession });
         await OTPModel.deleteOne({ _id: otpRecord._id }, { session: dbSession });
 
@@ -70,6 +79,9 @@ exports.resetPasswordVendorCore = async function (Body) {
 };
 
 exports.updateProfileVendorCore = async function (user, Body) {
+    const dbSession = await mongoose.startSession();
+    dbSession.startTransaction();
+
     try {
         const { error, value } = authValidation.updatevendorValidation(Body);
 
@@ -85,34 +97,62 @@ exports.updateProfileVendorCore = async function (user, Body) {
             throw new AppError("Your account has been blocked", 403);
         }
 
-        const updateFields = {};
+        const vendor = await VendorModel.findOne({
+            $or: [
+                { vendor_owner_id: user._id },
+                { vendor_user_id: user._id }
+            ]
+        }).session(dbSession);
 
-        if (value.vendor_mobile) updateFields.phone_no = value.vendor_mobile;
-        if (value.vendor_address) updateFields.address = value.vendor_address;
-        if (value.vendor_city) updateFields.city = value.vendor_city;
-        if (value.vendor_state) updateFields.state = value.vendor_state;
-        if (value.vendor_pincode) updateFields.pincode = value.vendor_pincode;
-        if (value.vendor_country) updateFields.country = value.vendor_country;
-        if (value.is_Active !== undefined) updateFields.isActive = value.is_Active;
+        if (!vendor) {
+            throw new AppError("Vendor profile not found", 404);
+        }
 
-        Object.assign(user, updateFields);
-        const updatedUser = await user.save();
+        // 1. Update User fields
+        if (value.name) user.name = value.name;
+        
+        const mobileNum = value.phone_no || value.mobile;
+        if (mobileNum) user.mobileNumber = mobileNum;
 
-        return updatedUser;
+        await user.save({ session: dbSession });
+
+        // 2. Update Vendor fields
+        if (value.company_name) {
+            vendor.vendor_name = value.company_name;
+        } else if (value.name && !vendor.vendor_name) {
+            vendor.vendor_name = value.name;
+        }
+
+        if (mobileNum) vendor.vendor_mobile = mobileNum;
+        if (value.address) vendor.vendor_address = value.address;
+        if (value.city) vendor.vendor_city = value.city;
+        if (value.state) vendor.vendor_state = value.state;
+        if (value.pincode) vendor.vendor_pincode = value.pincode;
+        if (value.country) vendor.vendor_country = value.country;
+        if (value.vendor_type) vendor.vendor_type = value.vendor_type;
+
+        await vendor.save({ session: dbSession });
+
+        await dbSession.commitTransaction();
+        dbSession.endSession();
+
+        return vendor;
 
     } catch (error) {
+        await dbSession.abortTransaction();
+        dbSession.endSession();
         if (error.statusCode) throw error;
         throw new AppError(error.message || "Internal Server Error", 500);
     }
 };
 exports.changePasswordCore = async function (user, Body) {
     try {
-        const { old_password, new_password } = Body;
-
-        const { error } = authValidation.changePasswordValidation(Body);
+        const { error, value } = authValidation.changePasswordValidation(Body);
         if (error) {
             throw new AppError(error.details[0].message, 400);
         }
+
+        const { old_password, new_password } = value;
 
         if (old_password === new_password) {
             throw new AppError("New password cannot be the same as old password", 400);
@@ -122,8 +162,7 @@ exports.changePasswordCore = async function (user, Body) {
             throw new AppError("Invalid old password", 400);
         }
 
-        const hashedPassword = await bcrypt.hash(new_password, 12);
-        user.password = hashedPassword;
+        user.password = new_password;
         await user.save();
 
         return { message: "Password changed successfully" };

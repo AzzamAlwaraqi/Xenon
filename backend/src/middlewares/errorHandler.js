@@ -48,6 +48,15 @@ const sendErrorProd = (err, res) => {
 };
 
 exports.Error = (err, req, res, next) => {
+    if (err.name === 'MulterError') {
+        err.statusCode = 400;
+        err.status = 'fail';
+        err.isOperational = true;
+        if (err.message === 'Field name missing') {
+            err.message = 'File upload field name is missing. Please ensure your form-data key name is specified (e.g. package_image).';
+        }
+    }
+
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
@@ -62,8 +71,8 @@ exports.Error = (err, req, res, next) => {
         if (error.code === 11000) error = handleDuplicateFieldsDB(error);
         if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
         
-        if (error.name === 'JsonWebTokenError') error = handleJWTError();
-        if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
+        if (error.name === 'JsonWebTokenError') error = handleTokenError();
+        if (error.name === 'TokenExpiredError') error = handleTokenExpiredError();
 
         sendErrorProd(error, res);
     }
