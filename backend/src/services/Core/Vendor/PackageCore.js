@@ -121,6 +121,7 @@ exports.deletePackageCore = async function (req, res, package_id) {
 exports.createPackage = async function (req, res, next) {
     try {
         const { 
+            vendor_id,
             package_name, 
             package_price, 
             package_description, 
@@ -147,30 +148,33 @@ exports.createPackage = async function (req, res, next) {
 
             imageUrl = uploadResult.secure_url;
             imagePublicId = uploadResult.public_id;
+
+            const packages = await Package.find();
+        
+            const packageExists = packages.some(p => p.package_name === package_name);
+        
+            if (packageExists) {
+                throw new AppError('package with this name already exists', 400);
+            }
+        
+            // Create new package
+            const newPackage = await Package.create({
+                vendor_id,
+                package_name,
+                package_price,
+                package_description,
+                startDate,
+                endDate,
+                package_image: imageUrl,
+                package_image_id: imagePublicId,
+                package_type: package_type ? package_type.toLowerCase() : package_type,
+                package_status
+            });
+        
+            return newPackage;
         } else {
             throw new AppError("image required", 400);
         }
-
-        // 2. إنشاء الـ Package في قاعدة البيانات
-        const newPackage = await Package.create({
-            package_name,
-            package_price,
-            package_description,
-            startDate,
-            endDate,
-            package_image: imageUrl,
-            package_image_id: imagePublicId,
-            package_type,
-            package_status
-        });
-
-        // 3. إرجاع الـ Response بتنسيق JSON (201 Created)
-        return res.status(201).json({
-            status: 'success',
-            data: {
-                package: newPackage
-            }
-        });
 
     } catch (err) {
         // إذا كنت تستخدم Global Error Handler في Express

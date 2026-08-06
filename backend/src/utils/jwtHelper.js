@@ -28,7 +28,6 @@ const generateAuthTokens = async (res, user, fingerprintHash, deviceInfo, existi
     );
 
     await Session.create({
-        session_id: familyId,
         user_id: user._id,
         token_id: tokenId,
         expires_at: new Date(Date.now() + 10 * 60 * 1000),

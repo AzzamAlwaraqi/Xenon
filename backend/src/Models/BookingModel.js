@@ -6,7 +6,7 @@ const BookingSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
         unique: true,
-        index: true``
+        index: true
     },
     user_id: {
         type: String,
@@ -63,7 +63,7 @@ const BookingSchema = new mongoose.Schema({
         default: false
     },
     deletionRequestedAt: {
-        type: MongooseStandardDate,
+        ...MongooseStandardDate,
         default: null
     }
 }, {

@@ -6,7 +6,7 @@ exports.createPackage = async (req, res, next) => {
     try {
         if (!packageValidate.createPackageValidate(req, res)) return;
         const package = await PackageCore.createPackage(req, res);
-        res.status(200).json({
+        res.status(201).json({
             status: "success",
             data: {
                 package,

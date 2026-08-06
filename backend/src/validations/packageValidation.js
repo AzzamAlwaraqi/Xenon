@@ -5,6 +5,10 @@ const AppError = require('../utils/AppError');
 const { setStandardDate } = require('../utils/dateFormatter');
 
 const createPackageSchema = Joi.object({
+    vendor_id: Joi.string().required().messages({
+        'string.empty': 'Vendor ID is required',
+        'any.required': 'Vendor ID is required'
+    }),
     package_name: Joi.string().min(3).max(100).required().messages({
         'string.empty': 'Package name is required',
         'string.min': 'Package name must be at least 3 characters long'
@@ -54,10 +58,9 @@ exports.validateUpdatePackage = (req, res, next) => {
 };
 
 const packageIdSchema = Joi.object({
-    id: Joi.string().hex().length(24).required().messages({
+    id: Joi.string().uuid().required().messages({
         'string.empty': 'ID is required',
-        'string.hex': 'Invalid ID format',
-        'string.length': 'ID must be a valid 24-character hex string',
+        'string.guid': 'Invalid ID format, must be a valid UUID',
         'any.required': 'ID is required'
     })
 });

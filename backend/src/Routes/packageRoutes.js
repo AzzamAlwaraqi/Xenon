@@ -20,7 +20,7 @@ const upload = multer({
 });
 
 router.get("/", getAllPackages);
-router.get("/:id", getPackage);
+router.get("/package/:id", getPackage);
 router.post("/create-package", upload.single("package_image"), createPackage);
 router.put("/package/:id", upload.single("package_image"), updatePackage);
 router.put("/delete-package/:id", deletePackage);

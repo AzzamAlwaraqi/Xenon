@@ -151,3 +151,25 @@ exports.deleteBookingCore = async function (vendor) {
         throw AppError(error.message, 400);
     }
 }
+
+exports.getAllBookingCore = async function (vendor) {
+    try {
+        if (vendor.role !== "user") {
+            throw new AppError("You are not authorized to get this booking", 403);
+        }
+        const bookings = await BookingModel.find({ vendor_id: vendorId })
+            .populate('package_id', 'title price location')
+            .populate('user_id', 'name email phone');
+
+        return {
+            status: "success",
+            count: bookings.length,
+            data: bookings
+        };
+
+    }
+    catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message || "Internal Server Error", 500);
+    }
+}

@@ -179,7 +179,8 @@ exports.deleteMyAccountCore = async function (user) {
     try {
 
         if (user.role === "vendor") {
-            if (user.vendor_role !== "owner") {
+            const vendor = await VendorModel.findOne({ vendor_owner_id: user._id });
+            if (!vendor) {
                 throw new AppError("Only the store owner can delete this vendor account", 403);
             }
         }

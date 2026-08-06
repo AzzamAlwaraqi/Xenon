@@ -51,11 +51,6 @@ const SessionSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-    session_id: {
-        type: String,
-        required: true,
-        unique: true
-    },
     family_id: {
         type: String,
         required: true
@@ -64,6 +59,10 @@ const SessionSchema = new mongoose.Schema({
     timestamps: true, 
     toJSON: { getters: true, virtuals: true }, 
     toObject: { getters: true, virtuals: true }
+});
+
+SessionSchema.virtual('session_id').get(function() {
+    return this._id;
 });
 
 module.exports = mongoose.model("Session", SessionSchema);

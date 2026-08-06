@@ -78,8 +78,7 @@ exports.createAccountCore = async function (authUser, Body, deviceInfo = {}) {
             browser_name: deviceInfo.browserName || deviceInfo.browser_name || Body.browser_name || "Unknown",
             device_id: deviceId,
             is_active: true,
-            family_id: familyId,
-            session_id: familyId
+            family_id: familyId
         }], { session: dbSession });
 
         await dbSession.commitTransaction();
@@ -140,8 +139,7 @@ exports.loginVendorCore = async function (user, Body, deviceInfo = {}) {
             browser_name: deviceInfo.browserName || deviceInfo.browser_name || Body.browser_name || "Unknown",
             device_id: deviceId,
             is_active: true,
-            family_id: familyId,
-            session_id: familyId
+            family_id: familyId
         });
 
         return { token, session };
@@ -158,7 +156,6 @@ exports.logoutVendorCore = async function (user, body) {
             throw AppError.forbidden("You are not authorized to logout from this portal");
         }
 
-        // فحص الـ Body (يفترض إرسال token أو refreshToken)
         const validation = authValidation.logoutVendorValidation(body);
         if (validation.error) {
             throw AppError.badRequest(validation.error.details.map(d => d.message).join(", "));
@@ -168,10 +165,8 @@ exports.logoutVendorCore = async function (user, body) {
             throw new AppError("Token is required for logout", 400);
         }
 
-        // تشفير الـ Token القادم في الـ Body لمطابقته مع المشفّر في الداتابيز
         const hashedToken = crypto.createHash("sha256").update(body.token).digest("hex");
 
-        // إلغاء تفعيل الجلسة الحالية المحددة (Soft Delete)
         const session = await SessionModel.findOneAndUpdate(
             { user_id: user._id, token_id: hashedToken, is_active: true },
             { is_active: false },
