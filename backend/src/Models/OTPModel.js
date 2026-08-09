@@ -1,12 +1,10 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
-const { MongooseStandardDate } = require("../utils/dateFormatter");
+
 const OTPSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
-        unique: true,
-        index: true
     },
     email: {
         type: String,
@@ -25,32 +23,39 @@ const OTPSchema = new mongoose.Schema({
     },
     purpose: {
         type: String,
-        default: "verification"
+        required: true,
+        default: "registration"
     },
     attempts: {
         type: Number,
         default: 0
     },
+    // Plain Date — no custom getter/setter. Required for TTL index to work correctly.
     expiresAt: {
-        ...MongooseStandardDate,
-        default: () => new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
-        index: { expires: 0 } // TTL index based on the value in expiresAt
+        type: Date,
+        default: () => new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
     },
     verifiedAt: {
-        ...MongooseStandardDate,
+        type: Date,
         default: null
     }
 }, {
-    timestamps: true , 
-    toJSON: { getters: true, virtuals: true }, 
-    toObject: { getters: true, virtuals: true } 
+    timestamps: true,
+    toJSON:   { virtuals: true },
+    toObject: { virtuals: true }
 });
 
-OTPSchema.pre("save", function (next) {
+// TTL index — MongoDB auto-removes documents when expiresAt passes
+OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+// Compound index for fast lookup by email + purpose
+OTPSchema.index({ email: 1, purpose: 1 });
+
+// Validate at least one contact method — using async style (Mongoose 9 / Express 5 compatible)
+OTPSchema.pre("save", async function () {
     if (!this.email && !this.phone) {
-        return next(new Error("Either email or phone must be provided for OTP"));
+        throw new Error("Either email or phone must be provided for OTP");
     }
-    next();
 });
 
 module.exports = mongoose.model("OTP", OTPSchema);

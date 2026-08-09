@@ -1,8 +1,8 @@
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
-const clientRoutes = require("./Routes/clientRoutes");
-const vendorRoutes = require("./Routes/vendorRoutes");
+const authRoutes = require("./Routes/authRoutes");
+const profileRoutes = require("./Routes/profileRoutes");
 const bookingRoutes = require("./Routes/bookingRoutes");
 const packageRoutes = require("./Routes/packageRoutes");
 const adminRoutes = require("./Routes/adminRoutes");
@@ -30,9 +30,9 @@ app.use((req, res, next) => {
 
 
 // Routes
-app.use("/api/v1/clients", clientRoutes);
-app.use("/api/v1/vendors", vendorRoutes);
-app.use("/api/v1/bookings", bookingRoutes);
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/profile", profileRoutes);
+app.use("/api/v1/packages/bookings", bookingRoutes);
 app.use("/api/v1/packages", packageRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/ai", aiRoutes);

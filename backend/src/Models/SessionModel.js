@@ -6,8 +6,6 @@ const SessionSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
         default: uuidv7, 
-        unique: true,
-        index: true
     },
     token_id: {
         type: String,
@@ -50,6 +48,15 @@ const SessionSchema = new mongoose.Schema({
     is_active: {
         type: Boolean,
         default: true
+    },
+    session_status: {
+        type: String,
+        default: "active"
+    },
+    role: {
+        type: String,
+        required: true
+
     },
     family_id: {
         type: String,

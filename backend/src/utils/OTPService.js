@@ -3,7 +3,7 @@ const OTPModel = require("../Models/OTPModel");
 const AppError = require("./AppError");
 const emailService = require("../services/Integration/emailService");
 
-// Mock Provider - logs to console (if provider is set to 'mock')
+// Mock Provider (Console logger for dev/unit testing)
 const mockProvider = {
     sendEmail: async (email, otp, purpose) => {
         console.log(`[Mock OTP Provider] Sending Email to ${email} for purpose "${purpose}". OTP Code: ${otp}`);
@@ -11,21 +11,35 @@ const mockProvider = {
     }
 };
 
-// Email Provider - sends email using emailService (with real nodemailer / SMTP under the hood)
+// Real Email Provider (Production / QC Environment)
 const emailProvider = {
     sendEmail: async (email, otp, purpose) => {
         const subject = `Your OTP Code - ${purpose.toUpperCase()}`;
-        const message = `Your Xenon OTP code is: ${otp}. It will expire in 5 minutes.`;
-        const html = `<p>Your Xenon OTP code is: <strong>${otp}</strong>.</p><p>It will expire in 5 minutes.</p>`;
-        
-        return await emailService.sendEmail({ email, subject, message, html });
+        const text = `Your Xenon OTP code is: ${otp}. It will expire in 5 minutes.`;
+        const html = `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                <h2 style="color: #007bff;">Xenon Verification</h2>
+                <p>Thank you for registering with Xenon. Your OTP verification code is:</p>
+                <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
+                    <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #007bff;">${otp}</span>
+                </div>
+                <p>This code is valid for <strong>5 minutes</strong>.</p>
+                <p style="font-size: 12px; color: #777;">If you did not request this, please ignore this email.</p>
+            </div>
+        `;
+
+        // Correct parameter mapping for emailService.sendEmail
+        return await emailService.sendEmail({
+            to: email,
+            subject,
+            text,
+            html
+        });
     }
 };
 
 /**
  * Generate a cryptographically secure numeric OTP
- * @param {number} length 
- * @returns {string}
  */
 const generateOTP = (length = 6) => {
     if (length < 4 || length > 10) {
@@ -38,38 +52,37 @@ const generateOTP = (length = 6) => {
 
 /**
  * Generate, save, and send an OTP via email
- * @param {Object} options
- * @param {string} options.email
- * @param {string} [options.purpose]
- * @param {string} [options.provider] - 'email' or 'mock'
- * @param {number} [options.length]
- * @returns {Promise<Object>}
  */
-exports.sendOTP = async ({ email, purpose = "verification", provider = "email", length = 6 }) => {
+exports.sendOTP = async ({
+    email,
+    purpose = "registration",
+    provider = process.env.OTP_PROVIDER || "email",
+    length = 6
+}) => {
     if (!email) {
         throw new AppError("Email must be provided to send OTP", 400);
     }
 
+    const cleanEmail = email.toLowerCase().trim();
     const otp = generateOTP(length);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
 
-    // Delete any active OTPs for the same target and purpose
-    await OTPModel.deleteMany({ email: email.toLowerCase().trim(), purpose });
+    // Delete any active OTPs for the same email and purpose
+    await OTPModel.deleteMany({ email: cleanEmail, purpose });
 
-    // Save the new OTP to database
+    // Save the new OTP to DB
     await OTPModel.create({
-        email: email.toLowerCase().trim(),
+        email: cleanEmail,
         otp,
         purpose,
         expiresAt
     });
 
     let sendResult;
-    // Route to appropriate provider
     if (provider === "mock") {
-        sendResult = await mockProvider.sendEmail(email, otp, purpose);
+        sendResult = await mockProvider.sendEmail(cleanEmail, otp, purpose);
     } else if (provider === "email") {
-        sendResult = await emailProvider.sendEmail(email, otp, purpose);
+        sendResult = await emailProvider.sendEmail(cleanEmail, otp, purpose);
     } else {
         throw new AppError(`Unsupported OTP provider: ${provider}`, 400);
     }
@@ -78,20 +91,16 @@ exports.sendOTP = async ({ email, purpose = "verification", provider = "email", 
         success: true,
         message: "OTP sent successfully",
         expiresAt,
-        otp: process.env.NODE_ENV !== "production" ? otp : undefined,
+        // Hide the plain text OTP code in production and QC environments
+        otp: (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "qc") ? otp : undefined,
         providerResult: sendResult
     };
 };
 
 /**
  * Verify an OTP
- * @param {Object} options
- * @param {string} options.email
- * @param {string} options.otp
- * @param {string} [options.purpose]
- * @returns {Promise<boolean>}
  */
-exports.verifyOTP = async ({ email, otp, purpose = "verification" }) => {
+exports.verifyOTP = async ({ email, otp, purpose = "registration" }) => {
     if (!email) {
         throw new AppError("Email must be provided to verify OTP", 400);
     }
@@ -99,42 +108,40 @@ exports.verifyOTP = async ({ email, otp, purpose = "verification" }) => {
         throw new AppError("OTP code is required for verification", 400);
     }
 
-    // Find the latest active (unverified) OTP record for this email and purpose
+    const cleanEmail = email.toLowerCase().trim();
+
     const otpRecord = await OTPModel.findOne({
-        email: email.toLowerCase().trim(),
+        email: cleanEmail,
         purpose
     }).sort({ createdAt: -1 });
 
     if (!otpRecord) {
-        throw new AppError("No OTP code request found for this account", 404);
+        throw new AppError("No active OTP code found for this account", 404);
     }
 
     if (otpRecord.verifiedAt) {
         throw new AppError("OTP code has already been verified", 400);
     }
 
-    // Check expiration
     if (otpRecord.expiresAt && otpRecord.expiresAt < new Date()) {
         throw new AppError("OTP code has expired. Please request a new one", 400);
     }
 
-    // Check attempts limit (e.g. max 5 attempts)
     const maxAttempts = 5;
     if (otpRecord.attempts >= maxAttempts) {
         await OTPModel.deleteOne({ _id: otpRecord._id });
         throw new AppError("Too many failed attempts. Please request a new OTP code", 400);
     }
 
-    // Validate the OTP code
-    if (otpRecord.otp !== otp.trim()) {
+    if (otpRecord.otp !== otp.toString().trim()) {
         otpRecord.attempts += 1;
         await otpRecord.save();
-        
+
         const remaining = maxAttempts - otpRecord.attempts;
         throw new AppError(`Invalid OTP code. You have ${remaining} attempts remaining`, 400);
     }
 
-    // Success - mark as verified and save
+    // Mark OTP as verified
     otpRecord.verifiedAt = new Date();
     await otpRecord.save();
 

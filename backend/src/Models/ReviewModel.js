@@ -6,8 +6,6 @@ const ReviewSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
-        unique: true,
-        index: true
     },
     user_id: {
         type: String,

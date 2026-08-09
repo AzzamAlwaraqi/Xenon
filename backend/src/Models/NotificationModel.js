@@ -1,11 +1,10 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
+const { MongooseStandardDate } = require("../utils/dateFormatter");
 const NotificationSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
-        unique: true,
-        index: true
     },
     user_id: {
         type: mongoose.Schema.Types.UUID,

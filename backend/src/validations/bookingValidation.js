@@ -1,13 +1,19 @@
-const joi = require("joi");
+const joi = require('joi');
 
 exports.createBookingValidation = function (body) {
     const Schema = joi.object({
         package_id: joi.string().required(),
-        booking_date: joi.date().required(),
-        number_of_people: joi.number().required(),//number of people who are booking must be bteween 1-5
-        status: joi.string().optional(),
+        
+        booking_date: joi.date().iso().min('now').required(),
+        
+        number_of_people: joi.number().integer().min(1).max(5).required().messages({
+            'number.min': 'You must be at least one person.',
+            'number.max': 'You can book for a maximum of 5 people only.',
+            'number.base': 'Number of people must be a number.'
+        }),
         user_id: joi.string().optional()
-    })
+    });
+    return Schema.validate(body, { stripUnknown: true });
 };
 ////number of people can be updated and booking date  just or can chenge the pakage that can updated 
 exports.updateBookingValidation = function (body) {

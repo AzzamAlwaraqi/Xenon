@@ -4,8 +4,14 @@ const Review = require("../../../Models/ReviewModel");
 const Vendor = require("../../../Models/VendorModel");
 const mongoose = require("mongoose");
 const { reviewValidation } = require("../../../validations/Client/reviewValidation");
+const checkRole = require("../../../utils/checkRole");
+
 exports.createReviewCore = async function (user, booking_id, reviewData) {
     try {
+        if (!checkRole(user.role, ["user"])) {
+            throw new AppError("Only users can create reviews", 403);
+        }
+
         const dbSession = await mongoose.startSession();
         dbSession.startTransaction();
         

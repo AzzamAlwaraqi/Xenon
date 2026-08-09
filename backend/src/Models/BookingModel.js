@@ -5,8 +5,6 @@ const BookingSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
-        unique: true,
-        index: true
     },
     user_id: {
         type: String,
@@ -51,7 +49,7 @@ const BookingSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true,
-        enum: ["pending", "accepted", "rejected", "completed"],
+        enum: ["pending","accepted", "rejected", "completed"],
         default: "pending"
     },
     total_price: {

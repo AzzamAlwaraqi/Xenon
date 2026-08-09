@@ -134,7 +134,6 @@ exports.createPackage = async function (req, res, next) {
         let imageUrl = '';
         let imagePublicId = '';
 
-        // 1. التحقق من وجود الملف ومعالجته عبر Sharp + Cloudinary Buffer
         if (req.file) {
             const optimizedBuffer = await sharp(req.file.buffer)
                 .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
@@ -149,9 +148,7 @@ exports.createPackage = async function (req, res, next) {
             imageUrl = uploadResult.secure_url;
             imagePublicId = uploadResult.public_id;
 
-            const packages = await Package.find();
-        
-            const packageExists = packages.some(p => p.package_name === package_name);
+            const packageExists = await Package.findOne({ package_name });
         
             if (packageExists) {
                 throw new AppError('package with this name already exists', 400);
