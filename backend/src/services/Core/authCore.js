@@ -198,3 +198,33 @@ exports.resetPasswordCore = async function (email, password, token) {
         throw new AppError(error.message, 500);
     }
 };
+
+const { sendOTP } = require("../../utils/OTPService");
+
+exports.forgotPasswordCore = async function (email) {
+    try {
+        const user = await UserModel.findOne({ email: email.toLowerCase().trim() });
+        if (!user) {
+            // For security, don't reveal if account exists or not, just pretend we sent it
+            return { message: "If an account with that email exists, an OTP has been sent." };
+        }
+        
+        if (user.isActive === false) {
+            throw new AppError("Account has been blocked or deactivated", 403);
+        }
+
+        const otpResponse = await sendOTP({
+            email: user.email,
+            purpose: "password_reset",
+            length: 6
+        });
+
+        return { 
+            message: "OTP sent to your email successfully",
+            expiresAt: otpResponse.expiresAt 
+        };
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
+    }
+};

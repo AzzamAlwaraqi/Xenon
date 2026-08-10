@@ -32,9 +32,10 @@ exports.register = async (req, res, next) => {
                     user: {
                         id: result.user._id,
                         name: result.user.name,
-                        email: result.user.email,
-                        isEmailVerified: result.user.isEmailVerified
+                        email: result.user.email
                     },
+                    token: result.token,
+                   // session: result.session,
                     otpInfo: {
                         expiresAt: otpResponse.expiresAt
                     }
@@ -116,6 +117,25 @@ exports.resetPassword = async (req, res, next) => {
         res.status(200).json({
             status: "success",
             message: result.message
+        });
+    } catch (error) {
+        next(new AppError(error.message, error.statusCode || 500));
+    }
+};
+
+exports.forgotPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return next(new AppError("Email is required", 400));
+        }
+
+        const result = await authCore.forgotPasswordCore(email);
+        res.status(200).json({
+            status: "success",
+            message: result.message,
+            data: result.expiresAt ? { expiresAt: result.expiresAt } : undefined
         });
     } catch (error) {
         next(new AppError(error.message, error.statusCode || 500));

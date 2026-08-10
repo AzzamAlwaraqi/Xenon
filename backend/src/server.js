@@ -1,6 +1,5 @@
 const dotenv = require("dotenv");
 const path = require("path");
-
 // ⚠️ dotenv MUST be configured before any other module is required,
 //    so that process.env is fully populated when services initialize.
 dotenv.config({ path: path.join(__dirname, 'config.env') });

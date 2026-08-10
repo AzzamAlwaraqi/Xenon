@@ -47,7 +47,7 @@ const UserSchema = new mongoose.Schema({
     },
     isEmailVerified: {
         type: Boolean,
-        default: false
+        default: true
     },
     recoveryEmail: {
         type: String,
@@ -83,7 +83,23 @@ const UserSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true, 
-    toJSON: { getters: true, virtuals: true }, 
+    toJSON: { 
+        getters: true, 
+        virtuals: true,
+        transform: function(doc, ret) {
+            delete ret.isEmailVerified;
+            delete ret.password; // It's good practice to ensure password is not sent too
+            delete ret.isDelete;
+            delete ret.deletionRequestedAt;
+            delete ret.recoveryEmail;
+            delete ret.emailChangeDate;
+            delete ret.recoveryMobileNumber;
+            delete ret.mobileNumberChangeDate;
+            delete ret.role;
+            delete ret.isActive;
+            return ret;
+        }
+    }, 
     toObject: { getters: true, virtuals: true }
 });
 

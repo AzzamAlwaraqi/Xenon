@@ -10,6 +10,7 @@ router.post("/register", validateRoleBased(authValidation.createClientValidation
 router.post("/login", validate(authValidation.loginAccountValidation), authController.login);
 
 router.post("/logout", protect, authController.logout); // Logout validation is simple
+router.post("/forgot-password", validate(authValidation.forgotPasswordValidation), authController.forgotPassword);
 router.post("/reset-password", validate(authValidation.resetPasswordValidation), authController.resetPassword);
 
 module.exports = router;

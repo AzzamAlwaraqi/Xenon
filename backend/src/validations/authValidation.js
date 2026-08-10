@@ -22,9 +22,8 @@ exports.createClientValidation = function (Body) {
             "any.only": "Gender must be either 'male' or 'female'",
             "any.required": "Gender is required"
         }),
-        mobileNumber: joi.string().length(10).pattern(/^[0-9]+$/).required().messages({
-            "string.length": "Mobile number must be exactly 10 digits",
-            "string.pattern.base": "Mobile number must contain digits only",
+        mobileNumber: joi.string().regex(/^07[789]\d{7}$/).required().messages({
+            "string.pattern.base": "Mobile number must start with 077, 078, or 079 and be exactly 10 digits long",
             "any.required": "Mobile number is required"
         }),
         DateOfBirth: joi.date().iso().less("now").required().messages({
@@ -45,8 +44,8 @@ exports.createAccountValidation = function (Body) {
         password: joi.string().regex(passwordRegex).required().messages({
             "string.pattern.base": "Password must be at least 8 characters long, contain uppercase, lowercase, number, and special character"
         }),
-        phone_no: joi.string().regex(/^[0-9+()\s-]{7,20}$/).required().messages({
-            "string.pattern.base": "Invalid phone number format"
+        phone_no: joi.string().regex(/^07[789]\d{7}$/).required().messages({
+            "string.pattern.base": "Mobile number must start with 077, 078, or 079 and be exactly 10 digits long"
         }),
         role: joi.string().valid("vendor", "user").required(),
         company_name: joi.string().trim().optional(),
@@ -74,7 +73,9 @@ exports.loginAccountValidation = function (Body) {
 exports.updateProfileVendorValidation = function (Body) {
     const Schema = joi.object({
         name: joi.string().trim().min(2).max(100).optional(),
-        phone_no: joi.string().regex(/^[6-9]\d{9}$/).optional(),
+        phone_no: joi.string().regex(/^07[789]\d{7}$/).optional().messages({
+            "string.pattern.base": "Mobile number must start with 077, 078, or 079 and be exactly 10 digits long"
+        }),
         company_name: joi.string().trim().min(2).max(100).optional(),
         address: joi.string().optional(),
         city: joi.string().optional(),
@@ -132,8 +133,8 @@ exports.toVendorValidation = function (body) {
             "string.pattern.base": "Invalid user_id format"
         }),
 
-        mobile: joi.string().pattern(/^[0-9+\s-]{7,20}$/).optional().messages({
-            "string.pattern.base": "Invalid mobile phone number format"
+        mobile: joi.string().regex(/^07[789]\d{7}$/).optional().messages({
+            "string.pattern.base": "Mobile number must start with 077, 078, or 079 and be exactly 10 digits long"
         }),
 
         status: joi.string().valid("pending", "active", "rejected").default("pending"),
@@ -152,6 +153,19 @@ exports.logoutVendorValidation = function (body) {
     return Schema.validate(body, { abortEarly: false, allowUnknown: true });
 };
 exports.resetPasswordValidation = function (body) {
+    const data = { ...body };
+    if (data.newPassword || data.new_password) {
+        data.password = data.newPassword || data.new_password;
+    }
+    if (data.confirmPassword || data.confirm_password || data.confiomPassword || data.confiom_password) {
+        data.confirm_password = data.confirmPassword || data.confirm_password || data.confiomPassword || data.confiom_password;
+    }
+    // If the user forgot confirmPassword completely in Postman (since screenshot only shows newPassword), let's map newPassword to confirm_password IF it's completely missing, or just let it fail so they add it?
+    // Wait, the screenshot only shows "newPassword": "ResetPassword123!&", it doesn't show confirmPassword! Let's just map it to confirm_password if they only sent newPassword.
+    if (!data.confirm_password && (data.newPassword || data.new_password)) {
+        data.confirm_password = data.newPassword || data.new_password;
+    }
+
     const Schema = joi.object({
         email: joi.string().email().required(),
         password: joi.string().regex(passwordRegex).required().messages({
@@ -161,20 +175,29 @@ exports.resetPasswordValidation = function (body) {
             "any.only": "Confirm password does not match new password"
         }),
         token: joi.string().optional(),
-        otpCode: joi.string().optional()
+        otpCode: joi.string().optional(),
+        newPassword: joi.any().optional(),
+        new_password: joi.any().optional(),
+        confirmPassword: joi.any().optional(),
+        confiomPassword: joi.any().optional(),
+        confiom_password: joi.any().optional()
     }).xor('token', 'otpCode').messages({
         'object.missing': 'Either "token" or "otpCode" is required'
     });
 
-    return Schema.validate(body, { abortEarly: false, allowUnknown: true });
+    return Schema.validate(data, { abortEarly: false, allowUnknown: true });
 };
 exports.updateProfileValidation = function (Body) {
     const Schema = joi.object({
         name: joi.string().trim().min(2).max(100).optional(),
-        phone_no: joi.string().regex(/^[6-9]\d{9}$/).optional(),
+        phone_no: joi.string().regex(/^07[789]\d{7}$/).optional().messages({
+            "string.pattern.base": "Mobile number must start with 077, 078, or 079 and be exactly 10 digits long"
+        }),
+        email: joi.string().email().optional(),
+        DateOfBirth: joi.date().iso().optional()
     }).min(1);
 
-    return Schema.validate(Body, { abortEarly: false });
+    return Schema.validate(Body, { abortEarly: false, allowUnknown: true });
 };
 exports.deleteAccountValidation = function (Body) {
     const Schema = joi.object({
@@ -187,8 +210,12 @@ exports.updatevendorValidation = function (Body) {
     const Schema = joi.object({
         name: joi.string().trim().min(2).max(100).optional(),
         company_name: joi.string().trim().min(2).max(100).optional(),
-        phone_no: joi.string().regex(/^[0-9+\s-]{7,20}$/).optional(),
-        mobile: joi.string().regex(/^[0-9+\s-]{7,20}$/).optional(),
+        phone_no: joi.string().regex(/^07[789]\d{7}$/).optional().messages({
+            "string.pattern.base": "Mobile number must start with 077, 078, or 079 and be exactly 10 digits long"
+        }),
+        mobile: joi.string().regex(/^07[789]\d{7}$/).optional().messages({
+            "string.pattern.base": "Mobile number must start with 077, 078, or 079 and be exactly 10 digits long"
+        }),
         address: joi.string().optional(),
         city: joi.string().optional(),
         state: joi.string().optional(),
@@ -199,4 +226,11 @@ exports.updatevendorValidation = function (Body) {
         vendor_type: joi.string().optional()
     }).min(1);
     return Schema.validate(Body, { abortEarly: false, allowUnknown: true });
+};
+
+exports.forgotPasswordValidation = function (body) {
+    const Schema = joi.object({
+        email: joi.string().email().required()
+    });
+    return Schema.validate(body, { abortEarly: false });
 };

@@ -22,6 +22,14 @@ exports.createbooking = (req, res) => {
     res.send("createbooking");
 };
 
+exports.getMyBookings = (req, res) => {
+    res.send("getMyBookings");
+};
+
+exports.getUserHistory = (req, res) => {
+    res.send("getUserHistory");
+};
+
 
 exports.getAllRequests = async (req, res) => {
     try {

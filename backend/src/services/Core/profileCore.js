@@ -58,15 +58,16 @@ exports.updateProfileCore = async function (user, updates) {
         }
 
         if (checkRole(user.role, ["user", "admin"])) {
-            const { mobileNumber, email } = updates;
+            const mobileNum = updates.phone_no || updates.mobile || updates.mobileNumber;
+            const { email, name, DateOfBirth } = updates;
             const userUpdates = {};
 
-            if (mobileNumber) {
-                const existing = await UserModel.findOne({ mobileNumber });
+            if (mobileNum) {
+                const existing = await UserModel.findOne({ mobileNumber: mobileNum });
                 if (existing && existing._id.toString() !== user._id.toString()) {
                     throw new AppError("Mobile number is already in use", 409);
                 }
-                userUpdates.mobileNumber = mobileNumber;
+                userUpdates.mobileNumber = mobileNum;
             }
 
             if (email) {
@@ -77,6 +78,9 @@ exports.updateProfileCore = async function (user, updates) {
                 }
                 userUpdates.email = cleanEmail;
             }
+            
+            if (name) userUpdates.name = name;
+            if (DateOfBirth) userUpdates.DateOfBirth = DateOfBirth;
 
             const updatedUser = await UserModel.findByIdAndUpdate(user._id, userUpdates, { new: true, runValidators: true });
             return updatedUser;
@@ -141,8 +145,8 @@ exports.updatePasswordCore = async function (user, oldPassword, newPassword) {
             throw new AppError("Current password is incorrect", 401);
         }
 
-        userDoc.password = newPassword;
-        await userDoc.save();
+        const hashPassword = await bcrypt.hash(newPassword, 12);
+        await UserModel.updateOne({ _id: user._id }, { password: hashPassword });
 
         // If vendor, also update the vendor model password
         if (checkRole(user.role, ["vendor"])) {
