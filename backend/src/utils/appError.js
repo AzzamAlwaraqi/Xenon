@@ -33,6 +33,7 @@ class AppError extends Error {
     }
 
     static internal(message = "Internal Server Error") {
+        
         return new AppError(message, 500);
     }
 }

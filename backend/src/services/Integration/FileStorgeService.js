@@ -1,5 +1,5 @@
 const cloudinary = require("../../config/cloudinaryConfig");
-const { Readable } = require("stream");
+
 
 // Upload image from a Buffer (used with Multer memoryStorage and Sharp)
 const uploadImageFromBuffer = async function (buffer, folderName = "xenon/general") {
@@ -11,7 +11,7 @@ const uploadImageFromBuffer = async function (buffer, folderName = "xenon/genera
                 else reject(error);
             }
         );
-        Readable.from(buffer).pipe(uploadStream);
+        uploadStream.end(buffer);
     });
 };
 
@@ -20,7 +20,7 @@ const uploadImage = async function (image, folderName = "xenon/vendors") {
     try {
         const result = await cloudinary.uploader.upload(image, {
             folder: folderName
-        });
+        }); 
         return result;
     } catch (error) {
         throw error;

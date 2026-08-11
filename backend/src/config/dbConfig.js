@@ -7,8 +7,12 @@ const connectDB = async () => {
         ? process.env.DATABASE.replace('<PASSWORD>', process.env.DATABASE_PASSWORD)
         : process.env.DATABASE;
 
-    await mongoose.connect(DB);
-    console.log(`✅ DB connected → ${DB.split('@').pop() || DB}`);
+    await mongoose.connect(DB).then(() => {
+        console.log(`✅ DB connected → ${DB.split('@').pop() || DB}`);
+    }).catch((err) => {
+        console.error('❌ DB connection error:', err.message);
+        process.exit(1);
+    });
 };
 
 module.exports = connectDB;

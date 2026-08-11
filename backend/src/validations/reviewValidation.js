@@ -34,7 +34,7 @@ exports.createReviewValidation = Joi.object({
         })
 });
 
-exports.updateReviewValidation = Joi.object({
+exports.updateReviewByIdValidation = Joi.object({
     rating: Joi.number()
         .min(1)
         .max(5)
@@ -56,18 +56,6 @@ exports.updateReviewValidation = Joi.object({
             'string.max': 'this text must not be more than 500 characters long'
         }),
 
-    reviewId: Joi.string()
-        .hex()
-        .length(24)
-        .required()
-        .messages({
-            'string.hex': 'the format of this id is not valid',
-            'string.length': 'the length of this id is not valid',
-            'any.required': 'this id is required'
-        })
-});
-
-exports.getReviewByIdValidation = Joi.object({
     reviewId: Joi.string()
         .hex()
         .length(24)

@@ -20,16 +20,16 @@ function env(key, fallback = '') {
 // ─── Configuration ────────────────────────────────────────────────────────────
 function buildSmtpConfig() {
     return {
-        host:   env('SMTP_HOST', 'smtp.gmail.com'),
-        port:   Number(env('SMTP_PORT', '465')),
+        host: env('SMTP_HOST', 'smtp.gmail.com'),
+        port: Number(env('SMTP_PORT', '465')),
         secure: env('SMTP_SECURE', 'true') === 'true', // true = SSL/port 465
         auth: {
             user: env('GOOGLE_EMAIL_ADDRESS'),
             pass: env('GOOGLE_EMAIL_APP_PASSWORD_SMTP'),
         },
         connectionTimeout: 10_000, // 10s to establish TCP connection
-        greetingTimeout:    8_000, // 8s to receive SMTP greeting
-        socketTimeout:     15_000, // 15s of socket inactivity
+        greetingTimeout: 8_000, // 8s to receive SMTP greeting
+        socketTimeout: 15_000, // 15s of socket inactivity
     };
 }
 
@@ -37,7 +37,6 @@ function buildSmtpConfig() {
 const REQUIRED_VARS = [
     'GOOGLE_EMAIL_ADDRESS',
     'GOOGLE_EMAIL_APP_PASSWORD_SMTP',
-    'SMTP_HOST',
 ];
 
 function validateEnv() {
@@ -69,7 +68,8 @@ async function verifyConnection() {
     if (!validateEnv()) return false;
     try {
         await getTransporter().verify();
-        console.log(`✅ SMTP connected — ${env('SMTP_HOST')}:${env('SMTP_PORT')} ready.`);
+        const cfg = buildSmtpConfig();
+        console.log(`✅ SMTP connected — ${cfg.host}:${cfg.port} ready.`);
         return true;
     } catch (err) {
         console.error('❌ SMTP connection failed:', _smtpHint(err));
@@ -139,8 +139,8 @@ async function sendEmail({ to, subject, text, html, retries = 2 }) {
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 function _isTransient(err) {
-    const transientCodes  = ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ESOCKET', 'ENOTFOUND'];
-    const transientSmtp   = [421, 450, 451, 452]; // 4xx = transient SMTP
+    const transientCodes = ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ESOCKET', 'ENOTFOUND'];
+    const transientSmtp = [421, 450, 451, 452]; // 4xx = transient SMTP
     return transientCodes.includes(err.code) || transientSmtp.includes(err.responseCode);
 }
 
@@ -151,10 +151,10 @@ function _isConnectionError(err) {
 function _smtpHint(err) {
     const cfg = buildSmtpConfig();
     const hints = {
-        EAUTH:        'Auth failed — check GOOGLE_EMAIL_ADDRESS & GOOGLE_EMAIL_APP_PASSWORD_SMTP. Gmail requires an App Password, not your account password.',
+        EAUTH: 'Auth failed — check GOOGLE_EMAIL_ADDRESS & GOOGLE_EMAIL_APP_PASSWORD_SMTP. Gmail requires an App Password, not your account password.',
         ECONNREFUSED: `Connection refused on ${cfg.host}:${cfg.port} — check SMTP_HOST / SMTP_PORT.`,
-        ENOTFOUND:    `Host "${cfg.host}" not found — check SMTP_HOST and network/DNS.`,
-        ETIMEDOUT:    `Timeout on ${cfg.host}:${cfg.port} — port may be blocked by firewall. Try port 465 with SMTP_SECURE=true.`,
+        ENOTFOUND: `Host "${cfg.host}" not found — check SMTP_HOST and network/DNS.`,
+        ETIMEDOUT: `Timeout on ${cfg.host}:${cfg.port} — port may be blocked by firewall. Try port 465 with SMTP_SECURE=true.`,
     };
     return hints[err.code] || err.message;
 }

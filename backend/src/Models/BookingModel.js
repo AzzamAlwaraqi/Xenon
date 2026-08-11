@@ -1,40 +1,26 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
 const { MongooseStandardDate } = require("../utils/dateFormatter");
+
 const BookingSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
     },
     user_id: {
-        type: String,
+        type: mongoose.Schema.Types.UUID,
         required: true,
         ref: "user"
     },
     vendor_id: {
-        type: String,
+        type: mongoose.Schema.Types.UUID,
         required: true,
         ref: "vendor"
     },
     package_id: {
-        type: String,
+        type: mongoose.Schema.Types.UUID,
         required: true,
         ref: "package"
-    },
-    booking_date: {
-        type: Date,
-        required: true
-
-    },
-    booking_time: {
-        type: String,
-        required: true,
-        default: function() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            return `${hours}:${minutes}`;
-        }
     },
     number_of_people: {
         type: Number,
@@ -42,21 +28,22 @@ const BookingSchema = new mongoose.Schema({
         max: [5, "Number of people must be at most 5"],
         required: true
     },
-    is_active: {
-        type: Boolean,
-        default: true
+    creator_role: {
+        type: String,
+        enum: ["user", "vendor"],
+        required: true
     },
     status: {
         type: String,
         required: true,
-        enum: ["pending","accepted", "rejected", "completed"],
+        enum: ["pending", "accepted", "rejected", "completed"],
         default: "pending"
     },
     total_price: {
         type: Number,
         required: true
     },
-    isDelete: {
+    isDeleted: { 
         type: Boolean,
         default: false
     },
@@ -69,4 +56,27 @@ const BookingSchema = new mongoose.Schema({
     toJSON: { getters: true, virtuals: true },
     toObject: { getters: true, virtuals: true }
 });
+
+
+BookingSchema.virtual('booking_time_formatted').get(function() {
+    if (!this.createdAt) return null;
+    
+    const date = new Date(this.createdAt);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${hours}:${minutes}`;
+});
+
+BookingSchema.virtual('booking_date_formatted').get(function() {
+    if (!this.createdAt) return null;
+    
+    const date = new Date(this.createdAt);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+});
+
 module.exports = mongoose.model("Booking", BookingSchema);

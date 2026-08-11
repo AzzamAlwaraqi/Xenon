@@ -63,7 +63,7 @@ exports.sendOTP = async ({
         throw new AppError("Email must be provided to send OTP", 400);
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = String(email).toLowerCase().trim();
     const otp = generateOTP(length);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
 
@@ -108,7 +108,7 @@ exports.verifyOTP = async ({ email, otp, purpose = "registration" }) => {
         throw new AppError("OTP code is required for verification", 400);
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = String(email).toLowerCase().trim();
 
     const otpRecord = await OTPModel.findOne({
         email: cleanEmail,
@@ -133,7 +133,7 @@ exports.verifyOTP = async ({ email, otp, purpose = "registration" }) => {
         throw new AppError("Too many failed attempts. Please request a new OTP code", 400);
     }
 
-    if (otpRecord.otp !== otp.toString().trim()) {
+    if (otpRecord.otp !== String(otp).trim()) {
         otpRecord.attempts += 1;
         await otpRecord.save();
 

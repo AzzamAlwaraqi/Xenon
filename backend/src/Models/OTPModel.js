@@ -30,7 +30,6 @@ const OTPSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    // Plain Date — no custom getter/setter. Required for TTL index to work correctly.
     expiresAt: {
         type: Date,
         default: () => new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
