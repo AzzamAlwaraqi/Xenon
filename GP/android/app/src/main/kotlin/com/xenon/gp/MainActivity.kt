@@ -1,4 +1,4 @@
-package com.example.gp
+package com.xenon.gp
 
 import io.flutter.embedding.android.FlutterActivity
 

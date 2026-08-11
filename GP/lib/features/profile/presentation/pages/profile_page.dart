@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:gp/app/theme/colors.dart';
+import 'package:gp/core/providers/settings_provider.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final isDark = settings.themeMode == ThemeMode.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
-        title: const Text('Hello, Voyager', style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: Text(
+          settings.locale.languageCode == 'ar' ? 'أهلاً بك' : 'Hello, Voyager',
+          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18),
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_outlined, color: Colors.white), onPressed: () {}),
+          IconButton(
+            icon: Icon(Icons.notifications_outlined, color: isDark ? Colors.white : Colors.black),
+            onPressed: () {},
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -44,7 +55,14 @@ class ProfilePage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text('Jordan Donovan', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Jordan Donovan',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -65,18 +83,44 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 40),
-            _buildSectionHeader('ACCOUNT SETTINGS'),
-            _buildSettingTile(Icons.person_outline, 'Personal Information', 'Contact and identity details'),
-            _buildSettingTile(Icons.payment, 'Payment Methods', 'Cards, wallets, and billing'),
+            _buildSectionHeader('ACCOUNT SETTINGS', context),
+            _buildSettingTile(Icons.person_outline, 'Personal Information', 'Contact and identity details', context),
+            _buildSettingTile(Icons.payment, 'Payment Methods', 'Cards, wallets, and billing', context),
             
             const SizedBox(height: 32),
-            _buildSectionHeader('PREFERENCES'),
-            _buildSettingTile(Icons.notifications_none, 'Notification Preferences', 'Alerts and communications'),
-            _buildSettingTile(Icons.language, 'Language & Currency', 'English (US), USD (\$)'),
+            _buildSectionHeader('PREFERENCES', context),
+            
+            // Theme Toggle
+            _buildSwitchTile(
+              Icons.brightness_6_outlined,
+              'Dark Mode',
+              'Toggle between bright and dark theme',
+              isDark,
+              (value) => settings.toggleTheme(),
+              context,
+            ),
+
+            // Language Selection
+            _buildActionTile(
+              Icons.language,
+              'Language',
+              settings.locale.languageCode == 'ar' ? 'العربية' : 'English',
+              () => _showLanguageDialog(context, settings),
+              context,
+            ),
+
+            // Currency Selection
+            _buildActionTile(
+              Icons.monetization_on_outlined,
+              'Currency',
+              settings.currency,
+              () => _showCurrencyDialog(context, settings),
+              context,
+            ),
 
             const SizedBox(height: 32),
-            _buildSectionHeader('SUPPORT'),
-            _buildSettingTile(Icons.help_outline, 'Help Center', 'FAQs and customer support'),
+            _buildSectionHeader('SUPPORT', context),
+            _buildSettingTile(Icons.help_outline, 'Help Center', 'FAQs and customer support', context),
 
             const SizedBox(height: 40),
             SizedBox(
@@ -86,19 +130,22 @@ class ProfilePage extends StatelessWidget {
                 icon: const Icon(Icons.logout),
                 label: const Text('Log out'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.surface,
-                  foregroundColor: Colors.white,
+                  backgroundColor: isDark ? AppColors.surface : Colors.grey[200],
+                  foregroundColor: isDark ? Colors.white : Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: isDark ? AppColors.border : Colors.grey[300]!),
                   ),
                   elevation: 0,
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            const Text('App Version 2.4.1 (Stable)', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+            Text(
+              'App Version 2.4.1 (Stable)',
+              style: TextStyle(color: isDark ? AppColors.textMuted : Colors.grey[600], fontSize: 12),
+            ),
             const SizedBox(height: 40),
           ],
         ),
@@ -106,40 +153,175 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
           title,
-          style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          style: TextStyle(
+            color: isDark ? AppColors.textMuted : Colors.grey[600],
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSettingTile(IconData icon, String title, String subtitle) {
+  Widget _buildSettingTile(IconData icon, String title, String subtitle, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: isDark ? AppColors.surface : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border, width: 0.5),
+        border: Border.all(color: isDark ? AppColors.border : Colors.grey[300]!, width: 0.5),
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: Colors.white, size: 20),
+          child: Icon(icon, color: isDark ? Colors.white : Colors.blue, size: 20),
         ),
-        title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
+        title: Text(
+          title,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(color: isDark ? AppColors.textMuted : Colors.grey[600], fontSize: 12),
+        ),
+        trailing: Icon(Icons.chevron_right, color: isDark ? AppColors.textMuted : Colors.grey[400]),
         onTap: () {},
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile(IconData icon, String title, String subtitle, bool value, ValueChanged<bool> onChanged, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surface : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.border : Colors.grey[300]!, width: 0.5),
+      ),
+      child: SwitchListTile(
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: isDark ? Colors.white : Colors.orange, size: 20),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(color: isDark ? AppColors.textMuted : Colors.grey[600], fontSize: 12),
+        ),
+        value: value,
+        onChanged: onChanged,
+        activeThumbColor: AppColors.accentGreen,
+      ),
+    );
+  }
+
+  Widget _buildActionTile(IconData icon, String title, String value, VoidCallback onTap, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surface : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.border : Colors.grey[300]!, width: 0.5),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.purple.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: isDark ? Colors.white : Colors.purple, size: 20),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              value,
+              style: TextStyle(color: isDark ? AppColors.accentGreen : Colors.blue, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right, color: isDark ? AppColors.textMuted : Colors.grey[400]),
+          ],
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context, SettingsProvider settings) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Language'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('English'),
+              trailing: settings.locale.languageCode == 'en' ? const Icon(Icons.check, color: AppColors.accentGreen) : null,
+              onTap: () {
+                settings.setLocale('en');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('العربية'),
+              trailing: settings.locale.languageCode == 'ar' ? const Icon(Icons.check, color: AppColors.accentGreen) : null,
+              onTap: () {
+                settings.setLocale('ar');
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCurrencyDialog(BuildContext context, SettingsProvider settings) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Currency'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ['USD', 'JOD', 'EUR'].map((c) => ListTile(
+            title: Text(c),
+            trailing: settings.currency == c ? const Icon(Icons.check, color: AppColors.accentGreen) : null,
+            onTap: () {
+              settings.setCurrency(c);
+              Navigator.pop(context);
+            },
+          )).toList(),
+        ),
       ),
     );
   }

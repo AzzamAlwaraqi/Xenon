@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:gp/app/theme/colors.dart';
 import 'package:gp/core/widgets/app_button.dart';
+import 'package:gp/core/providers/booking_provider.dart';
 
 class DestinationDetailsPage extends StatelessWidget {
   final String title;
@@ -36,7 +38,14 @@ class DestinationDetailsPage extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(imageUrl, fit: BoxFit.cover),
+                  Image.network(
+                    imageUrl, 
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: AppColors.surface,
+                      child: const Icon(Icons.image_not_supported, color: Colors.white, size: 50),
+                    ),
+                  ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -64,7 +73,7 @@ class DestinationDetailsPage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.accentGreen.withValues(alpha: 0.1),
+                        color: AppColors.accentGreen.withValues(alpha: 1.0),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -170,7 +179,26 @@ class DestinationDetailsPage extends StatelessWidget {
             Expanded(
               child: AppButton(
                 text: 'Reserve Now',
-                onPressed: () {},
+                onPressed: () {
+                  final numericPrice = double.tryParse(price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
+                  context.read<BookingProvider>().addBooking(
+                    Booking(
+                      title: title,
+                      date: 'Oct 24 - Oct 28, 2024',
+                      status: 'CONFIRMED',
+                      statusColor: AppColors.accentGreen,
+                      icon: Icons.bookmark,
+                      price: numericPrice,
+                    ),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Booking Successful!'),
+                      backgroundColor: AppColors.accentGreen,
+                    ),
+                  );
+                  Navigator.pop(context);
+                },
               ),
             ),
           ],
@@ -187,7 +215,7 @@ class DestinationDetailsPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: Colors.white.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: AppColors.accentGreen, size: 18),

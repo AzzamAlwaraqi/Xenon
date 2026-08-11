@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:gp/app/theme/colors.dart';
+import 'package:gp/core/providers/settings_provider.dart';
+
+import 'package:gp/core/providers/booking_provider.dart';
 
 class BookingsPage extends StatefulWidget {
   const BookingsPage({super.key});
@@ -13,100 +17,124 @@ class _BookingsPageState extends State<BookingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final bookingProvider = context.watch<BookingProvider>();
+    final isDark = settings.themeMode == ThemeMode.dark;
+    final isArabic = settings.locale.languageCode == 'ar';
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
-        title: const Text('Hello, Voyager', style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: Text(
+          isArabic ? 'حجوزاتي' : 'My Bookings',
+          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18),
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_outlined, color: Colors.white), onPressed: () {}),
+          IconButton(
+            icon: Icon(Icons.notifications_outlined, color: isDark ? Colors.white : Colors.black),
+            onPressed: () {},
+          ),
           const SizedBox(width: 8),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 10),
-            const Text('YOUR ITINERARY', style: TextStyle(color: AppColors.accentGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Bookings', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
+      body: Directionality(
+        textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+              Text(
+                isArabic ? 'خط سير الرحلة' : 'YOUR ITINERARY',
+                style: const TextStyle(color: AppColors.accentGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isArabic ? 'الحجوزات' : 'Bookings',
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 28, fontWeight: FontWeight.bold),
                   ),
-                  child: Row(
-                    children: [
-                      _buildToggleButton('Upcoming', isUpcoming, () => setState(() => isUpcoming = true)),
-                      _buildToggleButton('Past', !isUpcoming, () => setState(() => isUpcoming = false)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: isUpcoming 
-                ? ListView(
-                  children: [
-                    _buildBookingCard(
-                      title: 'Tokyo Neo-Expedition',
-                      date: 'Oct 14 - Oct 21, 2024',
-                      status: 'CONFIRMED',
-                      statusColor: AppColors.accentGreen,
-                      icon: Icons.airplanemode_active,
-                      showCheckIn: true,
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surface : Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 16),
-                    _buildBookingCard(
-                      title: 'Mars-Orbit Transit Hub',
-                      date: 'Dec 02 - Dec 05, 2024',
-                      status: 'PENDING',
-                      statusColor: Colors.amber,
-                      icon: Icons.hotel,
-                      bookingId: '#BK-9902',
-                      showDetails: true,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildBookingCard(
-                      title: 'Icelandic Ring Road',
-                      date: 'Jan 15 - Jan 25, 2025',
-                      status: 'CONFIRMED',
-                      statusColor: AppColors.accentGreen,
-                      icon: Icons.directions_car,
-                      footerText: 'Awaiting car model confirmation',
-                      showMore: true,
-                    ),
-                  ],
-                )
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Row(
                       children: [
-                        Icon(Icons.history, color: AppColors.textMuted, size: 48),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No past bookings yet',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 16),
+                        _buildToggleButton(
+                          isArabic ? 'القادمة' : 'Upcoming',
+                          isUpcoming,
+                          () => setState(() => isUpcoming = true),
+                          isDark,
+                        ),
+                        _buildToggleButton(
+                          isArabic ? 'السابقة' : 'Past',
+                          !isUpcoming,
+                          () => setState(() => isUpcoming = false),
+                          isDark,
                         ),
                       ],
                     ),
                   ),
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: isUpcoming 
+                  ? (bookingProvider.bookings.isEmpty 
+                    ? _buildEmptyState(isArabic, isDark)
+                    : ListView.builder(
+                        itemCount: bookingProvider.bookings.length,
+                        itemBuilder: (context, index) {
+                          final booking = bookingProvider.bookings[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildBookingCard(
+                              title: booking.title,
+                              date: booking.date,
+                              status: booking.status,
+                              statusColor: booking.statusColor,
+                              icon: booking.icon,
+                              isDark: isDark,
+                              currency: settings.currency,
+                              price: booking.price,
+                              bookingId: booking.bookingId,
+                            ),
+                          );
+                        },
+                      ))
+                  : _buildEmptyState(isArabic, isDark),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildToggleButton(String label, bool isSelected, VoidCallback onTap) {
+  Widget _buildEmptyState(bool isArabic, bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.history, color: isDark ? AppColors.textMuted : Colors.grey[400], size: 48),
+          const SizedBox(height: 16),
+          Text(
+            isArabic ? 'لا توجد حجوزات بعد' : 'No bookings yet',
+            style: TextStyle(color: isDark ? AppColors.textMuted : Colors.grey[600], fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleButton(String label, bool isSelected, VoidCallback onTap, bool isDark) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -118,7 +146,7 @@ class _BookingsPageState extends State<BookingsPage> {
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : AppColors.textMuted,
+            color: isSelected ? Colors.white : (isDark ? AppColors.textMuted : Colors.grey[600]),
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -133,18 +161,31 @@ class _BookingsPageState extends State<BookingsPage> {
     required String status,
     required Color statusColor,
     required IconData icon,
+    required bool isDark,
+    required String currency,
+    required double price,
     bool showCheckIn = false,
     bool showDetails = false,
     bool showMore = false,
     String? bookingId,
     String? footerText,
   }) {
+    String formattedPrice = '';
+    if (currency == 'USD') {
+      formattedPrice = '\$${price.toStringAsFixed(0)}';
+    } else if (currency == 'JOD') {
+      formattedPrice = '${(price * 0.71).toStringAsFixed(0)} JOD';
+    } else if (currency == 'EUR') {
+      formattedPrice = '€${(price * 0.92).toStringAsFixed(0)}';
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: isDark ? AppColors.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border, width: 0.5),
+        border: Border.all(color: isDark ? AppColors.border : Colors.grey[300]!, width: 0.5),
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
@@ -154,10 +195,10 @@ class _BookingsPageState extends State<BookingsPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blue.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 24),
+                child: Icon(icon, color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.blue, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -168,7 +209,7 @@ class _BookingsPageState extends State<BookingsPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          child: Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -182,10 +223,19 @@ class _BookingsPageState extends State<BookingsPage> {
                     ),
                     const SizedBox(height: 4),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.calendar_today, color: AppColors.textMuted, size: 12),
-                        const SizedBox(width: 4),
-                        Text(date, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today, color: isDark ? AppColors.textMuted : Colors.grey[600], size: 12),
+                            const SizedBox(width: 4),
+                            Text(date, style: TextStyle(color: isDark ? AppColors.textMuted : Colors.grey[600], fontSize: 12)),
+                          ],
+                        ),
+                        Text(
+                          formattedPrice,
+                          style: TextStyle(color: isDark ? AppColors.accentGreen : Colors.blue, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
                       ],
                     ),
                   ],
@@ -195,13 +245,13 @@ class _BookingsPageState extends State<BookingsPage> {
           ),
           if (bookingId != null || showCheckIn || showDetails) ...[
             const SizedBox(height: 16),
-            const Divider(color: AppColors.border, height: 1),
+            Divider(color: isDark ? AppColors.border : Colors.grey[200], height: 1),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (bookingId != null)
-                  Text('Booking ID: $bookingId', style: const TextStyle(color: AppColors.textMuted, fontSize: 12))
+                  Text('Booking ID: $bookingId', style: TextStyle(color: isDark ? AppColors.textMuted : Colors.grey[600], fontSize: 12))
                 else if (showCheckIn)
                    const Row(
                     children: [
@@ -230,8 +280,8 @@ class _BookingsPageState extends State<BookingsPage> {
                   OutlinedButton(
                     onPressed: () {},
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.border),
-                      foregroundColor: Colors.white,
+                      side: BorderSide(color: isDark ? AppColors.border : Colors.grey[300]!),
+                      foregroundColor: isDark ? Colors.white : Colors.black,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -243,13 +293,13 @@ class _BookingsPageState extends State<BookingsPage> {
           ],
           if (footerText != null) ...[
             const SizedBox(height: 16),
-            const Divider(color: AppColors.border, height: 1),
+            Divider(color: isDark ? AppColors.border : Colors.grey[200], height: 1),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(footerText, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                if (showMore) const Icon(Icons.more_vert, color: AppColors.textMuted, size: 20),
+                Text(footerText, style: TextStyle(color: isDark ? AppColors.textMuted : Colors.grey[600], fontSize: 12)),
+                if (showMore) Icon(Icons.more_vert, color: isDark ? AppColors.textMuted : Colors.grey[400], size: 20),
               ],
             ),
           ],
