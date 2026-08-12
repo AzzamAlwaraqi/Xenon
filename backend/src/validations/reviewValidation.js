@@ -1,92 +1,96 @@
 const Joi = require('joi');
+const AppError = require("../utils/AppError");
 
-exports.createReviewValidation = Joi.object({
-    rating: Joi.number()
-        .min(1)
-        .max(5)
-        .required()
-        .messages({
-            'number.base': 'this number must be a number',
-            'number.min': 'this number must be at least 1',
-            'number.max': 'this number must not be more than 5',
-            'any.required': 'this number is required'
-        }),
-
-    comment: Joi.string()
-        .trim()
-        .min(5)
-        .max(500)
-        .optional() 
-        .messages({
-            'string.base': 'this text must be string',
-            'string.min': 'this text must be at least 5 characters long',
-            'string.max': 'this text must not be more than 500 characters long'
-        }),
-
-    targetId: Joi.string()
-        .hex()
-        .length(24)
-        .required()
-        .messages({
-            'string.hex': 'the format of this id is not valid',
-            'string.length': 'the length of this id is not valid',
-            'any.required': 'this id is required'
-        })
+const createReviewSchema = Joi.object({
+    booking_id: Joi.string().uuid().required().messages({
+        'string.guid': 'The format of this booking id is not valid (must be UUID)',
+        'any.required': 'Booking id is required'
+    }),
+    rating: Joi.number().min(1).max(5).required().messages({
+        'number.base': 'Rating must be a number',
+        'number.min': 'Rating must be at least 1',
+        'number.max': 'Rating must not be more than 5',
+        'any.required': 'Rating is required'
+    }),
+    comment: Joi.string().trim().min(3).max(500).optional().allow('', null).messages({
+        'string.base': 'Comment must be a string',
+        'string.min': 'Comment must be at least 3 characters long',
+        'string.max': 'Comment must not be more than 500 characters long'
+    })
 });
 
-exports.updateReviewByIdValidation = Joi.object({
-    rating: Joi.number()
-        .min(1)
-        .max(5)
-        .optional()
-        .messages({
-            'number.base': 'this number must be a number',
-            'number.min': 'this number must be at least 1',
-            'number.max': 'this number must not be more than 5'
-        }),
+const updateReviewBodySchema = Joi.object({
+    rating: Joi.number().min(1).max(5).optional(),
+    comment: Joi.string().trim().min(3).max(500).optional()
+}).min(1);
 
-    comment: Joi.string()
-        .trim()
-        .min(5)
-        .max(500)
-        .optional()
-        .messages({
-            'string.base': 'this text must be string',
-            'string.min': 'this text must be at least 5 characters long',
-            'string.max': 'this text must not be more than 500 characters long'
-        }),
-
-    reviewId: Joi.string()
-        .hex()
-        .length(24)
-        .required()
-        .messages({
-            'string.hex': 'the format of this id is not valid',
-            'string.length': 'the length of this id is not valid',
-            'any.required': 'this id is required'
-        })
+const replyReviewSchema = Joi.object({
+    reply_comment: Joi.string().trim().min(2).max(500).required().messages({
+        'any.required': 'Reply comment is required'
+    })
 });
 
-exports.getReviewsByTargetIdValidation = Joi.object({
-    targetId: Joi.string()
-        .hex()
-        .length(24)
-        .required()
-        .messages({
-            'string.hex': 'the format of this id is not valid',
-            'string.length': 'the length of this id is not valid',
-            'any.required': 'this id is required'
-        })
+const updateStatusSchema = Joi.object({
+    status: Joi.string().valid("accepted", "rejected", "in-progress").required().messages({
+        'any.required': 'Status is required'
+    })
 });
 
-exports.deleteReviewValidation = Joi.object({
-    reviewId: Joi.string()
-        .hex()
-        .length(24)
-        .required()
-        .messages({
-            'string.hex': 'the format of this id is not valid',
-            'string.length': 'the length of this id is not valid',
-            'any.required': 'this id is required'
-        })
+const paramIdSchema = Joi.object({
+    id: Joi.string().uuid().required().messages({
+        'string.guid': 'The format of this id is not valid (must be UUID)',
+        'any.required': 'This id is required in the URL'
+    })
 });
+
+const queryReviewSchema = Joi.object({
+    page: Joi.number().integer().min(1).optional(),
+    limit: Joi.number().integer().min(1).max(100).optional(),
+    rating: Joi.number().min(1).max(5).optional(),
+    status: Joi.string().valid("accepted", "rejected", "in-progress").optional()
+});
+
+exports.createReviewValidation = (req, res, next) => {
+    const { error, value } = createReviewSchema.validate(req.body);
+    if (error) return next(new AppError(error.details[0].message, 400));
+    req.body = value;
+    next();
+};
+
+exports.updateReviewValidation = (req, res, next) => {
+    const { error, value } = updateReviewBodySchema.validate(req.body);
+    if (error) return next(new AppError(error.details[0].message, 400));
+    req.body = value;
+    next();
+};
+
+exports.getReviewsQueryValidation = (req, res, next) => {
+    const { error, value } = queryReviewSchema.validate(req.query);
+    if (error) return next(new AppError(error.details[0].message, 400));
+    req.query = value;
+    next();
+};
+
+exports.paramIdValidation = (req, res, next) => {
+    const idToValidate = req.params.reviewId || req.params.targetId || req.params.id;
+    const { error, value } = paramIdSchema.validate({ id: idToValidate });
+    if (error) return next(new AppError(error.details[0].message, 400));
+    req.params.id = value.id;
+    next();
+};
+
+exports.reviewIdParamValidation = exports.paramIdValidation;
+
+exports.replyOnReviewValidation = (req, res, next) => {
+    const { error, value } = replyReviewSchema.validate(req.body);
+    if (error) return next(new AppError(error.details[0].message, 400));
+    req.body = value;
+    next();
+};
+
+exports.updateReviewStatusValidation = (req, res, next) => {
+    const { error, value } = updateStatusSchema.validate(req.body);
+    if (error) return next(new AppError(error.details[0].message, 400));
+    req.body = value;
+    next();
+};

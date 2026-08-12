@@ -1,16 +1,22 @@
 const express = require("express");
-const { getbooking, getAllbookingMe, updatebooking, deletebooking, createbooking, getAllRequests, getMyBookings, getUserHistory } = require("../controllers/bookingController");
+const bookingController = require("../controllers/bookingController");
 const { protect } = require("../middlewares/authMiddleware");
-const bookingvalidator = require("../middlewares/validators/bookingValidator");
 const router = express.Router();
 
+router.post("/create-booking", protect, bookingController.createbooking);
 
-router.post("/create-booking", protect, bookingvalidator.createbooking, createbooking);
-router.get("/all-bookings", protect, bookingvalidator.getAllbooking, getAllbookingMe);
-router.get("/my-bookings", protect, bookingvalidator.getAllbooking, getMyBookings); // Not yet implemented
-router.get("/my-history", protect, bookingvalidator.getAllbooking, getUserHistory); // Not yet implemented
-router.get("/get-booking/:id", protect, bookingvalidator.getbooking, getbooking);
-router.put("/delete-booking/:id", protect, bookingvalidator.deletebooking, deletebooking);
-router.get('/vendor/booking-requests', protect, bookingvalidator.getAllbooking, getAllRequests);
+router.get("/all-bookings", protect, bookingController.getAllbookingMe);
+router.get("/my-bookings", protect, bookingController.getMyBookings);
+router.get("/my-history", protect, bookingController.getUserHistory);
+router.get("/get-booking/:id", protect, bookingController.getbooking);
+
+router.put("/update-booking/:id", protect, bookingController.updatebooking);
+router.patch("/update-status/:id", protect, bookingController.updateBookingStatus);
+router.put("/delete-booking/:id", protect, bookingController.deletebooking);
+
+router.get('/vendor/booking-requests', protect, bookingController.getAllRequests);
+
+router.get('/user/pending-requests', protect, bookingController.getUserPendingRequests);
+router.get('/vendor/pending-requests-count', protect, bookingController.getPendingRequestsCount);
 
 module.exports = router;

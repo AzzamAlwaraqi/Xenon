@@ -1,13 +1,21 @@
 const authCore = require("../services/Core/authCore");
 const AppError = require("../utils/AppError");
-const joi = require("joi");
 const { sendOTP } = require("../utils/OTPService");
 const UserModel = require("../Models/UserModel");
 const checkRole = require("../utils/checkRole");
+const authValidation = require("../validations/authValidation");
 
 exports.register = async (req, res, next) => {
     try {
         const role = req.body.role === "vendor" ? "vendor" : "user";
+        const validationFunction = role === "vendor" ? authValidation.createAccountValidation : authValidation.createClientValidation;
+        
+        const { error, value } = validationFunction(req.body);
+        if (error) {
+            return next(new AppError(error.details.map(d => d.message).join(", "), 400));
+        }
+        req.body = value;
+
         const result = await authCore.createAccountCore(req.body, role, req.deviceInfo || {});
 
         if (role === "user") {
@@ -59,6 +67,12 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
     try {
+        const { error, value } = authValidation.loginAccountValidation(req.body);
+        if (error) {
+            return next(new AppError(error.details.map(d => d.message).join(", "), 400));
+        }
+        req.body = value;
+
         const role = req.body.role;
         if (role) {
             const isValidRole = checkRole(role);
@@ -106,6 +120,12 @@ exports.logout = async (req, res, next) => {
 
 exports.resetPassword = async (req, res, next) => {
     try {
+        const { error, value } = authValidation.resetPasswordValidation(req.body);
+        if (error) {
+            return next(new AppError(error.details.map(d => d.message).join(", "), 400));
+        }
+        req.body = value;
+
         const { email, password, token, otpCode } = req.body;
         const resetToken = token || otpCode;
         
@@ -125,6 +145,12 @@ exports.resetPassword = async (req, res, next) => {
 
 exports.forgotPassword = async (req, res, next) => {
     try {
+        const { error, value } = authValidation.forgotPasswordValidation(req.body);
+        if (error) {
+            return next(new AppError(error.details.map(d => d.message).join(", "), 400));
+        }
+        req.body = value;
+
         const { email } = req.body;
         
         if (!email) {

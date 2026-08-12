@@ -2,7 +2,7 @@ const AppError = require('../../../utils/AppError');
 const sharp = require('sharp');
 const APIFeatures = require('../../../utils/apiFeatures');
 const Package = require('../../../Models/PackageModel');
-const FileStorageService = require("../../Integration/FileStorgeService");
+const FileStorageService = require("../../Integration/FileStorageService");
 const multer = require("multer");
 
 exports.getAllPackages = async function (req, res) {
@@ -60,8 +60,10 @@ exports.updatePackage = async function (req, res, package_id) {
 
         if (req.file) {
 
-            if (existingPackage.package_image_id) {
-                await FileStorageService.deleteImage(existingPackage.package_image_id);
+            if (existingPackage.images && existingPackage.images.length > 0) {
+                for (const image of existingPackage.images) {
+                    await FileStorageService.deleteImage(image.public_id);
+                }
             }
 
             const optimizedBuffer = await sharp(req.file.buffer)
@@ -71,11 +73,13 @@ exports.updatePackage = async function (req, res, package_id) {
 
             const uploadResult = await FileStorageService.uploadImageFromBuffer(
                 optimizedBuffer,
-                "xenon/packages"
+            `xenon/packages/vendor/${user.company_name}/${packageData.package_name}/${packageData.package_id}`
             );
 
-            updateData.package_image = uploadResult.secure_url;
-            updateData.package_image_id = uploadResult.public_id;
+            updateData.images = [{
+                url: uploadResult.secure_url,
+                public_id: uploadResult.public_id
+            }];
         }
 
         if (Object.keys(updateData).length === 0) {
@@ -105,8 +109,10 @@ exports.deletePackageCore = async function (req, res, package_id) {
             throw new AppError('the package is not found ', 404);
         }
 
-        if (packageDoc.package_image_id) {
-            await FileStorageService.deleteImage(packageDoc.package_image_id);
+        if (packageDoc.images && packageDoc.images.length > 0) {
+            for (const image of packageDoc.images) {
+                await FileStorageService.deleteImage(image.public_id);
+            }
         }
 
         await Package.findByIdAndUpdate(package_id, { isDelete: true, deletionRequestedAt: new Date() });
@@ -117,8 +123,8 @@ exports.deletePackageCore = async function (req, res, package_id) {
         throw new AppError(err.message, 400);
     }
 }
-
-exports.createPackage = async function (req, res, next) {
+/*
+exports.createPackage = async function (req, res) {
     try {
         const { 
             vendor_id,
@@ -162,8 +168,10 @@ exports.createPackage = async function (req, res, next) {
                 package_description,
                 startDate,
                 endDate,
-                package_image: imageUrl,
-                package_image_id: imagePublicId,
+                images: [{
+                    url: imageUrl,
+                    public_id: imagePublicId
+                }],
                 package_type: package_type ? package_type.toLowerCase() : package_type,
                 package_status
             });
@@ -174,9 +182,56 @@ exports.createPackage = async function (req, res, next) {
         }
 
     } catch (err) {
-        // إذا كنت تستخدم Global Error Handler في Express
-        // next(err); 
-        // أو إذا كنت تعتمد على رمي الخطأ مباشرة:
         throw new AppError(err.message, err.statusCode || 400);
+    }
+};
+*/
+
+exports.createPackage = async function (user, packageData, file) {
+    try {
+        const secureVendorId = user._id;
+
+        if (!file) {
+            throw new AppError("Package image is required", 400);
+        }
+
+        const packageExists = await Package.findOne({ 
+            package_name: packageData.package_name,
+            vendor_id: secureVendorId 
+        });
+        
+        if (packageExists) {
+            throw new AppError('You already have a package with this exact name', 400);
+        }
+
+        const optimizedBuffer = await sharp(file.buffer)
+            .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toBuffer();
+
+        const uploadResult = await FileStorageService.uploadImageFromBuffer(
+            optimizedBuffer,
+            `xenon/packages/vendor/${user.company_name}/${packageData.package_name}/${packageData.package_id}`
+        );
+
+        const newPackage = await Package.create({
+            vendor_id: secureVendorId,
+            package_name: packageData.package_name,
+            package_price: packageData.package_price,
+            package_description: packageData.package_description,
+            startDate: packageData.startDate,
+            endDate: packageData.endDate,
+            images: [{
+                url: uploadResult.secure_url,
+                public_id: uploadResult.public_id
+            }],
+            package_type: packageData.package_type ? packageData.package_type.toLowerCase() : packageData.package_type,
+            package_status: packageData.package_status
+        });
+
+        return newPackage;
+
+    } catch (err) {
+        throw new AppError(err.message, err.statusCode || 500);
     }
 };

@@ -9,7 +9,7 @@ const PackageSchema = new mongoose.Schema({
     vendor_id: {
         type: mongoose.Schema.Types.UUID,
         required: true,
-        ref: "vendor"
+        ref: "Vendor"
     },
     startDate: {
         type: Date,
@@ -115,11 +115,10 @@ const PackageSchema = new mongoose.Schema({
     toObject: { getters: true, virtuals: true }
 });
 
-PackageSchema.pre('save', function(next) {
+PackageSchema.pre('save', function() {
     if (this.isNew && this.available_seats === undefined) {
         this.available_seats = this.max_people;
     }
-    next();
 });
 
 module.exports = mongoose.model("Package", PackageSchema);

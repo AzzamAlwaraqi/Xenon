@@ -1,5 +1,6 @@
 const profileCore = require("../services/Core/profileCore");
 const AppError = require("../utils/AppError");
+const authValidation = require("../validations/authValidation");
 
 exports.getProfile = async (req, res, next) => {
     try {
@@ -23,6 +24,13 @@ exports.updateProfile = async (req, res, next) => {
         const user = req.user;
         if (!user) return next(new AppError("User not authenticated", 401));
 
+        const role = user.role === "vendor" ? "vendor" : "user";
+        const validationFunction = role === "vendor" ? authValidation.updatevendorValidation : authValidation.updateProfileValidation;
+        
+        const { error, value } = validationFunction(req.body);
+        if (error) return next(new AppError(error.details.map(d => d.message).join(", "), 400));
+        req.body = value;
+
         const updatedProfile = await profileCore.updateProfileCore(user, req.body);
         res.status(200).json({
             status: "success",
@@ -38,6 +46,10 @@ exports.changePassword = async (req, res, next) => {
     try {
         const user = req.user;
         if (!user) return next(new AppError("User not authenticated", 401));
+
+        const { error, value } = authValidation.changePasswordValidation(req.body);
+        if (error) return next(new AppError(error.details.map(d => d.message).join(", "), 400));
+        req.body = value;
 
         const { old_password, new_password, oldPassword, newPassword } = req.body;
         
@@ -62,6 +74,10 @@ exports.deleteProfile = async (req, res, next) => {
     try {
         const user = req.user;
         if (!user) return next(new AppError("User not authenticated", 401));
+
+        const { error, value } = authValidation.deleteAccountValidation(req.body);
+        if (error) return next(new AppError(error.details.map(d => d.message).join(", "), 400));
+        req.body = value;
 
         const result = await profileCore.deleteAccountCore(user);
         res.status(200).json({

@@ -3,7 +3,7 @@
  * @param {Array} allowedStatuses - array of statuses allowed to transition from or to (e.g., ["pending", "accepted", "rejected", "completed"])
  * @returns {boolean}
  */
-const checkStatus = function (status, allowedStatuses = ["pending", "accepted", "rejected", "completed"]) {
+const checkStatus = function (status, allowedStatuses = ["pending", "accepted", "rejected", "completed","cancelled"]) {
     if (!Array.isArray(allowedStatuses)) {
         return false;
     }

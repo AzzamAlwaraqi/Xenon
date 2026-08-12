@@ -59,7 +59,7 @@ const VendorSchema = new mongoose.Schema({
     vendor_owner_id: {
         type: mongoose.Schema.Types.UUID,
         required: true,
-        ref: "user"
+        ref: "User"
     },
     isDelete: {
         type: Boolean,

@@ -2,7 +2,9 @@ const joi = require('joi');
 
 exports.createBookingValidation = function (body) {
     const Schema = joi.object({
-        package_id: joi.string().required(),
+        package_id: joi.string().uuid().required().messages({
+            "string.guid": "Package ID must be a valid UUID"
+        }),
         
         booking_date: joi.date().iso().min('now').required(),
         
@@ -18,7 +20,9 @@ exports.createBookingValidation = function (body) {
 ////number of people can be updated and booking date  just or can chenge the pakage that can updated 
 exports.updateBookingValidation = function (body) {
     const Schema = joi.object({
-        package_id: joi.string().optional(),
+        package_id: joi.string().uuid().optional().messages({
+            "string.guid": "Package ID must be a valid UUID"
+        }),
         booking_date: joi.date().iso().optional().messages({
             "date.format": "Booking date must be a valid ISO date"
         }),
@@ -35,15 +39,35 @@ exports.updateBookingValidation = function (body) {
     return Schema.validate(body, { abortEarly: false, stripUnknown: true });
 };
 
-exports.deleteBookingValidation = function (body) {
+exports.bookingIdParamValidation = function (params) {
     const Schema = joi.object({
-        booking_id: joi.string().hex().length(24).required().messages({
+        id: joi.string().uuid().required().messages({
             "string.empty": "Booking ID is required",
-            "string.hex": "Invalid Booking ID format",
-            "string.length": "Booking ID must be a valid 24-character hex string",
+            "string.guid": "Invalid Booking ID format, Booking ID must be a valid UUID",
             "any.required": "Booking ID is required"
         })
     });
 
+    return Schema.validate(params, { abortEarly: false, stripUnknown: true });
+};
+
+exports.updateBookingStatusValidation = function (body) {
+    const Schema = joi.object({
+        status: joi.string().valid("accepted", "rejected", "completed").required().messages({
+            "any.only": "Status must be one of: accepted, rejected, completed",
+            "any.required": "Status is required"
+        })
+    });
+
     return Schema.validate(body, { abortEarly: false, stripUnknown: true });
+};
+
+exports.getAllRequestsQueryValidation = function (query) {
+    const Schema = joi.object({
+        package_id: joi.string().uuid().optional().messages({
+            "string.guid": "Invalid Package ID format, must be a valid UUID"
+        })
+    });
+
+    return Schema.validate(query, { abortEarly: false, stripUnknown: true });
 };

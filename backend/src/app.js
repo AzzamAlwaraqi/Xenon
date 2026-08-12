@@ -7,6 +7,8 @@ const bookingRoutes = require("./Routes/bookingRoutes");
 const packageRoutes = require("./Routes/packageRoutes");
 const adminRoutes = require("./Routes/adminRoutes");
 const aiRoutes = require("./Routes/aiRoutes");
+const complaintRoutes = require("./Routes/complaintRouter");
+const reviewRoutes = require("./Routes/reviewRouter");
 
 const app = express();
 
@@ -36,6 +38,8 @@ app.use("/api/v1/bookings", bookingRoutes);
 app.use("/api/v1/packages", packageRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/ai", aiRoutes);
+app.use("/api/v1/complaints", complaintRoutes);
+app.use("/api/v1/reviews", reviewRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!');

@@ -10,17 +10,21 @@ const BookingSchema = new mongoose.Schema({
     user_id: {
         type: mongoose.Schema.Types.UUID,
         required: true,
-        ref: "user"
+        ref: "User"
     },
     vendor_id: {
         type: mongoose.Schema.Types.UUID,
         required: true,
-        ref: "vendor"
+        ref: "Vendor"
     },
     package_id: {
         type: mongoose.Schema.Types.UUID,
         required: true,
-        ref: "package"
+        ref: "Package"
+    },
+    booking_date: {
+        type: Date,
+        required: true
     },
     number_of_people: {
         type: Number,
@@ -36,7 +40,7 @@ const BookingSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true,
-        enum: ["pending", "accepted", "rejected", "completed"],
+        enum: ["pending", "accepted", "rejected", "completed", "cancelled"],
         default: "pending"
     },
     total_price: {
