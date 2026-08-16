@@ -1,12 +1,14 @@
 // Libraries
 import { ArrowRight, Mail } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 // Components and services
 import AuthImage from '../components/AuthImage.jsx'
 import PasswordField from '../components/PasswordField.jsx'
 import { authApi } from '../services/api.js'
+import { storage, ROLE_KEY, TOKEN_KEY } from '../services/storage.js'
+import { ROUTES } from '../routes/routes.config.js'
 import { validateLogin } from '../utils/formValidation.js'
 
 // Page image
@@ -14,6 +16,7 @@ const loginImage = 'https://images.unsplash.com/photo-1724739541524-dd6ee3fc7ff9
 
 // Login page
 export default function Login() {
+  const navigate = useNavigate()
   const [role, setRole] = useState('user')
   const [form, setForm] = useState({ email: '', password: '' })
   const [status, setStatus] = useState({ loading: false, message: '', type: '' })
@@ -29,8 +32,14 @@ export default function Login() {
     setStatus({ loading: true, message: '', type: '' })
     try {
       const result = await authApi.login({ ...form, role })
-      localStorage.setItem('xenonUser', JSON.stringify(result.data || result.user || {}))
+      const token = result.data?.token
+      if (!token) throw new Error('The API did not return an authentication token.')
+      storage.set(TOKEN_KEY, token)
+      storage.set(ROLE_KEY, role)
+      storage.set('xenon_session', result.data?.session || null)
+      storage.set('xenon_user', result.data?.user || null)
       setStatus({ loading: false, message: 'Welcome back. Your session is ready.', type: 'success' })
+      navigate(role === 'vendor' ? ROUTES.VENDOR : ROUTES.DASHBOARD)
     } catch (error) {
       setStatus({ loading: false, message: error.message, type: 'error' })
     }

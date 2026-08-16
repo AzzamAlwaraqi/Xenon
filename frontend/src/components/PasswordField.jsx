@@ -12,7 +12,7 @@ export default function PasswordField({ label = 'Password', value, onChange, pla
     { label: 'Contains a letter', passed: /[A-Za-z]/.test(value) },
     { label: 'Contains a number', passed: /\d/.test(value) },
     { label: 'Uses uppercase and lowercase letters', passed: /[a-z]/.test(value) && /[A-Z]/.test(value) },
-    { label: 'Special character (recommended)', passed: /[^A-Za-z0-9]/.test(value), optional: true },
+    { label: 'Contains a special character (@ $ ! % * ? &) — required', passed: /[@$!%*?&]/.test(value) },
     { label: '12+ characters (recommended)', passed: value.length >= 12, optional: true },
   ], [value])
   const passedCount = rules.filter((rule) => rule.passed).length
