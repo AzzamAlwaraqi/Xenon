@@ -30,7 +30,15 @@ export default function TravellerRegistration() {
     }
     setStatus({loading:true,message:'',type:''})
     try {
-      await authApi.registerTraveller({ name:form.name, email:form.email, password:form.password, gender:form.gender, mobileNumber:form.mobileNumber, DateOfBirth:form.DateOfBirth, role:'user' })
+      await authApi.register({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        gender: form.gender === 'Mr.' ? 'male' : 'female',
+        mobileNumber: form.mobileNumber.replace(/\D/g, ''),
+        DateOfBirth: form.DateOfBirth,
+        role: 'user',
+      })
       setStatus({loading:false,message:'Registration complete. You can now sign in.',type:'success'})
     } catch (error) { setStatus({loading:false,message:error.message,type:'error'}) }
   }

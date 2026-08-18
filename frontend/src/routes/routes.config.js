@@ -4,5 +4,12 @@ export const ROUTES = {
   TRAVELLER_REGISTER: '/register/traveller',
   VENDOR_REGISTER: '/register/vendor',
   DASHBOARD: '/dashboard',
+  VENDOR: '/vendor',
+  VENDOR_PACKAGES: '/vendor/packages',
+  VENDOR_PACKAGE_CREATE: '/vendor/packages/new',
+  VENDOR_BOOKINGS: '/vendor/bookings',
+  VENDOR_ANALYTICS: '/vendor/analytics',
+  VENDOR_PROFILE: '/vendor/profile',
+  VENDOR_SETTINGS: '/vendor/settings',
   NOT_FOUND: '*',
 }

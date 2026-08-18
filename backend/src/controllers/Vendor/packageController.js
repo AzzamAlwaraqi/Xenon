@@ -2,10 +2,10 @@ const packageValidate = require("../../validations/packageValidation");
 const PackageCore = require("../../services/Core/Vendor/PackageCore");
 const AppError = require("../../utils/AppError");
 
-exports.createPackage = async (req, res, next) => {
+exports.createPackage = async (req, res,next) => {
     try {
         if (!packageValidate.createPackageValidate(req, res)) return;
-        const package = await PackageCore.createPackage(req, res);
+        const package = await PackageCore.createPackage(req.user, req.body, req.file);
         res.status(201).json({
             status: "success",
             data: {
@@ -13,7 +13,7 @@ exports.createPackage = async (req, res, next) => {
             }
         });
     } catch (error) {
-        next(new AppError(error.message, 500));
+       next(new AppError(error.message, 500));
     }
 };
 

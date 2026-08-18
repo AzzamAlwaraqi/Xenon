@@ -5,10 +5,7 @@ const AppError = require('../utils/AppError');
 const { setStandardDate } = require('../utils/dateFormatter');
 
 const createPackageSchema = Joi.object({
-    vendor_id: Joi.string().required().messages({
-        'string.empty': 'Vendor ID is required',
-        'any.required': 'Vendor ID is required'
-    }),
+    // vendor_id is securely extracted from the authenticated user token
     package_name: Joi.string().min(3).max(100).required().messages({
         'string.empty': 'Package name is required',
         'string.min': 'Package name must be at least 3 characters long'
@@ -38,7 +35,8 @@ const updatePackageSchema = Joi.object({
 
 // 3. Middleware to check package validation
 exports.validateCreatePackage = (req, res, next) => {
-    const { error } = createPackageSchema.validate(req.body, { abortEarly: false });
+    const { error, value } = createPackageSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (!error) req.body = value;
     
     if (error) {
         const errorMessage = error.details.map(err => err.message).join(', ');
@@ -48,7 +46,8 @@ exports.validateCreatePackage = (req, res, next) => {
 };
 
 exports.validateUpdatePackage = (req, res, next) => {
-    const { error } = updatePackageSchema.validate(req.body, { abortEarly: false });
+    const { error, value } = updatePackageSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (!error) req.body = value;
     
     if (error) {
         const errorMessage = error.details.map(err => err.message).join(', ');
@@ -69,7 +68,8 @@ exports.createPackageValidate = (req, res) => {
     if (req.body.startDate) req.body.startDate = setStandardDate(req.body.startDate);
     if (req.body.endDate) req.body.endDate = setStandardDate(req.body.endDate);
 
-    const { error } = createPackageSchema.validate(req.body, { abortEarly: false });
+    const { error, value } = createPackageSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (!error) req.body = value;
     if (error) {
         const errorMessage = error.details.map(err => err.message).join(', ');
         res.AppError(errorMessage, 400);
@@ -103,7 +103,8 @@ exports.updatePackageValidate = (req, res) => {
     if (req.body.startDate) req.body.startDate = setStandardDate(req.body.startDate);
     if (req.body.endDate) req.body.endDate = setStandardDate(req.body.endDate);
 
-    const bodyValidation = updatePackageSchema.validate(req.body, { abortEarly: false });
+    const bodyValidation = updatePackageSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (!bodyValidation.error) req.body = bodyValidation.value;
     if (bodyValidation.error) {
         const errorMessage = bodyValidation.error.details.map(err => err.message).join(', ');
         res.AppError(errorMessage, 400);

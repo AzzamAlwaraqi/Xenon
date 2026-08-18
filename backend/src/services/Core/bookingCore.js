@@ -9,11 +9,13 @@ function checkAuthorization(userOrVendor, booking) {
     if (checkRole(userOrVendor.role, ["admin"])) return true;
 
     if (checkRole(userOrVendor.role, ["user"])) {
-        if (booking.user_id.toString() !== userOrVendor._id.toString()) {
+        const bUserId = booking.user_id && booking.user_id._id ? booking.user_id._id.toString() : (booking.user_id ? booking.user_id.toString() : null);
+        if (bUserId !== userOrVendor._id.toString()) {
             throw new AppError("You are not authorized to perform this action on this booking", 403);
         }
     } else if (checkRole(userOrVendor.role, ["vendor"])) {
-        if (booking.vendor_id.toString() !== userOrVendor._id.toString()) {
+        const bVendorId = booking.vendor_id && booking.vendor_id._id ? booking.vendor_id._id.toString() : (booking.vendor_id ? booking.vendor_id.toString() : null);
+        if (bVendorId !== userOrVendor._id.toString()) {
             throw new AppError("You are not authorized to perform this action on this booking", 403);
         }
     } else {
@@ -25,7 +27,8 @@ function checkVendorAdminAuth(userOrVendor, booking) {
     if (checkRole(userOrVendor.role, ["admin"])) return true;
 
     if (checkRole(userOrVendor.role, ["vendor"])) {
-        if (booking.vendor_id.toString() !== userOrVendor._id.toString()) {
+        const bVendorId = booking.vendor_id && booking.vendor_id._id ? booking.vendor_id._id.toString() : (booking.vendor_id ? booking.vendor_id.toString() : null);
+        if (bVendorId !== userOrVendor._id.toString()) {
             throw new AppError("You do not have permission to manage this booking", 403);
         }
     } else {
@@ -41,15 +44,16 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
     if (checkRole(creatorRole, ['user'])) {
         finalUserId = creatorId;
     } else if (checkRole(creatorRole, ['vendor', 'admin'])) {
-        if (!bookingData.targetUserId) {
-            throw new AppError('you must specify the client (targetUserId) when creating a booking as a vendor/admin', 400);
+        // 🚀 Fix 1:  user_id to avoid deletion by Joi Validation
+        if (!bookingData.user_id) {
+            throw new AppError('you must specify the client (user_id) when creating a booking as a vendor/admin', 400);
         }
-        finalUserId = bookingData.targetUserId;
+        finalUserId = bookingData.user_id;
     } else {
         throw new AppError('not authorized to perform this action', 403);
     }
 
-    const requestedSeats = parseInt(bookingData.number_of_people,10) || 1;
+    const requestedSeats = parseInt(bookingData.number_of_people, 10) || 1;
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -76,6 +80,7 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
 
         const finalBookingPayload = {
             package_id: bookingData.package_id,
+            booking_date: bookingData.booking_date,
             user_id: finalUserId,
             vendor_id: updatedPackage.vendor_id, 
             creator_role: creatorRole,
@@ -94,33 +99,121 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        // 🚀 Fix 3: couldn't hide my custome errors
+        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
 
 exports.updateBookingCore = async function (userOrVendor, bookingId, updateData) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-        const booking = await BookingModel.findById(bookingId);
+        const booking = await BookingModel.findById(bookingId).session(session);
         if (!booking || booking.isDeleted) {
             throw new AppError("Booking not found", 404);
         }
         
         checkAuthorization(userOrVendor, booking);
 
+        // 🚀 Fix 2: can't update booking status from this route
+        if (updateData.status) {
+            throw new AppError("Cannot update booking status from this route. Please use the dedicated update-status endpoint.", 400);
+        }
+
         const allowedUpdates = {};
 
-        if (checkRole(userOrVendor.role, ["vendor", "admin"])) {
-            if (updateData.status) {
-                const validVendorStatuses = ["accepted", "rejected", "completed"];
-                if (validVendorStatuses.includes(updateData.status)) {
-                    allowedUpdates.status = updateData.status;
-                } else {
-                    throw new AppError("Invalid booking status.", 400);
+        if (checkRole(userOrVendor.role, ["vendor"])) {
+            if (updateData.booking_date) {
+                allowedUpdates.booking_date = updateData.booking_date;
+            }
+
+            let oldPackage = null;
+            let newPackage = null;
+            
+            // If package_id changed
+            if (updateData.package_id && updateData.package_id !== booking.package_id.toString()) {
+                oldPackage = await PackageModel.findById(booking.package_id).session(session);
+                newPackage = await PackageModel.findById(updateData.package_id).session(session);
+                
+                if (!newPackage || newPackage.isDeleted || newPackage.package_status !== 'active') {
+                    throw new AppError("The new package is not available.", 404);
                 }
+
+                const newSeatsRequired = parseInt(updateData.number_of_people, 10) || booking.number_of_people;
+                
+                if (newPackage.available_seats < newSeatsRequired) {
+                    throw new AppError("Not enough available seats in the new package.", 400);
+                }
+
+                // Restore seats to old package
+                if (oldPackage) {
+                    oldPackage.available_seats += booking.number_of_people;
+                    await oldPackage.save({ session });
+                }
+
+                // Deduct seats from new package
+                newPackage.available_seats -= newSeatsRequired;
+                await newPackage.save({ session });
+
+                allowedUpdates.package_id = updateData.package_id;
+                allowedUpdates.number_of_people = newSeatsRequired;
+                allowedUpdates.total_price = newPackage.package_price * newSeatsRequired;
+                
+            } 
+            // If only number_of_people changed
+            else if (updateData.number_of_people && updateData.number_of_people !== booking.number_of_people) {
+                const currentPackage = await PackageModel.findById(booking.package_id).session(session);
+                if (!currentPackage) throw new AppError("Package not found.", 404);
+
+                const seatDifference = parseInt(updateData.number_of_people, 10) - booking.number_of_people;
+
+                // If asking for more seats, check availability
+                if (seatDifference > 0 && currentPackage.available_seats < seatDifference) {
+                    throw new AppError("Not enough available seats in the package to add more people.", 400);
+                }
+
+                currentPackage.available_seats -= seatDifference;
+                await currentPackage.save({ session });
+
+                allowedUpdates.number_of_people = updateData.number_of_people;
+                allowedUpdates.total_price = currentPackage.package_price * updateData.number_of_people;
             }
         } 
         else if (checkRole(userOrVendor.role, ["user"])) {
-            throw new AppError("Customers cannot edit booking details. Please cancel the booking and create a new one.", 403);
+            if (updateData.booking_date) {
+                allowedUpdates.booking_date = updateData.booking_date;
+            }
+
+            if (updateData.number_of_people && updateData.number_of_people !== booking.number_of_people) {
+                throw new AppError("Customers cannot change the number of people. Please go to the vendor, they will change it if they have free space.", 403);
+            }
+            
+            // Allow changing package_id
+            if (updateData.package_id && updateData.package_id !== booking.package_id.toString()) {
+                const oldPackage = await PackageModel.findById(booking.package_id).session(session);
+                const newPackage = await PackageModel.findById(updateData.package_id).session(session);
+                
+                if (!newPackage || newPackage.isDeleted || newPackage.package_status !== 'active') {
+                    throw new AppError("The new package is not available.", 404);
+                }
+
+                if (newPackage.available_seats < booking.number_of_people) {
+                    throw new AppError("Not enough available seats in the new package.", 400);
+                }
+
+                if (oldPackage) {
+                    oldPackage.available_seats += booking.number_of_people;
+                    await oldPackage.save({ session });
+                }
+
+                newPackage.available_seats -= booking.number_of_people;
+                await newPackage.save({ session });
+
+                allowedUpdates.package_id = updateData.package_id;
+                allowedUpdates.total_price = newPackage.package_price * booking.number_of_people;
+                allowedUpdates.status = "pending"; // Reset status to pending when changing package
+            }
         }
 
         if (Object.keys(allowedUpdates).length === 0) {
@@ -130,9 +223,12 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
         const updatedBooking = await BookingModel.findByIdAndUpdate(
             bookingId, 
             allowedUpdates, 
-            { new: true, runValidators: true }
+            { new: true, runValidators: true, session }
         );
         
+        await session.commitTransaction();
+        session.endSession();
+
         return {
             status: "success",
             message: "The update process is completed successfully",
@@ -140,10 +236,15 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
         };
     }
     catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 400);
+        await session.abortTransaction();
+        session.endSession();
+        // 🚀 Fix 3: couldn't hide my custome errors
+
+
+        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
-
+//get booking by id
 exports.getBookingCore = async function (userOrVendor, bookingId) {
     try {
         const booking = await BookingModel.findById(bookingId)
@@ -163,11 +264,10 @@ exports.getBookingCore = async function (userOrVendor, bookingId) {
         };
     }
     catch (error) {
-        if (error.statusCode) throw error;
-        throw new AppError(error.message || "Internal Server Error", 500);
+        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
-
+// delete booking with restore seats if pending or accepted
 exports.deleteBookingCore = async function (userOrVendor, bookingId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -180,16 +280,14 @@ exports.deleteBookingCore = async function (userOrVendor, bookingId) {
         
         checkAuthorization(userOrVendor, booking);
 
-        // تعديل مهم جداً: التحقق مما إذا كان الحجز يشغل مقاعد فعلاً قبل استرجاعها
         const shouldRestoreSeats = ['pending', 'accepted'].includes(booking.status);
 
         booking.isDeleted = true; 
         booking.deletionRequestedAt = new Date();
-        booking.status = "cancelled"; // استبدال rejected بـ cancelled ليعرف التاجر أن العميل هو من ألغى
+        booking.status = "cancelled"; 
         
         await booking.save({ session });
 
-        // لا نسترجع المقاعد إذا كان الحجز مرفوضاً أو مكتمل مسبقاً
         if (shouldRestoreSeats) {
             await PackageModel.findByIdAndUpdate(
                 booking.package_id,
@@ -215,10 +313,10 @@ exports.deleteBookingCore = async function (userOrVendor, bookingId) {
     catch (error) {
         await session.abortTransaction();
         session.endSession();
-        throw error instanceof AppError ? error : new AppError(error.message, 400);
+        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
-
+// get all bookings for a user or vendor or admin
 exports.getAllBookingCore = async function (userOrVendor) {
     try {
         let query = { isDeleted: false }; 
@@ -228,7 +326,6 @@ exports.getAllBookingCore = async function (userOrVendor) {
         } else if (checkRole(userOrVendor.role, ["vendor"])) {
             query.vendor_id = userOrVendor._id;
         } else if (!checkRole(userOrVendor.role, ["admin"])) {
-            // الأدمن يتجاوز الشروط أعلاه لجلب كافة الحجوزات
             throw new AppError("Invalid role", 403);
         }
 
@@ -246,19 +343,24 @@ exports.getAllBookingCore = async function (userOrVendor) {
 
     }
     catch (error) {
-        if (error.statusCode) throw error;
-        throw new AppError(error.message || "Internal Server Error", 500);
+        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
 
-exports.getAllRequestsCore = async function (vendorId, packageId) {
+exports.getAllRequestsCore = async function (userOrVendor, packageId) {
     try {
         const query = {
-            vendor_id: vendorId,
             status: 'pending',
             isDeleted: false
         };
         
+        if (checkRole(userOrVendor.role, ["vendor"])) {
+            query.vendor_id = userOrVendor._id; // The vendor sees only his requests
+        } else if (!checkRole(userOrVendor.role, ["admin"])) {
+            throw new AppError("Only admins and vendors can view requests", 403); // prohibit the normal user
+        }
+        // The admin will bypass the above conditions and will not set vendor_id to the  query, which brings all requests
+
         if (packageId) {
             query.package_id = packageId;
         }
@@ -274,8 +376,7 @@ exports.getAllRequestsCore = async function (vendorId, packageId) {
             data: requests
         };
     } catch (error) {
-        if (error.statusCode) throw error;
-        throw new AppError(error.message || "Internal Server Error", 500);
+        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
 
@@ -308,7 +409,7 @@ exports.getAllMyBookingsCore = async function (userOrVendor) {
         };
 
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
 
@@ -345,7 +446,7 @@ exports.getBookingHistoryCore = async function (userOrVendor) {
         };
 
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
 
@@ -357,7 +458,7 @@ exports.acceptBookingCore = async function (vendorOrAdmin, bookingId) {
         checkVendorAdminAuth(vendorOrAdmin, booking);
 
         if (!checkStatus(booking.status, ['pending'])) {
-            throw new AppError(`Can't accept this booking, status should be pending. Current status: ${booking.status}`, 400);
+            throw new AppError("Can't accept this booking, status should be pending. Current status: " + booking.status, 400);
         }
 
         booking.status = 'accepted';
@@ -369,7 +470,7 @@ exports.acceptBookingCore = async function (vendorOrAdmin, bookingId) {
             data: booking
         };
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
 
@@ -407,7 +508,7 @@ exports.rejectBookingCore = async function (vendorOrAdmin, bookingId) {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        throw new AppError(error.message || "Internal Server Error",error.statusCode || 500);
     }
 };
 
@@ -419,7 +520,7 @@ exports.completeBookingCore = async function (vendorOrAdmin, bookingId) {
         checkVendorAdminAuth(vendorOrAdmin, booking);
 
         if (!checkStatus(booking.status, ['accepted'])) {
-            throw new AppError(`Can't complete this booking, status should be accepted. Current status: ${booking.status}`, 400);
+            throw new AppError("Can't complete this booking, status should be accepted. Current status: " + booking.status, 400);
         }
 
         booking.status = 'completed';
@@ -431,7 +532,7 @@ exports.completeBookingCore = async function (vendorOrAdmin, bookingId) {
             data: booking
         };
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        throw new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };
 
@@ -439,7 +540,7 @@ exports.updateStatusCore = async function (userOrVendor, bookingId, newStatus) {
     try {
         const validStatuses = ['accepted', 'rejected', 'completed'];
         if (!validStatuses.includes(newStatus)) {
-            throw new AppError(`Invalid status update requested: ${newStatus}`, 400);
+            throw new AppError("Invalid status update requested: " + newStatus, 400);
         }
 
         switch (newStatus) {
@@ -456,6 +557,53 @@ exports.updateStatusCore = async function (userOrVendor, bookingId, newStatus) {
                 throw new AppError("Unexpected status encountered", 500);
         }
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        throw new AppError(error.message || "Internal Server Error",error.statusCode||500);
+    }
+};
+
+exports.getUserPendingRequestsCore = async function (userOrVendor) {
+    try {
+        if (!checkRole(userOrVendor.role, ["user"])) {
+            throw new AppError("Only users can view their pending requests", 403);
+        }
+
+        const requests = await BookingModel.find({
+            user_id: userOrVendor._id,
+            status: 'pending',
+            isDeleted: false
+        })
+        .populate('package_id', 'package_name package_price')
+        .populate('vendor_id', 'name vendor_email vendor_mobile')
+        .sort({ createdAt: -1 });
+
+        return {
+            status: "success",
+            count: requests.length,
+            data: requests
+        };
+    } catch (error) {
+        throw new AppError(error.message || "Internal Server Error",error.statusCode||500);
+    }
+};
+
+exports.getPendingRequestsCountCore = async function (userOrVendor) {
+    try {
+        if (!checkRole(userOrVendor.role, ["vendor", "admin"])) {
+            throw new AppError("Only vendors or admins can view requests count", 403);
+        }
+
+        const query = { status: 'pending', isDeleted: false };
+        if (checkRole(userOrVendor.role, ["vendor"])) {
+            query.vendor_id = userOrVendor._id;
+        }
+
+        const count = await BookingModel.countDocuments(query);
+
+        return {
+            status: "success",
+            data: { pendingRequestsCount: count }
+        };
+    } catch (error) {
+        throw new AppError(error.message || "Internal Server Error",error.statusCode||500);
     }
 };

@@ -1,5 +1,6 @@
 const express = require("express");
 const multer = require("multer");
+const { protect } = require("../middlewares/authMiddleware");
 const { 
     getAllPackages, 
     getPackage, 
@@ -21,7 +22,7 @@ const upload = multer({
 
 router.get("/", getAllPackages);
 router.get("/package/:id", getPackage);
-router.post("/create-package", upload.single("package_image"), createPackage);
+router.post("/create-package", protect, upload.single("package_image"), createPackage);
 router.put("/package/:id", upload.single("package_image"), updatePackage);
 router.put("/delete-package/:id", deletePackage);
 

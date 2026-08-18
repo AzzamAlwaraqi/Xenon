@@ -9,17 +9,17 @@ const ReviewSchema = new mongoose.Schema({
     user_id: {
         type: mongoose.Schema.Types.UUID,
         required: true,
-        ref: "user"
+        ref: "User"
     },
     vendor_id: {
         type: mongoose.Schema.Types.UUID,
         required: true,
-        ref: "vendor"
+        ref: "Vendor"
     },
     package_id: {
         type: mongoose.Schema.Types.UUID,
         required: true,
-        ref: "package"
+        ref: "Package"
     },
     review_text: {
         type: String,

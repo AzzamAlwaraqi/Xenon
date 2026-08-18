@@ -1,17 +1,15 @@
 /**
- * @param {string} userRole - دور المستخدم الحالي (مثال: 'user', 'vendor')
- * @param {Array} allowedRoles - مصفوفة الأدوار المسموح لها بالوصول
+ * @param {string|object} userRole 
+ * @param {Array} allowedRoles 
  * @returns {boolean}
  */
 const checkRole = function (userRole, allowedRoles = ["admin", "vendor", "user"]) {
-    // حماية إضافية: التأكد من أن allowedRoles هي مصفوفة فعلية لمنع انهيار السيرفر
     if (!Array.isArray(allowedRoles)) {
         return false;
     }
     
-    // إرجاع true إذا كان الدور موجوداً، و false إذا لم يكن
-    return allowedRoles.includes(userRole);
+    const role = (typeof userRole === 'object' && userRole !== null) ? userRole.role : userRole;
+    return allowedRoles.includes(role);
 };
 
-// تصدير دالة واحدة فقط لأنها تكفي لكل الحالات
 module.exports = checkRole;
