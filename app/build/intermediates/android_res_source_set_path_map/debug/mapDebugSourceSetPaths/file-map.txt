@@ -1,0 +1,8 @@
+com.example.design_only.app-pngs-0 C:\Users\anasm\StudioProjects\DESIGNONLY\app\build\generated\res\pngs\debug
+com.example.design_only.app-updated_navigation_xml-1 C:\Users\anasm\StudioProjects\DESIGNONLY\app\build\generated\updated_navigation_xml\debug
+com.example.design_only.app-packageDebugResources-2 C:\Users\anasm\StudioProjects\DESIGNONLY\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.example.design_only.app-packageDebugResources-3 C:\Users\anasm\StudioProjects\DESIGNONLY\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.example.design_only.app-debug-4 C:\Users\anasm\StudioProjects\DESIGNONLY\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.example.design_only.app-debug-5 C:\Users\anasm\StudioProjects\DESIGNONLY\app\src\debug\res
+com.example.design_only.app-main-6 C:\Users\anasm\StudioProjects\DESIGNONLY\app\src\main\res
+gradleHome-0 C:\Users\anasm\.gradle
