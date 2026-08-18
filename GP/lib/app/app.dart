@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/app/theme/app_theme.dart';
 import 'package:gp/app/main_layout.dart';
@@ -6,6 +7,7 @@ import 'package:gp/features/auth/presentation/pages/login_page.dart';
 import 'package:gp/features/auth/presentation/pages/signup_page.dart';
 import 'package:gp/core/providers/settings_provider.dart';
 import 'package:gp/core/providers/booking_provider.dart';
+import 'package:gp/core/providers/destination_provider.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -16,6 +18,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => BookingProvider()),
+        ChangeNotifierProvider(create: (_) => DestinationProvider()),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
@@ -26,6 +29,15 @@ class MyApp extends StatelessWidget {
             darkTheme: AppTheme.darkTheme,
             themeMode: settings.themeMode,
             locale: settings.locale,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'),
+              Locale('ar'),
+            ],
             initialRoute: '/login',
             routes: {
               '/login': (context) => const LoginPage(),

@@ -1,51 +1,94 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/app/theme/colors.dart';
-import 'package:gp/core/widgets/app_button.dart';
-import 'package:gp/core/providers/booking_provider.dart';
+import 'package:gp/features/home/presentation/providers/destination_details_provider.dart';
 
 class DestinationDetailsPage extends StatelessWidget {
-  final String title;
-  final String imageUrl;
-  final String price;
-  final String rating;
-  final String category;
+  final Map<String, dynamic>? destination;
 
-  const DestinationDetailsPage({
-    super.key,
-    required this.title,
-    required this.imageUrl,
-    required this.price,
-    required this.rating,
-    required this.category,
-  });
+  const DestinationDetailsPage({super.key, this.destination});
 
   @override
   Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => DestinationDetailsProvider(),
+      child: _DestinationDetailsPageContent(destination: destination),
+    );
+  }
+}
+
+class _DestinationDetailsPageContent extends StatelessWidget {
+  final Map<String, dynamic>? destination;
+  
+  const _DestinationDetailsPageContent({this.destination});
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<DestinationDetailsProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Use fallback data if destination is null
+    final String title = destination?['title'] ?? 'The Treasury at Petra';
+    final String imageUrl = destination?['imageUrl'] ?? 'https://images.unsplash.com/photo-1547234935-80c7145ec969?q=80&w=1000&auto=format&fit=crop';
+    
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       body: CustomScrollView(
         slivers: [
+          // Header Image with Back Button & Actions
           SliverAppBar(
-            expandedHeight: 400,
+            expandedHeight: 350.0,
             pinned: true,
-            backgroundColor: AppColors.background,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+            backgroundColor: AppColors.backgroundDark,
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
             ),
+            actions: [
+              Container(
+                margin: const EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    provider.isSaved ? Icons.favorite : Icons.favorite_border,
+                    color: provider.isSaved ? Colors.red : Colors.black,
+                  ),
+                  onPressed: () => provider.toggleSaved(),
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.share, color: Colors.black),
+                  onPressed: () {},
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   Image.network(
-                    imageUrl, 
+                    imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: AppColors.surface,
-                      child: const Icon(Icons.image_not_supported, color: Colors.white, size: 50),
-                    ),
                   ),
+                  // Dark gradient overlay
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -53,177 +96,396 @@ class DestinationDetailsPage extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          AppColors.background.withValues(alpha: 0.8),
-                          AppColors.background,
+                          Colors.black.withValues(alpha: 0.8),
                         ],
+                        stops: const [0.5, 1.0],
                       ),
+                    ),
+                  ),
+                  // Title and Info overlay
+                  Positioned(
+                    bottom: 40,
+                    left: 24,
+                    right: 24,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryRust,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'HISTORICAL SITE',
+                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.star, color: Colors.amber, size: 14),
+                            const SizedBox(width: 4),
+                            const Text(
+                              '4.9 (1.2k Reviews)',
+                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined, color: Colors.white70, size: 16),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Ma\'an Governorate, Jordan',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                            const SizedBox(width: 16),
+                            const Icon(Icons.access_time, color: Colors.white70, size: 16),
+                            const SizedBox(width: 4),
+                            const Text(
+                              '2 Days',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+            // The white rounded sheet overlap effect
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(20),
+              child: Container(
+                height: 20,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+              ),
+            ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.all(24),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentGreen.withValues(alpha: 1.0),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        category,
-                        style: const TextStyle(
-                          color: AppColors.accentGreen,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+          
+          // Content
+          SliverToBoxAdapter(
+            child: Container(
+              color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Tabs
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight)),
                     ),
-                    Row(
+                    child: Row(
                       children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 20),
-                        const SizedBox(width: 4),
-                        Text(
-                          rating,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        _buildTab(context, provider, 0, 'ITINERARY', isDark),
+                        _buildTab(context, provider, 1, 'INCLUDED', isDark),
+                        _buildTab(context, provider, 2, 'REVIEWS', isDark),
                       ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Row(
-                  children: [
-                    Icon(Icons.location_on, color: AppColors.textMuted, size: 16),
-                    SizedBox(width: 4),
-                    Text(
-                      'Sahara Desert, North Africa',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  'About this experience',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  
+                  // Tab Content
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: _buildTabContent(context, provider.selectedTabIndex, isDark),
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Embark on an unforgettable journey through the golden dunes. This premium experience includes a private guided camel trek, traditional Berber hospitality, and an exquisite dinner under the canopy of a million stars. Our expert guides ensure your comfort and safety while sharing the rich history and secrets of the desert.',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 16,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  'What\'s included',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildIncludedItem(Icons.restaurant, 'Traditional Dinner'),
-                _buildIncludedItem(Icons.nightlight_round, 'Luxury Camping'),
-                _buildIncludedItem(Icons.directions_bus, 'Transport included'),
-                _buildIncludedItem(Icons.security, 'Expert Guide'),
-                const SizedBox(height: 100),
-              ]),
+                ],
+              ),
             ),
           ),
         ],
       ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
-        ),
-        child: Row(
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Price per person', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                Text(price, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: AppButton(
-                text: 'Reserve Now',
-                onPressed: () {
-                  final numericPrice = double.tryParse(price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
-                  context.read<BookingProvider>().addBooking(
-                    Booking(
-                      title: title,
-                      date: 'Oct 24 - Oct 28, 2024',
-                      status: 'CONFIRMED',
-                      statusColor: AppColors.accentGreen,
-                      icon: Icons.bookmark,
-                      price: numericPrice,
-                    ),
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Booking Successful!'),
-                      backgroundColor: AppColors.accentGreen,
-                    ),
-                  );
-                  Navigator.pop(context);
-                },
+    );
+  }
+
+  Widget _buildTab(BuildContext context, DestinationDetailsProvider provider, int index, String label, bool isDark) {
+    final isSelected = provider.selectedTabIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => provider.setTabIndex(index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: isSelected ? AppColors.primaryRust : Colors.transparent,
+                width: 2,
               ),
             ),
-          ],
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected 
+                  ? AppColors.primaryRust 
+                  : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 12,
+              letterSpacing: 1.2,
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildIncludedItem(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+  Widget _buildTabContent(BuildContext context, int tabIndex, bool isDark) {
+    if (tabIndex == 0) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(8),
+          // About Section
+          Text(
+            'About this experience',
+            style: TextStyle(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-            child: Icon(icon, color: AppColors.accentGreen, size: 18),
           ),
-          const SizedBox(width: 16),
-          Text(text, style: const TextStyle(color: Colors.white, fontSize: 14)),
+          const SizedBox(height: 12),
+          Text(
+            'Journey through the narrow gorge of the Siq to reveal the magnificent Treasury (Al-Khazneh), Petra\'s most famous monument....',
+            style: TextStyle(
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Read more ∨',
+            style: TextStyle(
+              color: AppColors.primaryRust,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Itinerary Timeline
+          Text(
+            'Itinerary Overview',
+            style: TextStyle(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Day 1
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.primaryRust, width: 2),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primaryRust,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 2,
+                    height: 180, // Approximate height to connect to next node
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                  ),
+                ],
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Day 1: The Siq and The Treasury',
+                      style: TextStyle(
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Begin your journey walking through the 1.2km Siq, culminating in the dramatic reveal of Al-Khazneh.',
+                      style: TextStyle(
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 100,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              'https://images.unsplash.com/photo-1547234935-80c7145ec969?q=80&w=200&auto=format&fit=crop',
+                              width: 140,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              'https://images.unsplash.com/photo-1574017377800-475a89849ee5?q=80&w=200&auto=format&fit=crop',
+                              width: 140,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          // Day 2
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.blue.withValues(alpha: 0.3), width: 2),
+                      color: Colors.blue.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Day 2: Royal Tombs & The Monastery',
+                      style: TextStyle(
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Hike up the 800 ancient steps to Ad-Deir (The Monastery) and explore the expansive Royal Tombs overlooking the valley.',
+                      style: TextStyle(
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 40),
+          
+          // Guide Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : const Color(0xFFF8F9FA),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundImage: const NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop'),
+                  backgroundColor: AppColors.primaryRust.withValues(alpha: 0.2),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'EXPERT LOCAL GUIDE',
+                        style: TextStyle(
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tariq Al-Naimat',
+                        style: TextStyle(
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '10+ years experience in Petra archaeology',
+                        style: TextStyle(
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 100), // Padding for bottom nav
         ],
-      ),
-    );
+      );
+    } else {
+      return Center(
+        child: Text(
+          'Content for ${tabIndex == 1 ? 'Included' : 'Reviews'}',
+          style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+        ),
+      );
+    }
   }
 }

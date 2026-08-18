@@ -2,14 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/app/theme/colors.dart';
 import 'package:gp/core/providers/settings_provider.dart';
+import 'package:gp/core/providers/destination_provider.dart';
 import 'destination_details_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => context.read<DestinationProvider>().fetchDestinations());
+  }
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final destinationProvider = context.watch<DestinationProvider>();
     final isDark = settings.themeMode == ThemeMode.dark;
     final isArabic = settings.locale.languageCode == 'ar';
 
@@ -21,21 +34,21 @@ class HomePage extends StatelessWidget {
         title: Text(
           isArabic ? 'أهلاً بك' : 'Hello, Voyager',
           style: TextStyle(
-            color: isDark ? AppColors.textPrimary : Colors.black,
+            color: isDark ? AppColors.textPrimaryLight : Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications_outlined, color: isDark ? AppColors.textPrimary : Colors.black),
+            icon: Icon(Icons.notifications_outlined, color: isDark ? AppColors.textPrimaryLight : Colors.black),
             onPressed: () {},
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: Directionality(
-        textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
+      body: RefreshIndicator(
+        onRefresh: () => destinationProvider.fetchDestinations(),
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -46,16 +59,16 @@ class HomePage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.surface : Colors.grey[200],
+                  color: isDark ? AppColors.surfaceLight : Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? AppColors.border : Colors.grey[300]!, width: 0.5),
+                  border: Border.all(color: isDark ? AppColors.borderLight : Colors.grey[300]!, width: 0.5),
                 ),
                 child: TextField(
                   style: TextStyle(color: isDark ? Colors.white : Colors.black),
                   decoration: InputDecoration(
-                    icon: Icon(Icons.search, color: AppColors.textMuted, size: 20),
+                    icon: Icon(Icons.search, color: AppColors.textSecondaryLight, size: 20),
                     hintText: isArabic ? 'استكشف الوجهات...' : 'Explore destinations...',
-                    hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+                    hintStyle: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 14),
                     border: InputBorder.none,
                   ),
                 ),
@@ -74,45 +87,69 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              // Destination Cards
-              _buildDestinationCard(
-                context,
-                category: isArabic ? 'مغامرة' : 'ADVENTURE',
-                title: isArabic ? 'البتراء: المدينة الوردية' : 'Petra: The Rose City',
-                price: 50,
-                rating: '5.0',
-                imageUrl: 'https://images.unsplash.com/photo-1580618673372-9742760b0642?q=80&w=800&auto=format&fit=crop',
-                description: isArabic 
-                  ? 'استكشف إحدى عجائب الدنيا السبع، المدينة النبطية القديمة المنحوتة في الصخور الوردية.'
-                  : 'Explore one of the Seven Wonders of the World, the ancient Nabataean city carved into rose-red cliffs.',
-                settings: settings,
-              ),
-              const SizedBox(height: 20),
-              _buildDestinationCard(
-                context,
-                category: isArabic ? 'مغامرة' : 'ADVENTURE',
-                title: isArabic ? 'وادي رم: وادي القمر' : 'Wadi Rum: Valley of the Moon',
-                price: 75,
-                rating: '4.9',
-                imageUrl: 'https://images.unsplash.com/photo-1509233725247-49e657c54213?q=80&w=800&auto=format&fit=crop',
-                description: isArabic 
-                  ? 'عش تجربة المريخ على الأرض مع رحلات السفاري في الصحراء الحمراء والتخييم تحت النجوم.'
-                  : 'Experience Mars on Earth with red desert safaris and luxury camping under the stars.',
-                settings: settings,
-              ),
-              const SizedBox(height: 20),
-              _buildDestinationCard(
-                context,
-                category: isArabic ? 'صحة' : 'WELLNESS',
-                title: isArabic ? 'البحر الميت: الطفو والاسترخاء' : 'Dead Sea: Float & Relax',
-                price: 120,
-                rating: '4.8',
-                imageUrl: 'https://images.unsplash.com/photo-1551041777-ed9383fd386d?q=80&w=800&auto=format&fit=crop',
-                description: isArabic 
-                  ? 'استمتع بأدنى نقطة على سطح الأرض، واشعر بالطفو في المياه الغنية بالمعادن وعلاجات الطين الطبيعية.'
-                  : 'Visit the lowest point on Earth, float in mineral-rich waters and enjoy natural mud treatments.',
-                settings: settings,
-              ),
+              
+              // Dynamic Content
+              if (destinationProvider.isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 100),
+                    child: CircularProgressIndicator(color: AppColors.primaryRust),
+                  ),
+                )
+              else if (destinationProvider.error != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 100),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text(
+                          isArabic ? 'حدث خطأ ما' : 'Something went wrong',
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        ),
+                        TextButton(
+                          onPressed: () => destinationProvider.fetchDestinations(),
+                          child: Text(isArabic ? 'إعادة المحاولة' : 'Try Again'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (destinationProvider.destinations.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 100),
+                    child: Text(
+                      isArabic ? 'لا توجد وجهات حالياً' : 'No destinations found',
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                    ),
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: destinationProvider.destinations.length,
+                  itemBuilder: (context, index) {
+                    final destination = destinationProvider.destinations[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: _buildDestinationCard(
+                        context,
+                        category: destination.category,
+                        title: destination.title,
+                        price: double.tryParse(destination.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0,
+                        rating: destination.rating,
+                        imageUrl: destination.imageUrl,
+                        description: isArabic 
+                          ? 'استمتع بتجربة فريدة في ${destination.title}'
+                          : 'Enjoy a unique experience in ${destination.title}',
+                        settings: settings,
+                      ),
+                    );
+                  },
+                ),
               const SizedBox(height: 30),
             ],
           ),
@@ -121,22 +158,23 @@ class HomePage extends StatelessWidget {
     );
   }
 
+
   Widget _buildCategoryChip(String label, bool isSelected, bool isDark) {
     return Container(
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.accentGreen.withValues(alpha: 1.0) : Colors.transparent,
+        color: isSelected ? AppColors.primaryRust.withValues(alpha: 1.0) : Colors.transparent,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isSelected ? AppColors.accentGreen : (isDark ? AppColors.border : Colors.grey[300]!),
+          color: isSelected ? AppColors.primaryRust : (isDark ? AppColors.borderLight : Colors.grey[300]!),
           width: 1,
         ),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: isSelected ? (isDark ? AppColors.accentGreen : Colors.white) : (isDark ? AppColors.textSecondary : Colors.grey[600]),
+          color: isSelected ? (isDark ? AppColors.primaryRust : Colors.white) : (isDark ? AppColors.textSecondaryLight : Colors.grey[600]),
           fontSize: 12,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
@@ -168,9 +206,9 @@ class HomePage extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardBg : Colors.white,
+        color: isDark ? AppColors.cardBgDark : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? AppColors.border : Colors.grey[300]!, width: 0.5),
+        border: Border.all(color: isDark ? AppColors.borderLight : Colors.grey[300]!, width: 0.5),
         boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
@@ -185,9 +223,17 @@ class HomePage extends StatelessWidget {
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 200,
+                      color: isDark ? AppColors.surfaceLight : Colors.grey[200],
+                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    );
+                  },
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 200,
-                    color: Colors.grey[300],
+                    color: isDark ? AppColors.surfaceLight : Colors.grey[200],
                     child: const Icon(Icons.image_not_supported, size: 50),
                   ),
                 ),
@@ -223,7 +269,7 @@ class HomePage extends StatelessWidget {
                 Text(
                   category,
                   style: const TextStyle(
-                    color: AppColors.accentGreen,
+                    color: AppColors.primaryRust,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
@@ -258,7 +304,7 @@ class HomePage extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    color: isDark ? AppColors.textSecondary.withValues(alpha: 0.7) : Colors.grey[600],
+                    color: isDark ? AppColors.textSecondaryLight.withValues(alpha: 0.7) : Colors.grey[600],
                     fontSize: 12,
                   ),
                 ),
@@ -269,7 +315,7 @@ class HomePage extends StatelessWidget {
                     Text(
                       isArabic ? 'للشخص الواحد' : 'Per person',
                       style: TextStyle(
-                        color: isDark ? AppColors.textMuted : Colors.grey[500],
+                        color: isDark ? AppColors.textSecondaryLight : Colors.grey[500],
                         fontSize: 12,
                       ),
                     ),
@@ -279,11 +325,13 @@ class HomePage extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => DestinationDetailsPage(
-                              title: title,
-                              imageUrl: imageUrl,
-                              price: formattedPrice,
-                              rating: rating,
-                              category: category,
+                              destination: {
+                                'title': title,
+                                'imageUrl': imageUrl,
+                                'price': formattedPrice,
+                                'rating': rating,
+                                'category': category,
+                              },
                             ),
                           ),
                         );

@@ -24,8 +24,8 @@ class AppButton extends StatelessWidget {
         child: OutlinedButton(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: AppColors.border),
-            foregroundColor: Colors.white,
+            side: const BorderSide(color: AppColors.borderLight),
+            foregroundColor: AppColors.textPrimaryLight,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -44,7 +44,7 @@ class AppButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: color ?? AppColors.accentBlue,
+          backgroundColor: color ?? AppColors.primaryRust,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
