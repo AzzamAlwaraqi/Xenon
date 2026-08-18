@@ -1,13 +1,13 @@
 const mongoose = require("mongoose");
 const Vendor = require("../../../Models/VendorModel");
-const AppError = require("../../../utils/appError");
+const AppError = require("../../../utils/AppError");
 const APIFeatures = require("../../../utils/APIFeatures");
-const checkRoles = require("../../../utils/checkRoles");
+const checkRole = require("../../../utils/checkRole");
 const checkvendorStatus = require("../../../utils/checkvendoraccess");
 const User = require("../../../Models/UserModel");
 
 exports.getAllVendors = async function (queryString, user) {
-    if(!checkRoles(user, ["admin"])) throw new AppError("Unauthorized", 403); 
+    if(!checkRole(user, ["admin"])) throw new AppError("Unauthorized", 403); 
     const features = new APIFeatures(Vendor.find().populate('user_id', 'name email mobileNumber'), queryString)
         .filter()
         .sort()
@@ -22,7 +22,7 @@ exports.getAllVendors = async function (queryString, user) {
 // 2. update approval status (accepted , rejected , pending , suspended)
 // ==========================================
 exports.updateApprovalStatus = async function (vendorId, status, rejectionReason = null, user) {
-    if (!checkRoles(user, ["admin"])) throw new AppError("Unauthorized", 403); 
+    if (!checkRole(user, ["admin"])) throw new AppError("Unauthorized", 403); 
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -62,7 +62,7 @@ exports.updateApprovalStatus = async function (vendorId, status, rejectionReason
 // 3. get vendor details before accepting is must mandatory for admin
 // ==========================================
 exports.getVendorDetails = async function (vendorId, user) {
-    if(!checkRoles(user, ["admin"])) throw new AppError("Unauthorized", 403); 
+    if(!checkRole(user, ["admin"])) throw new AppError("Unauthorized", 403); 
     const vendor = await Vendor.findById(vendorId).populate('user_id', '-password');
     if (!vendor) {
         throw new AppError("Vendor not found", 404);

@@ -47,11 +47,12 @@ const OTPSchema = new mongoose.Schema({
 // TTL index — MongoDB auto-removes documents when expiresAt passes
 OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-// Compound index for fast lookup by email + purpose
+// Compound indexes for fast lookup by email or phone + purpose
 OTPSchema.index({ email: 1, purpose: 1 });
+OTPSchema.index({ phone: 1, purpose: 1 }); 
 
-// Validate at least one contact method — using async style (Mongoose 9 / Express 5 compatible)
-OTPSchema.pre("save", async function () {
+// ✅ Validate at least one contact method
+OTPSchema.pre("validate", function () {
     if (!this.email && !this.phone) {
         throw new Error("Either email or phone must be provided for OTP");
     }

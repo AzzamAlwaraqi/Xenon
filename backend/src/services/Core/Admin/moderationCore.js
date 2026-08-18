@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
-const Report = require("../../../Models/ReportModel");
+const Report = require("../../../Models/ReportsModels");
 const User = require("../../../Models/UserModel");
 const checkstatusReport = require("../../../utils/checkstatusReport");
 const APIFeatures = require("../../../utils/APIFeatures");
-const AppError = require("../../../utils/appError");
+const AppError = require("../../../utils/AppError");
 const checkTerminalStatus = require("../../../utils/TERMINAL_STATUSES"); 
 
 exports.getAllReports = async function (queryString) {

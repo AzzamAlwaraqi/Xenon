@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-const checkRoles = require("../middleware/checkRoles");
+const checkRole = require("../utils/checkRole");
 const { MongooseStandardDate } = require("../utils/dateFormatter");
 const { v7: uuidv7 } = require("uuid");
 
@@ -76,7 +76,7 @@ const UserSchema = new mongoose.Schema({
     },
     DateOfBirth: {
         ...MongooseStandardDate, 
-        required: [function() { return checkRoles(this.role, ['user']); }, 'تاريخ الميلاد مطلوب']
+        required: [function() { return checkRole(this.role, ['user']); }, 'تاريخ الميلاد مطلوب']
     },
     isActive: {
         type: Boolean,

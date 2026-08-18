@@ -199,7 +199,7 @@ exports.resetPasswordCore = async function (email, password, token) {
     }
 };
 
-const { sendOTP } = require("../../utils/OTPService");
+const { sendOtpCore } = require("./otpCore");
 
 exports.forgotPasswordCore = async function (email) {
     try {
@@ -213,7 +213,7 @@ exports.forgotPasswordCore = async function (email) {
             throw new AppError("Account has been blocked or deactivated", 403);
         }
 
-        const otpResponse = await sendOTP({
+        const otpResponse = await sendOtpCore({
             email: user.email,
             purpose: "password_reset",
             length: 6

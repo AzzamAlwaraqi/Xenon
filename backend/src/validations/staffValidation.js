@@ -1,6 +1,6 @@
 const Joi = require('joi');
-const AppError = require('../../utils/AppError');
-const { adminposition, vendorposition } = require('../../utils/staffposition');
+const AppError = require('../utils/AppError');
+const { adminposition, vendorposition } = require('../utils/staffposition');
 
 
 const ROLES = ['admin', 'vendor'];

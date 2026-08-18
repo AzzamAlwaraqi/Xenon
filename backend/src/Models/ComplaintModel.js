@@ -91,16 +91,14 @@ const ComplaintSchema = new mongoose.Schema({
 });
 
 
-ComplaintSchema.pre('validate', function (next) {
+ComplaintSchema.pre('validate', function () {
     if (this.isNew && !this.complaint_id) {
         const randomString = Math.random().toString(36).substring(2, 8).toUpperCase();
         this.complaint_id = `CMP-${randomString}`;
     }
-    next();
 });
 
 ComplaintSchema.index({ user_id: 1 });
 ComplaintSchema.index({ complaint_status: 1 });
-ComplaintSchema.index({ complaint_id: 1 });
 
 module.exports = mongoose.model("Complaint", ComplaintSchema);

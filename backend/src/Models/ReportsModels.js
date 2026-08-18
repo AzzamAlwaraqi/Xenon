@@ -76,17 +76,15 @@ const ReportSchema = new mongoose.Schema({
 });
 
 
-ReportSchema.pre('validate', function (next) {
+ReportSchema.pre('validate', function () {
     if (this.isNew && !this.report_id) {
         const randomString = Math.random().toString(36).substring(2, 8).toUpperCase();
         this.report_id = `REP-${randomString}`;
     }
-    next();
 });
 
 
 ReportSchema.index({ status: 1 }); 
 ReportSchema.index({ reported_user: 1 }); 
-ReportSchema.index({ report_id: 1 }); 
 
 module.exports = mongoose.model("Report", ReportSchema);

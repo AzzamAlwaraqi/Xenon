@@ -1,6 +1,6 @@
 const authCore = require("../services/Core/authCore");
 const AppError = require("../utils/AppError");
-const { sendOTP } = require("../utils/OTPService");
+const { sendOtpCore } = require("../services/Core/otpCore");
 const UserModel = require("../Models/UserModel");
 const checkRole = require("../utils/checkRole");
 const authValidation = require("../validations/authValidation");
@@ -21,10 +21,9 @@ exports.register = async (req, res, next) => {
         if (role === "user") {
             let otpResponse;
             try {
-                otpResponse = await sendOTP({
+                otpResponse = await sendOtpCore({
                     email: result.user.email,
                     purpose: "registration",
-                    provider: process.env.OTP_PROVIDER || "email",
                     length: 6
                 });
             } catch (otpErr) {

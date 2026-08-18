@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const User = require("../../../Models/UserModel");
 const Employee = require("../../../Models/EmployeeModels"); 
-const AppError = require("../../../utils/appError");
+const AppError = require("../../../utils/AppError");
 
 const APIFeatures = require("../../../utils/APIFeatures");
 
