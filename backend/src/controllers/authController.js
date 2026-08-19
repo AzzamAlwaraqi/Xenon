@@ -207,3 +207,29 @@ exports.verifyOtp = async (req, res, next) => {
         next(new AppError(error.message, error.statusCode || 500));
     }
 };
+
+exports.sendOtp = async (req, res, next) => {
+    try {
+        const { email, purpose } = req.body;
+        
+        if (!email) {
+            return next(new AppError('Please provide an email', 400));
+        }
+
+        const otpResponse = await sendOtpCore({
+            email,
+            purpose: purpose || 'registration',
+            length: 6
+        });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'OTP sent successfully to your email.',
+            data: {
+                expiresAt: otpResponse.expiresAt
+            }
+        });
+    } catch (error) {
+        next(new AppError(error.message, error.statusCode || 500));
+    }
+};
