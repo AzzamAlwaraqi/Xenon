@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gp/app/theme/colors.dart';
 import 'package:gp/features/auth/presentation/providers/signup_provider.dart';
 
@@ -97,62 +96,7 @@ class _SignUpPageContent extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
-                  // Social Buttons
-                  OutlinedButton.icon(
-                    onPressed: provider.continueWithGoogle,
-                    icon: const FaIcon(FontAwesomeIcons.google, size: 18, color: AppColors.textPrimaryLight),
-                    label: const Text(
-                      'Continue with Google',
-                      style: TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.bold),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: AppColors.borderLight),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: provider.continueWithApple,
-                    icon: const FaIcon(FontAwesomeIcons.apple, size: 18, color: AppColors.textPrimaryLight),
-                    label: const Text(
-                      'Continue with Apple',
-                      style: TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.bold),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: AppColors.borderLight),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // OR divider
-                  Row(
-                    children: [
-                      const Expanded(child: Divider(color: AppColors.borderLight)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OR',
-                          style: TextStyle(
-                            color: AppColors.textPrimaryLight.withValues(alpha: 0.8),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      const Expanded(child: Divider(color: AppColors.borderLight)),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
+
                   
                   // Form Fields
                   _buildLabel('Full Name'),
@@ -214,11 +158,82 @@ class _SignUpPageContent extends StatelessWidget {
                     ),
                   ),
                   
+                  const SizedBox(height: 16),
+
+                  _buildLabel('Confirm Password'),
+                  TextFormField(
+                    controller: provider.confirmPasswordController,
+                    obscureText: provider.obscureConfirmPassword,
+                    style: const TextStyle(color: AppColors.textPrimaryLight),
+                    decoration: InputDecoration(
+                      hintText: '••••••••',
+                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondaryLight),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          provider.obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          color: AppColors.textSecondaryLight,
+                        ),
+                        onPressed: provider.toggleConfirmPasswordVisibility,
+                      ),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.borderLight),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.borderLight),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primaryRust),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Password Strength Bar
+                  if (provider.passwordController.text.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: _buildStrengthSegment(provider.passwordStrengthLevel >= 1, provider.passwordStrengthLevel)),
+                            const SizedBox(width: 4),
+                            Expanded(child: _buildStrengthSegment(provider.passwordStrengthLevel >= 2, provider.passwordStrengthLevel)),
+                            const SizedBox(width: 4),
+                            Expanded(child: _buildStrengthSegment(provider.passwordStrengthLevel >= 3, provider.passwordStrengthLevel)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _getStrengthText(provider.passwordStrengthLevel),
+                          style: TextStyle(
+                            color: _getStrengthColor(provider.passwordStrengthLevel),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Checklist
+                        _buildChecklistItem('At least 8 characters', provider.hasMinLength),
+                        _buildChecklistItem('At least 1 capital letter', provider.hasCapital),
+                        _buildChecklistItem('At least 1 number', provider.hasNumber),
+                        _buildChecklistItem('At least 1 special character', provider.hasSpecial),
+                        _buildChecklistItem('Passwords match', provider.passwordsMatch),
+                      ],
+                    ),
+                  
                   const SizedBox(height: 32),
                   
                   // Create Account Button
                   ElevatedButton(
-                    onPressed: provider.isLoading ? null : () => provider.signup(context),
+                    onPressed: (provider.isLoading || !provider.isPasswordValid) 
+                      ? null 
+                      : () => provider.signup(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryRust,
                       foregroundColor: Colors.white,
@@ -322,6 +337,53 @@ class _SignUpPageContent extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primaryRust),
         ),
+      ),
+    );
+  }
+
+  Widget _buildStrengthSegment(bool isActive, int level) {
+    return Container(
+      height: 4,
+      decoration: BoxDecoration(
+        color: isActive ? _getStrengthColor(level) : Colors.grey[300],
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+
+  Color _getStrengthColor(int level) {
+    if (level == 1) return Colors.red;
+    if (level == 2) return Colors.orange;
+    if (level == 3) return Colors.green;
+    return Colors.transparent;
+  }
+
+  String _getStrengthText(int level) {
+    if (level == 1) return 'Weak';
+    if (level == 2) return 'Medium';
+    if (level == 3) return 'Strong';
+    return '';
+  }
+
+  Widget _buildChecklistItem(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.circle_outlined,
+            size: 14,
+            color: isMet ? Colors.green : Colors.grey[400],
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              color: isMet ? Colors.green : Colors.grey[600],
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }

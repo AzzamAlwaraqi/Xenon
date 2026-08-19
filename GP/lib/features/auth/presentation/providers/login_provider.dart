@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:gp/core/services/auth_service.dart';
 
 class LoginProvider extends ChangeNotifier {
   final TextEditingController emailOrPhoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -19,14 +21,25 @@ class LoginProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    final error = await _authService.login(
+      emailOrPhoneController.text.trim(),
+      passwordController.text,
+    );
     
     _isLoading = false;
     notifyListeners();
 
     if (context.mounted) {
-      Navigator.pushReplacementNamed(context, '/main');
+      if (error == null) {
+        Navigator.pushReplacementNamed(context, '/main');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

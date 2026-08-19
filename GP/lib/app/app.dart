@@ -34,10 +34,7 @@ class MyApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: const [
-              Locale('en'),
-              Locale('ar'),
-            ],
+            supportedLocales: const [Locale('en'), Locale('ar')],
             initialRoute: '/login',
             routes: {
               '/login': (context) => const LoginPage(),
