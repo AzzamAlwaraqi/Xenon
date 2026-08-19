@@ -2,9 +2,11 @@ const mongoose = require("mongoose");
 const AppError = require("../../utils/AppError");
 const BookingModel = require("../../Models/BookingModel");
 const PackageModel = require("../../Models/PackageModel");
-const checkRole = require("../../utils/checkRole");
-const checkStatus = require("../../utils/checkStatus"); 
+const { checkRole, checkStatus } = require("../../utils/checkvalidete");
 
+// ==========================================
+// 🛡️ HELPERS: Role & Authorization Checks
+// ==========================================
 function checkAuthorization(userOrVendor, booking) {
     if (checkRole(userOrVendor.role, ["admin"])) return true;
 
@@ -36,6 +38,9 @@ function checkVendorAdminAuth(userOrVendor, booking) {
     }
 }
 
+// ==========================================
+// 1. CORE: Create Booking
+// ==========================================
 exports.createBookingCore = async function (userOrVendor, bookingData) {
     const creatorId = userOrVendor._id;
     const creatorRole = userOrVendor.role;
@@ -44,7 +49,6 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
     if (checkRole(creatorRole, ['user'])) {
         finalUserId = creatorId;
     } else if (checkRole(creatorRole, ['vendor', 'admin'])) {
-        // 🚀 Fix 1:  user_id to avoid deletion by Joi Validation
         if (!bookingData.user_id) {
             throw new AppError('you must specify the client (user_id) when creating a booking as a vendor/admin', 400);
         }
@@ -54,7 +58,6 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
     }
 
     const requestedSeats = parseInt(bookingData.number_of_people, 10) || 1;
-
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -66,9 +69,7 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
                 package_status: 'active',
                 isDeleted: false
             },
-            { 
-                $inc: { available_seats: -requestedSeats }
-            },
+            { $inc: { available_seats: -requestedSeats } },
             { new: true, session }
         );
 
@@ -99,24 +100,24 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        // 🚀 Fix 3: couldn't hide my custome errors
-        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error; 
+        throw new AppError(error.message || "Internal Server Error", 500);
     }
 };
 
+// ==========================================
+// 2. CORE: Update Booking
+// ==========================================
 exports.updateBookingCore = async function (userOrVendor, bookingId, updateData) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         const booking = await BookingModel.findById(bookingId).session(session);
-        if (!booking || booking.isDeleted) {
-            throw new AppError("Booking not found", 404);
-        }
+        if (!booking || booking.isDeleted) throw new AppError("Booking not found", 404);
         
         checkAuthorization(userOrVendor, booking);
 
-        // 🚀 Fix 2: can't update booking status from this route
         if (updateData.status) {
             throw new AppError("Cannot update booking status from this route. Please use the dedicated update-status endpoint.", 400);
         }
@@ -124,14 +125,11 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
         const allowedUpdates = {};
 
         if (checkRole(userOrVendor.role, ["vendor"])) {
-            if (updateData.booking_date) {
-                allowedUpdates.booking_date = updateData.booking_date;
-            }
+            if (updateData.booking_date) allowedUpdates.booking_date = updateData.booking_date;
 
             let oldPackage = null;
             let newPackage = null;
             
-            // If package_id changed
             if (updateData.package_id && updateData.package_id !== booking.package_id.toString()) {
                 oldPackage = await PackageModel.findById(booking.package_id).session(session);
                 newPackage = await PackageModel.findById(updateData.package_id).session(session);
@@ -146,29 +144,24 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
                     throw new AppError("Not enough available seats in the new package.", 400);
                 }
 
-                // Restore seats to old package
                 if (oldPackage) {
                     oldPackage.available_seats += booking.number_of_people;
                     await oldPackage.save({ session });
                 }
 
-                // Deduct seats from new package
                 newPackage.available_seats -= newSeatsRequired;
                 await newPackage.save({ session });
 
                 allowedUpdates.package_id = updateData.package_id;
                 allowedUpdates.number_of_people = newSeatsRequired;
                 allowedUpdates.total_price = newPackage.package_price * newSeatsRequired;
-                
             } 
-            // If only number_of_people changed
             else if (updateData.number_of_people && updateData.number_of_people !== booking.number_of_people) {
                 const currentPackage = await PackageModel.findById(booking.package_id).session(session);
                 if (!currentPackage) throw new AppError("Package not found.", 404);
 
                 const seatDifference = parseInt(updateData.number_of_people, 10) - booking.number_of_people;
 
-                // If asking for more seats, check availability
                 if (seatDifference > 0 && currentPackage.available_seats < seatDifference) {
                     throw new AppError("Not enough available seats in the package to add more people.", 400);
                 }
@@ -181,15 +174,12 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
             }
         } 
         else if (checkRole(userOrVendor.role, ["user"])) {
-            if (updateData.booking_date) {
-                allowedUpdates.booking_date = updateData.booking_date;
-            }
+            if (updateData.booking_date) allowedUpdates.booking_date = updateData.booking_date;
 
             if (updateData.number_of_people && updateData.number_of_people !== booking.number_of_people) {
-                throw new AppError("Customers cannot change the number of people. Please go to the vendor, they will change it if they have free space.", 403);
+                throw new AppError("Customers cannot change the number of people. Please contact the vendor.", 403);
             }
             
-            // Allow changing package_id
             if (updateData.package_id && updateData.package_id !== booking.package_id.toString()) {
                 const oldPackage = await PackageModel.findById(booking.package_id).session(session);
                 const newPackage = await PackageModel.findById(updateData.package_id).session(session);
@@ -212,7 +202,7 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
 
                 allowedUpdates.package_id = updateData.package_id;
                 allowedUpdates.total_price = newPackage.package_price * booking.number_of_people;
-                allowedUpdates.status = "pending"; // Reset status to pending when changing package
+                allowedUpdates.status = "pending"; 
             }
         }
 
@@ -238,45 +228,43 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
     catch (error) {
         await session.abortTransaction();
         session.endSession();
-        // 🚀 Fix 3: couldn't hide my custome errors
-
-
-        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error; 
+        throw new AppError(error.message, 500);
     }
 };
-//get booking by id
+
+// ==========================================
+// 3. CORE: Get Booking By ID
+// ==========================================
 exports.getBookingCore = async function (userOrVendor, bookingId) {
     try {
         const booking = await BookingModel.findById(bookingId)
-            .populate('package_id', 'package_name package_price package_type')
-            .populate('vendor_id', 'name vendor_email vendor_mobile')
-            .populate('user_id', 'name email mobileNumber');
+            .populate('package_id', 'package_name package_price package_type -_id')
+            .populate('vendor_id', 'name vendor_email vendor_mobile -_id')
+            .populate('user_id', 'name email mobileNumber -_id');
 
-        if (!booking || booking.isDeleted) {
-            throw new AppError("Booking not found", 404);
-        }
+        if (!booking || booking.isDeleted) throw new AppError("Booking not found", 404);
 
         checkAuthorization(userOrVendor, booking);
 
-        return {
-            status: "success",
-            data: booking
-        };
+        return { status: "success", data: booking };
     }
     catch (error) {
-        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
-// delete booking with restore seats if pending or accepted
+
+// ==========================================
+// 4. CORE: Delete Booking (Cancel)
+// ==========================================
 exports.deleteBookingCore = async function (userOrVendor, bookingId) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         const booking = await BookingModel.findById(bookingId).session(session);
-        if (!booking || booking.isDeleted) {
-            throw new AppError("Booking not found", 404);
-        }
+        if (!booking || booking.isDeleted) throw new AppError("Booking not found", 404);
         
         checkAuthorization(userOrVendor, booking);
 
@@ -291,9 +279,7 @@ exports.deleteBookingCore = async function (userOrVendor, bookingId) {
         if (shouldRestoreSeats) {
             await PackageModel.findByIdAndUpdate(
                 booking.package_id,
-                { 
-                    $inc: { available_seats: booking.number_of_people } 
-                },
+                { $inc: { available_seats: booking.number_of_people } },
                 { session }
             );
         }
@@ -304,19 +290,20 @@ exports.deleteBookingCore = async function (userOrVendor, bookingId) {
         return {
             status: "success",
             message: "Booking cancelled and seats recovered successfully",
-            data: {
-                bookingId,
-                deletionRequestedAt: booking.deletionRequestedAt
-            }
+            data: { bookingId, deletionRequestedAt: booking.deletionRequestedAt }
         };
     }
     catch (error) {
         await session.abortTransaction();
         session.endSession();
-        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error; 
+        throw new AppError(error.message, 500);
     }
 };
-// get all bookings for a user or vendor or admin
+
+// ==========================================
+// 5. CORE: Get All Bookings
+// ==========================================
 exports.getAllBookingCore = async function (userOrVendor) {
     try {
         let query = { isDeleted: false }; 
@@ -330,56 +317,49 @@ exports.getAllBookingCore = async function (userOrVendor) {
         }
 
         const bookings = await BookingModel.find(query)
-            .populate('package_id', 'package_name package_price package_type')
-            .populate('vendor_id', 'name vendor_email vendor_mobile')
-            .populate('user_id', 'name email mobileNumber')
+            .populate('package_id', 'package_name package_price package_type -_id')
+            .populate('vendor_id', 'name vendor_email vendor_mobile -_id')
+            .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
 
-        return {
-            status: "success",
-            count: bookings.length,
-            data: bookings
-        };
-
+        return { status: "success", count: bookings.length, data: bookings };
     }
     catch (error) {
-        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
+// ==========================================
+// 6. CORE: Get All Requests (Pending)
+// ==========================================
 exports.getAllRequestsCore = async function (userOrVendor, packageId) {
     try {
-        const query = {
-            status: 'pending',
-            isDeleted: false
-        };
+        const query = { status: 'pending', isDeleted: false };
         
         if (checkRole(userOrVendor.role, ["vendor"])) {
-            query.vendor_id = userOrVendor._id; // The vendor sees only his requests
+            query.vendor_id = userOrVendor._id; 
         } else if (!checkRole(userOrVendor.role, ["admin"])) {
-            throw new AppError("Only admins and vendors can view requests", 403); // prohibit the normal user
+            throw new AppError("Only admins and vendors can view requests", 403); 
         }
-        // The admin will bypass the above conditions and will not set vendor_id to the  query, which brings all requests
 
-        if (packageId) {
-            query.package_id = packageId;
-        }
+        if (packageId) query.package_id = packageId;
 
         const requests = await BookingModel.find(query)
-            .populate('package_id', 'package_name package_price max_people')
-            .populate('user_id', 'name email mobileNumber')
+            .populate('package_id', 'package_name package_price max_people -_id')
+            .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
 
-        return {
-            status: "success",
-            count: requests.length,
-            data: requests
-        };
+        return { status: "success", count: requests.length, data: requests };
     } catch (error) {
-        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
+// ==========================================
+// 7. CORE: Get All My Active Bookings
+// ==========================================
 exports.getAllMyBookingsCore = async function (userOrVendor) {
     try {
         let query = { 
@@ -396,9 +376,9 @@ exports.getAllMyBookingsCore = async function (userOrVendor) {
         }
 
         const activeBookings = await BookingModel.find(query)
-            .populate('package_id', 'package_name package_price package_type startDate endDate')
-            .populate('vendor_id', 'name vendor_email vendor_mobile')
-            .populate('user_id', 'name email mobileNumber')
+            .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
+            .populate('vendor_id', 'name vendor_email vendor_mobile -_id')
+            .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 }); 
 
         return {
@@ -407,12 +387,15 @@ exports.getAllMyBookingsCore = async function (userOrVendor) {
             message: "Active bookings retrieved successfully",
             data: activeBookings
         };
-
     } catch (error) {
-        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
+// ==========================================
+// 8. CORE: Get Booking History
+// ==========================================
 exports.getBookingHistoryCore = async function (userOrVendor) {
     try {
         let userQuery = {};
@@ -433,9 +416,9 @@ exports.getBookingHistoryCore = async function (userOrVendor) {
         };
 
         const bookingHistory = await BookingModel.find(historyQuery)
-            .populate('package_id', 'package_name package_price package_type startDate endDate')
-            .populate('vendor_id', 'name vendor_email vendor_mobile')
-            .populate('user_id', 'name email mobileNumber')
+            .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
+            .populate('vendor_id', 'name vendor_email vendor_mobile -_id')
+            .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
 
         return {
@@ -444,12 +427,15 @@ exports.getBookingHistoryCore = async function (userOrVendor) {
             message: "Booking history retrieved successfully",
             data: bookingHistory
         };
-
     } catch (error) {
-        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
+// ==========================================
+// 9. CORE: Status Management Methods
+// ==========================================
 exports.acceptBookingCore = async function (vendorOrAdmin, bookingId) {
     try {
         const booking = await BookingModel.findById(bookingId);
@@ -458,19 +444,16 @@ exports.acceptBookingCore = async function (vendorOrAdmin, bookingId) {
         checkVendorAdminAuth(vendorOrAdmin, booking);
 
         if (!checkStatus(booking.status, ['pending'])) {
-            throw new AppError("Can't accept this booking, status should be pending. Current status: " + booking.status, 400);
+            throw new AppError("Can't accept this booking, status should be pending.", 400);
         }
 
         booking.status = 'accepted';
         await booking.save();
 
-        return {
-            status: "success",
-            message: "Your booking has been accepted successfully",
-            data: booking
-        };
+        return { status: "success", message: "Your booking has been accepted successfully", data: booking };
     } catch (error) {
-        throw  new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
@@ -485,7 +468,7 @@ exports.rejectBookingCore = async function (vendorOrAdmin, bookingId) {
         checkVendorAdminAuth(vendorOrAdmin, booking);
 
         if (!checkStatus(booking.status, ['pending', 'accepted'])) {
-            throw new AppError("Can't reject this booking, status should be pending or accepted. Current status: " + booking.status, 400);
+            throw new AppError("Can't reject this booking, status should be pending or accepted.", 400);
         }
 
         booking.status = 'rejected';
@@ -500,15 +483,12 @@ exports.rejectBookingCore = async function (vendorOrAdmin, bookingId) {
         await session.commitTransaction();
         session.endSession();
 
-        return {
-            status: "success",
-            message: "Your booking has been rejected successfully",
-            data: booking
-        };
+        return { status: "success", message: "Your booking has been rejected successfully", data: booking };
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        throw new AppError(error.message || "Internal Server Error",error.statusCode || 500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
@@ -520,19 +500,16 @@ exports.completeBookingCore = async function (vendorOrAdmin, bookingId) {
         checkVendorAdminAuth(vendorOrAdmin, booking);
 
         if (!checkStatus(booking.status, ['accepted'])) {
-            throw new AppError("Can't complete this booking, status should be accepted. Current status: " + booking.status, 400);
+            throw new AppError("Can't complete this booking, status should be accepted.", 400);
         }
 
         booking.status = 'completed';
         await booking.save();
 
-        return {
-            status: "success",
-            message: `Your booking has been completed successfully`,
-            data: booking
-        };
+        return { status: "success", message: "Your booking has been completed successfully", data: booking };
     } catch (error) {
-        throw new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
@@ -544,23 +521,19 @@ exports.updateStatusCore = async function (userOrVendor, bookingId, newStatus) {
         }
 
         switch (newStatus) {
-            case 'accepted':
-                return await exports.acceptBookingCore(userOrVendor, bookingId);
-            
-            case 'rejected':
-                return await exports.rejectBookingCore(userOrVendor, bookingId);
-            
-            case 'completed':
-                return await exports.completeBookingCore(userOrVendor, bookingId);
-                
-            default:
-                throw new AppError("Unexpected status encountered", 500);
+            case 'accepted': return await exports.acceptBookingCore(userOrVendor, bookingId);
+            case 'rejected': return await exports.rejectBookingCore(userOrVendor, bookingId);
+            case 'completed': return await exports.completeBookingCore(userOrVendor, bookingId);
         }
     } catch (error) {
-        throw new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
+// ==========================================
+// 10. CORE: Get User Pending Requests
+// ==========================================
 exports.getUserPendingRequestsCore = async function (userOrVendor) {
     try {
         if (!checkRole(userOrVendor.role, ["user"])) {
@@ -572,20 +545,20 @@ exports.getUserPendingRequestsCore = async function (userOrVendor) {
             status: 'pending',
             isDeleted: false
         })
-        .populate('package_id', 'package_name package_price')
-        .populate('vendor_id', 'name vendor_email vendor_mobile')
+        .populate('package_id', 'package_name package_price -_id')
+        .populate('vendor_id', 'name vendor_email vendor_mobile -_id')
         .sort({ createdAt: -1 });
 
-        return {
-            status: "success",
-            count: requests.length,
-            data: requests
-        };
+        return { status: "success", count: requests.length, data: requests };
     } catch (error) {
-        throw new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
+// ==========================================
+// 11. CORE: Get Pending Requests Count
+// ==========================================
 exports.getPendingRequestsCountCore = async function (userOrVendor) {
     try {
         if (!checkRole(userOrVendor.role, ["vendor", "admin"])) {
@@ -599,11 +572,9 @@ exports.getPendingRequestsCountCore = async function (userOrVendor) {
 
         const count = await BookingModel.countDocuments(query);
 
-        return {
-            status: "success",
-            data: { pendingRequestsCount: count }
-        };
+        return { status: "success", data: { pendingRequestsCount: count } };
     } catch (error) {
-        throw new AppError(error.message || "Internal Server Error",error.statusCode||500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };

@@ -9,7 +9,8 @@ const adminRoutes = require("./Routes/adminRoutes");
 const aiRoutes = require("./Routes/aiRoutes");
 const complaintRoutes = require("./Routes/complaintRouter");
 const reviewRoutes = require("./Routes/reviewRouter");
-
+const adminAuth = require("./adminAuth");
+const { registerAdminValidator } = require("./adminValidation");
 const app = express();
 
 // Middlewares
@@ -40,6 +41,8 @@ app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/ai", aiRoutes);
 app.use("/api/v1/complaints", complaintRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
+app.post("/api/v1/admin/auth/register", registerAdminValidator, adminAuth.registerAdmin);
+
 
 app.get('/', (req, res) => {
     res.send('Hello World!');

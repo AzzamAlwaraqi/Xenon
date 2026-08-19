@@ -1,26 +1,63 @@
+const mongoose = require("mongoose");
 const AppError = require('../../../utils/AppError');
 const sharp = require('sharp');
 const APIFeatures = require('../../../utils/apiFeatures');
 const Package = require('../../../Models/PackageModel');
+const PackageDetails = require('../../../Models/packageDetailsModels'); // 🌟 استيراد جدول التفاصيل
 const FileStorageService = require("../../Integration/FileStorageService");
-const multer = require("multer");
+const { checkRole } = require("../../../utils/checkvalidete");
 
-exports.getAllPackages = async function (req, res) {
-    try {
-        const features = new APIFeatures(Package.find(), req.query).filter().sort().limitFields().paginate();
-        const packages = await features.query;
-        return packages;
-    } catch (err) {
-        throw new AppError(err.message, 400);
+// ==========================================
+// 🛡️ HELPER: Check Package Ownership
+// ==========================================
+const checkPackageOwnership = (userOrVendor, packageDoc) => {
+    if (checkRole(userOrVendor.role, ["admin"])) return true;
+    if (checkRole(userOrVendor.role, ["vendor"])) {
+        const vendorId = packageDoc.vendor_id && packageDoc.vendor_id._id 
+            ? packageDoc.vendor_id._id.toString() 
+            : packageDoc.vendor_id.toString();
+            
+        if (vendorId !== userOrVendor._id.toString()) {
+            throw new AppError("You do not have permission to modify or delete this package", 403);
+        }
+    } else {
+        throw new AppError("Only vendors or admins can manage packages", 403);
     }
-}
+};
 
-exports.getPackage = async function (req, res, package_id) {
+// ==========================================
+// 1. CORE: Get All Packages (خفيفة وسريعة للواجهة)
+// ==========================================
+exports.getAllPackagesCore = async function (queryString) {
     try {
-        let query = Package.findById(package_id);
+        const baseQuery = Package.find({ isDeleted: { $ne: true } })
+                                 .populate('vendor_id', 'vendor_name vendor_email -_id');
+        
+        const features = new APIFeatures(baseQuery, queryString)
+            .filter()
+            .sort()
+            .limitFields()
+            .paginate();
+            
+        const packages = await features.query;
+        return { count: packages.length, data: packages };
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
+    }
+};
 
-        if (req.query.fields) {
-            const fields = req.query.fields.split(',').join(' ');
+// ==========================================
+// 2. CORE: Get Single Package (مع التفاصيل الكاملة)
+// ==========================================
+exports.getPackageCore = async function (packageId, queryString = {}) {
+    try {
+        let query = Package.findOne({ _id: packageId, isDeleted: { $ne: true } })
+                           .populate('vendor_id', 'vendor_name vendor_email vendor_mobile -_id')
+                           .populate('details'); // 🌟 السحر هنا: جلب كل التفاصيل من الجدول الآخر
+
+        if (queryString.fields) {
+            const fields = queryString.fields.split(',').join(' ');
             query = query.select(fields);
         } else {
             query = query.select('-__v');
@@ -29,209 +66,247 @@ exports.getPackage = async function (req, res, package_id) {
         const packageDoc = await query;
 
         if (!packageDoc) {
-            throw new AppError('the package is not found', 404);
+            throw new AppError('The package is not found or has been deleted', 404);
         }
 
         return packageDoc;
-
-    } catch (err) {
-        throw new AppError(err.message, 400);
-    }
-}
-
-exports.updatePackage = async function (req, res, package_id) {
-    try {
-        const existingPackage = await Package.findById(package_id);
-        if (!existingPackage) {
-            throw new AppError('this package is not found ', 404);
-        }
-
-        const updateData = {};
-        const allowedFields = [
-            'package_name', 'package_price', 'package_description',
-            'package_type', 'package_status', 'startDate', 'endDate'
-        ];
-
-        allowedFields.forEach(field => {
-            if (req.body[field] !== undefined) {
-                updateData[field] = req.body[field];
-            }
-        });
-
-        if (req.file) {
-
-            if (existingPackage.images && existingPackage.images.length > 0) {
-                for (const image of existingPackage.images) {
-                    await FileStorageService.deleteImage(image.public_id);
-                }
-            }
-
-            const optimizedBuffer = await sharp(req.file.buffer)
-                .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-                .webp({ quality: 80 })
-                .toBuffer();
-
-            const uploadResult = await FileStorageService.uploadImageFromBuffer(
-                optimizedBuffer,
-            `xenon/packages/vendor/${user.company_name}/${packageData.package_name}/${packageData.package_id}`
-            );
-
-            updateData.images = [{
-                url: uploadResult.secure_url,
-                public_id: uploadResult.public_id
-            }];
-        }
-
-        if (Object.keys(updateData).length === 0) {
-            return existingPackage;
-        }
-
-        const updatedPackage = await Package.findByIdAndUpdate(
-            package_id,
-            { $set: updateData },
-            {
-                new: true,
-                runValidators: true
-            }
-        );
-
-        return updatedPackage;
-
-    } catch (err) {
-        throw new AppError(err.message, 400);
-    }
-}
-
-exports.deletePackageCore = async function (req, res, package_id) {
-    try {
-        const packageDoc = await Package.findById(package_id);
-        if (!packageDoc) {
-            throw new AppError('the package is not found ', 404);
-        }
-
-        if (packageDoc.images && packageDoc.images.length > 0) {
-            for (const image of packageDoc.images) {
-                await FileStorageService.deleteImage(image.public_id);
-            }
-        }
-
-        await Package.findByIdAndUpdate(package_id, { isDelete: true, deletionRequestedAt: new Date() });
-
-        return packageDoc;
-
-    } catch (err) {
-        throw new AppError(err.message, 400);
-    }
-}
-/*
-exports.createPackage = async function (req, res) {
-    try {
-        const { 
-            vendor_id,
-            package_name, 
-            package_price, 
-            package_description, 
-            package_type, 
-            package_status,
-            startDate, 
-            endDate 
-        } = req.body;
-
-        let imageUrl = '';
-        let imagePublicId = '';
-
-        if (req.file) {
-            const optimizedBuffer = await sharp(req.file.buffer)
-                .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-                .webp({ quality: 80 })
-                .toBuffer();
-
-            const uploadResult = await FileStorageService.uploadImageFromBuffer(
-                optimizedBuffer,
-                "xenon/packages"
-            );
-
-            imageUrl = uploadResult.secure_url;
-            imagePublicId = uploadResult.public_id;
-
-            const packageExists = await Package.findOne({ package_name });
-        
-            if (packageExists) {
-                throw new AppError('package with this name already exists', 400);
-            }
-        
-            // Create new package
-            const newPackage = await Package.create({
-                vendor_id,
-                package_name,
-                package_price,
-                package_description,
-                startDate,
-                endDate,
-                images: [{
-                    url: imageUrl,
-                    public_id: imagePublicId
-                }],
-                package_type: package_type ? package_type.toLowerCase() : package_type,
-                package_status
-            });
-        
-            return newPackage;
-        } else {
-            throw new AppError("image required", 400);
-        }
-
-    } catch (err) {
-        throw new AppError(err.message, err.statusCode || 400);
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
-*/
 
-exports.createPackage = async function (user, packageData, file) {
+// ==========================================
+// 3. CORE: Create Package (مع الـ Transactions)
+// ==========================================
+exports.createPackageCore = async function (user, packageData, file) {
+    let uploadedImagePublicId = null; // للتنظيف في حال الفشل
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const secureVendorId = user._id;
+        const vendorName = user.company_name || user.vendor_name || user.name || 'Vendor';
 
-        if (!file) {
-            throw new AppError("Package image is required", 400);
-        }
+        if (!file) throw new AppError("Package image is required", 400);
 
-        const packageExists = await Package.findOne({ 
+        const activePackageExists = await Package.findOne({ 
             package_name: packageData.package_name,
-            vendor_id: secureVendorId 
-        });
+            vendor_id: secureVendorId,
+            package_status: 'active', 
+            isDeleted: { $ne: true }
+        }).session(session);
         
-        if (packageExists) {
-            throw new AppError('You already have a package with this exact name', 400);
+        if (activePackageExists) {
+            throw new AppError(`You cannot create this package. You already have an ACTIVE package named "${packageData.package_name}".`, 409);
         }
 
+        // 🌟 1. رفع الصورة
         const optimizedBuffer = await sharp(file.buffer)
             .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
             .webp({ quality: 80 })
             .toBuffer();
 
-        const uploadResult = await FileStorageService.uploadImageFromBuffer(
-            optimizedBuffer,
-            `xenon/packages/vendor/${user.company_name}/${packageData.package_name}/${packageData.package_id}`
-        );
+        const safePackageName = packageData.package_name.replace(/[^a-zA-Z0-9]/g, '_');
+        const uploadPath = `xenon/packages/vendor/${vendorName}/${safePackageName}_${Date.now()}`;
+        const uploadResult = await FileStorageService.uploadImageFromBuffer(optimizedBuffer, uploadPath);
+        
+        uploadedImagePublicId = uploadResult.public_id; // حفظ الـ ID للحماية
 
-        const newPackage = await Package.create({
+        // 🌟 2. إنشاء الباقة الأساسية
+        const newPackage = await Package.create([{
             vendor_id: secureVendorId,
             package_name: packageData.package_name,
             package_price: packageData.package_price,
             package_description: packageData.package_description,
             startDate: packageData.startDate,
             endDate: packageData.endDate,
+            max_people: packageData.max_people, 
             images: [{
                 url: uploadResult.secure_url,
                 public_id: uploadResult.public_id
             }],
             package_type: packageData.package_type ? packageData.package_type.toLowerCase() : packageData.package_type,
-            package_status: packageData.package_status
+            package_status: packageData.package_status || 'active'
+        }], { session });
+
+        // 🌟 3. إنشاء تفاصيل الباقة وربطها
+        await PackageDetails.create([{
+            package_id: newPackage[0]._id, // الربط الوثيق
+            itinerary: packageData.itinerary,
+            included_services: packageData.included_services,
+            excluded_services: packageData.excluded_services,
+            meeting_point: packageData.meeting_point,
+            location_coordinates: packageData.location_coordinates,
+            cancellation_policy: packageData.cancellation_policy,
+            important_notes: packageData.important_notes
+        }], { session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return newPackage[0];
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        
+        // 🌟🌟 هندسة الطوارئ (Emergency Cleanup)
+        if (uploadedImagePublicId) {
+            await FileStorageService.deleteImage(uploadedImagePublicId).catch(e => console.error("Cloud cleanup failed:", e));
+        }
+
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
+    }
+};
+
+// ==========================================
+// 4. CORE: Update Package (تحديث الجدولين)
+// ==========================================
+exports.updatePackageCore = async function (userOrVendor, packageId, updateData, file) {
+    let newUploadedImageId = null;
+    let oldImagesToDelete = []; 
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const existingPackage = await Package.findById(packageId).session(session);
+        if (!existingPackage || existingPackage.isDeleted) {
+            throw new AppError('This package is not found', 404);
+        }
+
+        checkPackageOwnership(userOrVendor, existingPackage);
+
+        const packageUpdates = {};
+        const detailsUpdates = {};
+        
+        // 1. Date Logic Validation
+        const finalStartDate = updateData.startDate || existingPackage.startDate;
+        const finalEndDate = updateData.endDate || existingPackage.endDate;
+        if (finalStartDate && finalEndDate && new Date(finalStartDate) >= new Date(finalEndDate)) {
+            throw new AppError("The end date cannot be before or equal to the start date", 400);
+        }
+        
+        // 2. فصل البيانات: Package vs PackageDetails
+        const packageFields = ['startDate', 'endDate', 'package_name', 'package_price', 'package_description', 'package_type', 'package_status'];
+        const detailsFields = ['itinerary', 'included_services', 'excluded_services', 'meeting_point', 'location_coordinates', 'cancellation_policy', 'important_notes'];
+
+        packageFields.forEach(field => {
+            if (updateData[field] !== undefined) packageUpdates[field] = updateData[field];
         });
 
-        return newPackage;
+        detailsFields.forEach(field => {
+            if (updateData[field] !== undefined) detailsUpdates[field] = updateData[field];
+        });
 
-    } catch (err) {
-        throw new AppError(err.message, err.statusCode || 500);
+        // 3. Smart Capacity Management
+        if (updateData.max_people !== undefined && updateData.max_people !== existingPackage.max_people) {
+            const newMax = parseInt(updateData.max_people, 10);
+            const capacityDifference = newMax - existingPackage.max_people;
+            const newAvailableSeats = existingPackage.available_seats + capacityDifference;
+            
+            if (newAvailableSeats < 0) {
+                throw new AppError(`Cannot reduce max_people to ${newMax}. Existing bookings exceed this limit.`, 400);
+            }
+            packageUpdates.max_people = newMax;
+            packageUpdates.available_seats = newAvailableSeats;
+        }
+
+        // 4. Safe Cloud Storage Update
+        if (file) {
+            const vendorName = userOrVendor.company_name || userOrVendor.name || 'Vendor';
+            const safePackageName = (packageUpdates.package_name || existingPackage.package_name).replace(/[^a-zA-Z0-9]/g, '_');
+            
+            const optimizedBuffer = await sharp(file.buffer)
+                .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+                .webp({ quality: 80 })
+                .toBuffer();
+
+            const uploadPath = `xenon/packages/vendor/${vendorName}/${safePackageName}_${Date.now()}`;
+            const uploadResult = await FileStorageService.uploadImageFromBuffer(optimizedBuffer, uploadPath);
+
+            newUploadedImageId = uploadResult.public_id;
+
+            packageUpdates.images = [{
+                url: uploadResult.secure_url,
+                public_id: uploadResult.public_id
+            }];
+            
+            if (existingPackage.images && existingPackage.images.length > 0) {
+                oldImagesToDelete = existingPackage.images;
+            }
+        }
+
+        if (Object.keys(packageUpdates).length === 0 && Object.keys(detailsUpdates).length === 0) {
+            throw new AppError('No valid data provided for update', 400);
+        }
+
+        // 🌟 5. تحديث الداتابيز (الجدولين)
+        let updatedPackage = existingPackage;
+        
+        if (Object.keys(packageUpdates).length > 0) {
+            updatedPackage = await Package.findByIdAndUpdate(packageId, { $set: packageUpdates }, { new: true, runValidators: true, session });
+        }
+
+        if (Object.keys(detailsUpdates).length > 0) {
+            // تحديث التفاصيل إن وجدت
+            await PackageDetails.findOneAndUpdate(
+                { package_id: packageId }, 
+                { $set: detailsUpdates }, 
+                { new: true, runValidators: true, session }
+            );
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        // 🌟 6. تنظيف السحابة من الصورة القديمة (النجاح)
+        if (oldImagesToDelete.length > 0) {
+            for (const image of oldImagesToDelete) {
+                await FileStorageService.deleteImage(image.public_id).catch(e => console.error("Cloud cleanup failed:", e)); 
+            }
+        }
+
+        return updatedPackage;
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        
+        // 🌟 تنظيف السحابة من الصورة الجديدة التي رُفعت إن فشل التحديث (الفشل)
+        if (newUploadedImageId) {
+            await FileStorageService.deleteImage(newUploadedImageId).catch(e => console.error("Cloud cleanup failed:", e));
+        }
+
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
+    }
+};
+
+// ==========================================
+// 5. CORE: Delete Package (Soft Delete)
+// ==========================================
+exports.deletePackageCore = async function (userOrVendor, packageId) {
+    try {
+        const packageDoc = await Package.findById(packageId);
+        
+        if (!packageDoc || packageDoc.isDeleted) {
+            throw new AppError('The package is not found', 404);
+        }
+
+        checkPackageOwnership(userOrVendor, packageDoc);
+
+        packageDoc.isDeleted = true;
+        packageDoc.deletionRequestedAt = new Date();
+        packageDoc.package_status = 'inactive'; 
+        
+        await packageDoc.save();
+
+        // 💡 ملاحظة هندسية: لا نحتاج لعمل Soft Delete لجدول PackageDetails
+        // لأننا في دالة الـ Get نعتمد على أن Package نفسها isDeleted: false
+
+        return { message: "Package deleted and deactivated successfully" };
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };

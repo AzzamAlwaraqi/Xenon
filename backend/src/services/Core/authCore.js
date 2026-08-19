@@ -7,13 +7,25 @@ const VendorModel = require("../../Models/VendorModel");
 const SessionModel = require("../../Models/SessionModel");
 const OTPModel = require("../../Models/OTPModel");
 const { setStandardDate } = require("../../utils/dateFormatter");
-const checkRole = require("../../utils/checkRole");
-
+const { checkRole } = require("../../utils/checkvalidete");
+const { sendOtpCore, verifyOtpCore } = require("./otpCore"); 
+const sesstionHelper = require("../../utils/sessionHelper");
 exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}) {
     const cleanEmail = Body.email.toLowerCase().trim();
     const mobileNumber = Body.phone_no || Body.mobileNumber;
 
-    // Check existing
+    const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || Body.device_type || "Desktop";
+    const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
+    const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
+
+    if (checkRole(role, ["user"]) && !isMobile) {
+        throw new AppError("Access Denied: Clients can only register via the Xenon Mobile App.", 403);
+    
+    }
+    if (checkRole(role, ["vendor"]) && isMobile) {
+        throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
+    }
+
     const existingUserByEmail = await UserModel.findOne({ email: cleanEmail });
     if (existingUserByEmail) throw new AppError("Account with this email already exists", 409);
     
@@ -27,8 +39,22 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
 
     if (Body.DateOfBirth) {
         const dob = new Date(Body.DateOfBirth);
-        if (dob > new Date()) throw new AppError("Date of birth cannot be in the future", 409);
-        if(dob < new Date(Date.now() - 100 * 365 * 24 * 60 * 60 * 1000)) throw new AppError("Date of birth cannot be in the past", 409);
+        const today = new Date();
+
+        if (dob > today) {
+            throw new AppError("Date of birth cannot be in the future", 400);
+        }
+
+        const hundredYearsAgo = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate());
+        if (dob < hundredYearsAgo) {
+            throw new AppError("Invalid date of birth. Please provide a valid date.", 400);
+        }
+
+        const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        
+        if (dob > eighteenYearsAgo) {
+            throw new AppError("Access Denied: You must be at least 18 years old to create an account on Xenon.", 403); 
+        }
     }
 
     const newUser = await UserModel.create({
@@ -43,7 +69,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
 
     let newVendor = null;
     if (checkRole(role, ["vendor"])) {
-        newVendor = await VendorModel.create({
+        const createdVendor = await VendorModel.create({
             vendor_name: Body.company_name || Body.name,
             vendor_email: cleanEmail,
             vendor_password: Body.password,
@@ -57,48 +83,61 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
             vendor_owner_id: newUser._id,
             vendor_user_id: newUser._id
         });
+
+        newVendor = await VendorModel.populate(createdVendor, [
+            { path: "vendor_owner_id", select: "name" },
+            { path: "vendor_user_id", select: "name" },
+            { path: "_id", select: "company_name" }
+        ]);
     }
 
     const token = newUser.getJwtToken ? newUser.getJwtToken() : crypto.randomBytes(16).toString("hex");
     const familyId = deviceInfo.familyId || deviceInfo.family_id || crypto.randomBytes(16).toString("hex");
     const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
-    
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-    const session = await SessionModel.create({
+    await SessionModel.create({
         token_id: hashedToken,
         user_id: newUser._id,
-        expires_at: deviceInfo.expiresAt || deviceInfo.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        ip_address: deviceInfo.ipAddress || deviceInfo.ip_address || Body.ip_address || "127.0.0.1",
-        user_agent: deviceInfo.userAgent || deviceInfo.user_agent || Body.user_agent || "Unknown",
-        device_type: deviceInfo.deviceType || deviceInfo.device_type || Body.device_type || "Desktop",
-        os_name: deviceInfo.osName || deviceInfo.os_name || Body.os_name || "Unknown",
-        browser_name: deviceInfo.browserName || deviceInfo.browser_name || Body.browser_name || "Unknown",
-        device_id: deviceId,
-        role: role,
-        is_active: true,
-        session_status: "active",
-        family_id: familyId
+        expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
+        ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || Body.ip_address || "127.0.0.1"),
+        user_agent: sesstionHelper.getUserAgent(deviceInfo.userAgent || deviceInfo.user_agent || Body.user_agent || "Unknown"),
+        device_type: resolvedDeviceType, // 🌟 نستخدم القيمة التي فحصناها في البداية
+        os_name: sesstionHelper.getOsName(deviceInfo.osName || deviceInfo.os_name || Body.os_name || "Unknown"),
+        browser_name: sesstionHelper.getBrowserName(deviceInfo.browserName || deviceInfo.browser_name || Body.browser_name || "Unknown"),
+        device_id: sesstionHelper.getDeviceId(deviceId),
+        role: sesstionHelper.getRole(role),
+        is_active: sesstionHelper.getIsActive(deviceInfo.isActive || deviceInfo.is_active),
+        session_status: sesstionHelper.getSessionStatus(deviceInfo.sessionStatus || deviceInfo.session_status),
+        family_id: sesstionHelper.getFamilyId(familyId)
     });
 
-    return { user: newUser, vendor: newVendor, session, token };
+    return { user: newUser, vendor: newVendor, token };
 };
 
 exports.loginCore = async function (email, password, roleExpected, deviceInfo = {}) {
     try {
+
+        const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || "Desktop";
+        const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
+        const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
+
         const user = await UserModel.findOne({ email: email.toLowerCase().trim() });
-        if (!user) {
-            throw new AppError("Invalid email or password", 401);
-        }
+        if (!user) throw new AppError("Invalid email or password", 401);
 
         if (roleExpected && !checkRole(user.role, [roleExpected])) {
             throw new AppError("You are not authorized to login to this portal", 403);
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            throw new AppError("Invalid email or password", 401);
+        if (checkRole(user.role, ["user"]) && !isMobile) {
+            throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
         }
+        if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
+            throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) throw new AppError("Invalid email or password", 401);
 
         if (user.deletionRequestedAt) {
             const timeSinceRequest = Date.now() - new Date(user.deletionRequestedAt).getTime();
@@ -110,38 +149,35 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
             }
         }
 
-        if (user.isActive === false) {
-            throw new AppError("Your account has been blocked or deactivated", 403);
-        }
+        if (user.isActive === false) throw new AppError("Your account has been blocked or deactivated", 403);
 
         const token = user.getJwtToken ? user.getJwtToken() : crypto.randomBytes(16).toString("hex");
         const familyId = deviceInfo.familyId || deviceInfo.family_id || crypto.randomBytes(16).toString("hex");
         const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
         const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-        const session = await SessionModel.create({
+        await SessionModel.create({
             token_id: hashedToken,
             user_id: user._id,
-            expires_at: deviceInfo.expiresAt || deviceInfo.expires_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            ip_address: deviceInfo.ipAddress || deviceInfo.ip_address || "127.0.0.1",
-            user_agent: deviceInfo.userAgent || "Unknown",
-            device_type: deviceInfo.deviceType || "Desktop",
-            os_name: deviceInfo.osName || "Unknown",
-            browser_name: deviceInfo.browserName || "Unknown",
-            device_id: deviceId,
-            role: user.role,
+            expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
+            ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || "127.0.0.1"),
+            user_agent: sesstionHelper.getUserAgent(deviceInfo.userAgent || "Unknown"),
+            device_type: resolvedDeviceType, 
+            os_name: sesstionHelper.getOsName(deviceInfo.osName || "Unknown"),
+            browser_name: sesstionHelper.getBrowserName(deviceInfo.browserName || "Unknown"),
+            device_id: sesstionHelper.getDeviceId(deviceId),
+            role: user.role, 
             is_active: true,
             session_status: "active",
             family_id: familyId
         });
 
-        return { user, token, session };
+        return { user, token };
     } catch (error) {
         if (error.statusCode) throw error;
         throw new AppError(error.message, 500);
     }
 };
-
 exports.logoutCore = async function (user, token) {
     try {
         if (!token) throw new AppError("Token is required for logout", 400);
@@ -154,9 +190,7 @@ exports.logoutCore = async function (user, token) {
             { new: true }
         );
 
-        if (!session) {
-            throw new AppError("Active session not found or already logged out", 404);
-        }
+        if (!session) throw new AppError("Active session not found or already logged out", 404);
 
         return { message: "Logout successful" };
     } catch (error) {
@@ -167,14 +201,16 @@ exports.logoutCore = async function (user, token) {
 
 exports.resetPasswordCore = async function (email, password, token) {
     try {
-        const otpRecord = await OTPModel.findOne({ email, otp: token });
-        if (!otpRecord) throw new AppError("Invalid token or OTP", 400);
-        
-        if (otpRecord.expiresAt && otpRecord.expiresAt < new Date()) {
-            throw new AppError("Token or OTP has expired", 400);
-        }
+        const cleanEmail = email.toLowerCase().trim();
 
-        const user = await UserModel.findOne({ email });
+        // 🌟 التحسين: استخدام دالة التحقق من الـ OTP النظيفة التي بنيناها (DRY Principle)
+        await verifyOtpCore({
+            email: cleanEmail,
+            otp: token,
+            purpose: "password_reset"
+        });
+
+        const user = await UserModel.findOne({ email: cleanEmail });
         if (!user) throw new AppError("Account not found", 404);
         
         if (user.isActive === false) throw new AppError("Account has been blocked or deactivated", 403);
@@ -183,14 +219,12 @@ exports.resetPasswordCore = async function (email, password, token) {
         await user.save();
 
         if (checkRole(user.role, ["vendor"])) {
-            const vendor = await VendorModel.findOne({ vendor_email: email });
+            const vendor = await VendorModel.findOne({ vendor_email: cleanEmail });
             if (vendor) {
                 vendor.vendor_password = password;
                 await vendor.save();
             }
         }
-
-        await OTPModel.deleteOne({ _id: otpRecord._id });
 
         return { message: "Password reset successfully" };
     } catch (error) {
@@ -199,19 +233,14 @@ exports.resetPasswordCore = async function (email, password, token) {
     }
 };
 
-const { sendOtpCore } = require("./otpCore");
-
 exports.forgotPasswordCore = async function (email) {
     try {
         const user = await UserModel.findOne({ email: email.toLowerCase().trim() });
         if (!user) {
-            // For security, don't reveal if account exists or not, just pretend we sent it
             return { message: "If an account with that email exists, an OTP has been sent." };
         }
         
-        if (user.isActive === false) {
-            throw new AppError("Account has been blocked or deactivated", 403);
-        }
+        if (user.isActive === false) throw new AppError("Account has been blocked or deactivated", 403);
 
         const otpResponse = await sendOtpCore({
             email: user.email,

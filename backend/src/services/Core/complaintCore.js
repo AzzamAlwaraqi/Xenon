@@ -1,47 +1,57 @@
+const mongoose = require("mongoose");
 const sharp = require("sharp");
 const AppError = require("../../utils/AppError");
 const ComplaintModel = require("../../Models/ComplaintModel");
-const FileStorageService = require("../Integration/FileStorageService");
 const BookingModel = require("../../Models/BookingModel");
-const checkRole = require("../../utils/checkRole");
-const CheckStatus = require("../../utils/checkStatus");
-
-// ==========================================
-// 1. User Functions (العميل)
-// ==========================================
+const FileStorageService = require("../Integration/FileStorageService");
+const { checkRole, checkStatus } = require("../../utils/checkvalidete"); 
 
 exports.createComplaintCore = async function (user, complaintData, files) {
+    let attachments = []; 
+
     try {
         const {
             complaint_type,
             complaint_title,
             complaint_message,
+        
             complaint_priority,
             vendor_id,
             booking_id
         } = complaintData;
+
+        let finalVendorId = vendor_id || null;
 
         if (booking_id) {
             const booking = await BookingModel.findById(booking_id);
             if (!booking || booking.user_id.toString() !== user._id.toString()) {
                 throw new AppError("Invalid booking ID or you do not have permission to complain about this booking", 403);
             }
+            
+            finalVendorId = booking.vendor_id;
+
+            const existingComplaint = await ComplaintModel.findOne({
+                user_id: user._id,
+                booking_id: booking_id,
+                complaint_status: { $in: ['pending', 'in_progress'] },
+                isDeleted: false
+            });
+
+            if (existingComplaint) {
+                throw new AppError("You already have an active complaint for this booking. Please wait for the admin to resolve it.", 409);
+            }
         }
 
-        let attachments = [];
-
         if (files && files.length > 0) {
-            const usernameFolder = user.username || user.name || user._id;
-            const uploadPromises = files.map(async (file) => {
+            const usernameFolder = user.company_name || user.vendor_name || user.name || 'User';
+            const uploadPromises = files.map(async (file, index) => {
                 const optimizedBuffer = await sharp(file.buffer)
                     .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
                     .webp({ quality: 80 })
                     .toBuffer();
 
-                const uploadResult = await FileStorageService.uploadImageFromBuffer(
-                    optimizedBuffer,
-                    `xenon/complaints/user/${usernameFolder}/${user._id}`
-                );
+                const uniquePath = `xenon/complaints/user/${usernameFolder}/${user._id}_${Date.now()}_${index}`;
+                const uploadResult = await FileStorageService.uploadImageFromBuffer(optimizedBuffer, uniquePath);
 
                 return {
                     url: uploadResult.secure_url,
@@ -57,34 +67,49 @@ exports.createComplaintCore = async function (user, complaintData, files) {
             complaint_type,
             complaint_title,
             complaint_message,
-            complaint_priority,
-            vendor_id: vendor_id || null,
+            complaint_priority: complaint_priority || 'medium',
+            vendor_id: finalVendorId, 
             booking_id: booking_id || null,
             attachments
         });
 
         if (global.io) {
-            global.io.emit('new_complaint_alert', {
-                complaint_id: newComplaint.complaint_id,
+            global.io.to('admins_room').emit('new_complaint_alert', {
+                complaint_id: newComplaint._id,
                 priority: newComplaint.complaint_priority,
-                username: user.username || user.name,
-                message: `New ${complaint_priority} priority complaint submitted.`
+                username: user.name,
+                message: `New ${newComplaint.complaint_priority} priority complaint submitted.`
             });
+            
+            if (finalVendorId) {
+                global.io.to(`vendor_${finalVendorId}`).emit('complaint_received', {
+                    message: "A new complaint has been filed regarding your services. Admin will review it."
+                });
+            }
         }
 
-        return newComplaint;
+        return {
+            status: "success",
+            message: "Complaint submitted successfully.",
+            data: newComplaint
+        };
 
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        if (attachments && attachments.length > 0) {
+            for (const file of attachments) {
+                await FileStorageService.deleteImage(file.public_id).catch(e => 
+                    console.error("Critical: Failed to clean up orphaned image:", e)
+                );
+            }
+        }
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
 exports.getMyComplaintsCore = async function (user, queryParams = {}) {
     try {
-        const query = {
-            user_id: user._id,
-            isDeleted: false
-        };
+        const query = { user_id: user._id, isDeleted: false };
 
         if (queryParams.status) query.complaint_status = queryParams.status;
         if (queryParams.priority) query.complaint_priority = queryParams.priority;
@@ -94,14 +119,15 @@ exports.getMyComplaintsCore = async function (user, queryParams = {}) {
         const limit = parseInt(queryParams.limit, 10) || 10;
         const skip = (page - 1) * limit;
 
-        const complaints = await ComplaintModel.find(query)
-            .populate('vendor_id', 'name vendor_email')
-            .populate('booking_id', 'package_name startDate total_price')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const totalComplaints = await ComplaintModel.countDocuments(query);
+        const [complaints, totalComplaints] = await Promise.all([
+            ComplaintModel.find(query)
+                .populate('vendor_id', 'vendor_name company_name vendor_email -_id')
+                .populate('booking_id', 'package_name startDate total_price -_id')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            ComplaintModel.countDocuments(query)
+        ]);
 
         return {
             status: "success",
@@ -115,35 +141,36 @@ exports.getMyComplaintsCore = async function (user, queryParams = {}) {
             data: complaints
         };
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
 exports.getComplaintByIdCore = async function (user, complaintId) {
     try {
-        const complaint = await ComplaintModel.findById(complaintId)
-            .populate('user_id', 'name email mobileNumber')
-            .populate('vendor_id', 'name vendor_email vendor_mobile')
-            .populate('booking_id', 'package_name startDate endDate total_price');
-
-        if (!complaint || complaint.isDeleted) {
+        const rawComplaint = await ComplaintModel.findById(complaintId);
+        
+        if (!rawComplaint || rawComplaint.isDeleted) {
             throw new AppError("Complaint not found", 404);
         }
 
-        const isOwner = complaint.user_id._id.toString() === user._id.toString();
-        const isTargetVendor = complaint.vendor_id && complaint.vendor_id._id.toString() === user._id.toString();
+        const isOwner = rawComplaint.user_id.toString() === user._id.toString();
+        const isTargetVendor = rawComplaint.vendor_id && rawComplaint.vendor_id.toString() === user._id.toString();
         const isAdmin = checkRole(user.role, ['admin']);
 
         if (!isOwner && !isTargetVendor && !isAdmin) {
             throw new AppError("You do not have permission to view this complaint", 403);
         }
 
-        return {
-            status: "success",
-            data: complaint
-        };
+        const complaint = await ComplaintModel.findById(complaintId)
+            .populate('user_id', 'name email mobileNumber -_id')
+            .populate('vendor_id', 'vendor_name vendor_email vendor_mobile -_id')
+            .populate('booking_id', 'package_name startDate endDate total_price -_id');
+
+        return { status: "success", data: complaint };
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
@@ -175,13 +202,10 @@ exports.cancelComplaintCore = async function (user, complaintId) {
             data: complaint
         };
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
-
-// ==========================================
-// 2. Admin & Vendor Functions (الإدارة والتاجر)
-// ==========================================
 
 exports.getAllComplaintsCore = async function (user, queryParams = {}) {
     try {
@@ -197,21 +221,25 @@ exports.getAllComplaintsCore = async function (user, queryParams = {}) {
         if (queryParams.vendor_id) query.vendor_id = queryParams.vendor_id;
 
         if (queryParams.search) {
-            query.complaint_id = { $regex: queryParams.search, $options: 'i' };
+            query.$or = [
+                { _id: { $regex: queryParams.search, $options: 'i' } },
+                { complaint_title: { $regex: queryParams.search, $options: 'i' } }
+            ];
         }
 
         const page = parseInt(queryParams.page, 10) || 1;
         const limit = parseInt(queryParams.limit, 10) || 20;
         const skip = (page - 1) * limit;
 
-        const complaints = await ComplaintModel.find(query)
-            .populate('user_id', 'name email')
-            .populate('vendor_id', 'name vendor_email')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const totalComplaints = await ComplaintModel.countDocuments(query);
+        const [complaints, totalComplaints] = await Promise.all([
+            ComplaintModel.find(query)
+                .populate('user_id', 'name email -_id')
+                .populate('vendor_id', 'vendor_name vendor_email -_id')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            ComplaintModel.countDocuments(query)
+        ]);
 
         return {
             status: "success",
@@ -225,7 +253,8 @@ exports.getAllComplaintsCore = async function (user, queryParams = {}) {
             data: complaints
         };
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
@@ -237,7 +266,7 @@ exports.respondToComplaintCore = async function (user, complaintId, responseData
 
         const { status, admin_response } = responseData;
 
-        if (status && !CheckStatus(status)) {
+        if (status && !checkStatus(status, ['pending', 'in_progress', 'resolved', 'cancelled'])) {
             throw new AppError("Invalid complaint status update", 400);
         }
 
@@ -253,8 +282,8 @@ exports.respondToComplaintCore = async function (user, complaintId, responseData
         await complaint.save();
 
         if (global.io) {
-            global.io.emit(`complaint_update_${complaint.user_id}`, {
-                complaint_id: complaint.complaint_id,
+            global.io.to(`user_${complaint.user_id}`).emit('complaint_update', {
+                complaint_id: complaint._id,
                 status: complaint.complaint_status,
                 message: "Your complaint status has been updated by the administration."
             });
@@ -266,7 +295,8 @@ exports.respondToComplaintCore = async function (user, complaintId, responseData
             data: complaint
         };
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
@@ -276,10 +306,7 @@ exports.getComplaintsAgainstMeCore = async function (user, queryParams = {}) {
             throw new AppError("Unauthorized access. Vendor role required.", 403);
         }
 
-        const query = {
-            vendor_id: user._id,
-            isDeleted: false
-        };
+        const query = { vendor_id: user._id, isDeleted: false };
 
         if (queryParams.status) query.complaint_status = queryParams.status;
         if (queryParams.priority) query.complaint_priority = queryParams.priority;
@@ -288,14 +315,15 @@ exports.getComplaintsAgainstMeCore = async function (user, queryParams = {}) {
         const limit = parseInt(queryParams.limit, 10) || 10;
         const skip = (page - 1) * limit;
 
-        const complaints = await ComplaintModel.find(query)
-            .populate('booking_id', 'package_name startDate')
-            .select('-user_id')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const totalComplaints = await ComplaintModel.countDocuments(query);
+        const [complaints, totalComplaints] = await Promise.all([
+            ComplaintModel.find(query)
+                .populate('booking_id', 'package_name startDate -_id')
+                .select('-user_id') 
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            ComplaintModel.countDocuments(query)
+        ]);
 
         return {
             status: "success",
@@ -309,6 +337,48 @@ exports.getComplaintsAgainstMeCore = async function (user, queryParams = {}) {
             data: complaints
         };
     } catch (error) {
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
+    }
+};
+
+exports.vendorReplyToComplaintCore = async function (user, complaintId, replyText) {
+    try {
+        if (!checkRole(user.role, ['vendor'])) {
+            throw new AppError("Unauthorized access. Vendor role required.", 403);
+        }
+
+        const complaint = await ComplaintModel.findById(complaintId);
+
+        if (!complaint || complaint.isDeleted) {
+            throw new AppError("Complaint not found", 404);
+        }
+
+        if (complaint.vendor_id.toString() !== user._id.toString()) {
+            throw new AppError("You can only reply to complaints directed at your services.", 403);
+        }
+
+        complaint.vendor_reply = replyText;
+        complaint.vendor_replied_at = new Date();
+        
+        await complaint.save();
+
+        if (global.io) {
+            global.io.to(`user_${complaint.user_id}`).emit('vendor_reply_received', {
+                complaint_id: complaint._id,
+                vendor_name: user.company_name || user.vendor_name || user.name,
+                message: "The vendor has replied to your complaint.",
+                reply: replyText
+            });
+        }
+
+        return {
+            status: "success",
+            message: "Your reply has been sent successfully to the user.",
+            data: complaint
+        };
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };

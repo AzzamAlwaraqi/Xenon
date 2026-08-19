@@ -1,29 +1,43 @@
 const mongoose = require("mongoose");
 const Report = require("../../../Models/ReportsModels");
 const User = require("../../../Models/UserModel");
-const checkstatusReport = require("../../../utils/checkstatusReport");
-const APIFeatures = require("../../../utils/APIFeatures");
+const { checkReportStatus: checkstatusReport, checkTerminalStatus } = require("../../../utils/checkvalidete");
+const APIFeatures = require("../../../utils/apiFeatures");
 const AppError = require("../../../utils/AppError");
-const checkTerminalStatus = require("../../../utils/TERMINAL_STATUSES"); 
 
-exports.getAllReports = async function (queryString) {
-    if(queryString.status && !checkstatusReport(queryString.status)) {
+// ==========================================
+// 1. Get All Reports
+// ==========================================
+exports.getAllReportsCore = async function (queryString) {
+    if (queryString.status && !checkstatusReport(queryString.status)) {
         throw new AppError("Invalid status parameter", 400);
     }
 
-    const features = new APIFeatures(Report.find()
-        .populate('reporter', 'name email') 
-        .populate('reported_user', 'name email role'), 
+    const features = new APIFeatures(
+        Report.find()
+            // 🌟 إخفاء الـ _id للحفاظ على نظافة الـ API للـ Frontend
+            .populate('reporter', 'name email -_id')
+            .populate('reported_user', 'name email role -_id'),
         queryString
     )
-    .filter()
-    .sort() 
-    .paginate();
+        .filter()
+        .sort()
+        .paginate();
 
-    return await features.query;
+    const reports = await features.query;
+
+    // توحيد شكل الاستجابة
+    return {
+        status: "success",
+        count: reports.length,
+        data: reports
+    };
 };
 
-exports.resolveReport = async function (reportId, action, adminNotes, adminId) {
+// ==========================================
+// 2. Resolve Report (The Core Engine)
+// ==========================================
+exports.resolveReportCore = async function (reportId, action, adminNotes, adminId) {
     if (['suspend_user', 'delete_content'].includes(action) && !adminNotes) {
         throw new AppError(`Admin notes are strictly required when performing: ${action}`, 400);
     }
@@ -40,35 +54,57 @@ exports.resolveReport = async function (reportId, action, adminNotes, adminId) {
 
         report.status = action === 'dismiss' ? 'dismissed' : 'resolved';
         report.resolved_by = adminId;
-        report.admin_notes = adminNotes; 
+        report.admin_notes = adminNotes;
         report.action_taken = action;
 
         switch (action) {
             case 'dismiss':
+                // لا يوجد إجراء إضافي
                 break;
 
             case 'warn_user':
-                await User.findByIdAndUpdate(
-                    report.reported_user, 
-                    { $inc: { warnings_count: 1 } }, 
-                    { session }
-                );
+                // 🌟 التحسين الذكي: الإيقاف التلقائي عند الوصول لـ 3 إنذارات
+                const userToWarn = await User.findById(report.reported_user).session(session);
+                if (userToWarn) {
+                    userToWarn.warnings_count = (userToWarn.warnings_count || 0) + 1;
+                    
+                    if (userToWarn.warnings_count >= 3) {
+                        userToWarn.isActive = false; // Auto-suspend
+                        report.admin_notes += " | [SYSTEM: User automatically suspended due to reaching 3 warnings]";
+                    }
+                    await userToWarn.save({ session });
+                }
                 break;
 
             case 'suspend_user':
+                // 🌟 تصحيح اسم الحقل ليطابق الموديل (isActive)
                 await User.findByIdAndUpdate(
-                    report.reported_user, 
-                    { is_active: false }, 
+                    report.reported_user,
+                    { isActive: false },
                     { session }
                 );
+                // ملاحظة: إذا كان هناك SessionModel، يجب أن نضيف كود لتدمير جلساته هنا!
                 break;
 
             case 'delete_content':
-                if(!report.content_type || !report.content_id) {
+                if (!report.content_type || !report.content_id) {
                     throw new AppError("Cannot delete content: Target content details are missing in the report", 400);
                 }
+
+                // 🌟 حماية ضد الـ Dynamic Injection (حدد فقط الموديلات المسموح حذفها)
+                const allowedModels = ['ReviewModel', 'CommentModel', 'PackageModel']; // عدلها حسب الموديلات الحقيقية في مشروعك
+                if (!allowedModels.includes(report.content_type)) {
+                    throw new AppError(`Security Error: Modifying ${report.content_type} is not allowed via reporting.`, 403);
+                }
+
                 const ContentModel = mongoose.model(report.content_type);
-                await ContentModel.findByIdAndDelete(report.content_id).session(session);
+                
+                // 🌟 Soft Delete بدلاً من Hard Delete
+                await ContentModel.findByIdAndUpdate(
+                    report.content_id, 
+                    { isDeleted: true }, // تأكد أن الموديل المستهدف يحتوي على حقل isDeleted
+                    { session }
+                );
                 break;
 
             default:
@@ -80,41 +116,73 @@ exports.resolveReport = async function (reportId, action, adminNotes, adminId) {
         await session.commitTransaction();
         session.endSession();
 
-        return report;
+        return {
+            status: "success",
+            message: `Report resolved with action: ${action}`,
+            data: report
+        };
 
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        throw error instanceof AppError ? error : new AppError(error.message, 500);
+        // 🌟 توحيد إدارة الأخطاء
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
 };
 
-exports.getUserModerationHistory = async function (userId) {
-    const user = await User.findById(userId).select('name email warnings_count is_active');
-    if (!user) {
-        throw new AppError("No user found with that ID", 404);
+// ==========================================
+// 3. Get User Moderation History
+// ==========================================
+exports.getUserModerationHistoryCore = async function (userId) {
+    try {
+        // 🌟 تصحيح الحقل لـ isActive
+        const user = await User.findById(userId).select('name email warnings_count isActive');
+        if (!user) {
+            throw new AppError("No user found with that ID", 404);
+        }
+
+        const history = await Report.find({
+            reported_user: userId,
+            status: { $in: ['resolved', 'closed'] },
+            action_taken: { $ne: 'dismiss' }
+        }).sort({ createdAt: -1 });
+
+        return {
+            status: "success",
+            data: {
+                user_info: user,
+                past_violations: history
+            }
+        };
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
     }
-
-    const history = await Report.find({ 
-        reported_user: userId, 
-        status: { $in: ['resolved', 'closed'] }, 
-        action_taken: { $ne: 'dismiss' } 
-    }).sort({ createdAt: -1 });
-
-    return {
-        user_info: user,
-        past_violations: history
-    };
 };
 
-exports.escalateReport = async function (reportId, escalationNotes, adminId) {
-    const report = await Report.findById(reportId);
-    if (!report) throw new AppError("Report not found", 404);
-    if (checkTerminalStatus(report.status)) throw new AppError("Cannot escalate a closed report", 400);
-    report.status = 'escalated';
-    report.escalation_notes = escalationNotes;
-    report.escalation_by = adminId;
-    await report.save();
+// ==========================================
+// 4. Escalate Report
+// ==========================================
+exports.escalateReportCore = async function (reportId, escalationNotes, adminId) {
+    try {
+        const report = await Report.findById(reportId);
+        if (!report) throw new AppError("Report not found", 404);
+        if (checkTerminalStatus(report.status)) throw new AppError("Cannot escalate a closed report", 400);
+        
+        report.status = 'escalated';
+        report.escalation_notes = escalationNotes;
+        report.escalation_by = adminId;
+        
+        await report.save();
 
-    return report;
+        return {
+            status: "success",
+            message: "Report successfully escalated to higher administration.",
+            data: report
+        };
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
+    }
 };

@@ -11,6 +11,21 @@ const PackageSchema = new mongoose.Schema({
         required: true,
         ref: "Vendor"
     },
+    package_name: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    package_description: {
+        type: String, // وصف مختصر جداً كإعلان تشويقي للباقة
+        required: true,
+        trim: true
+    },
+    package_price: {
+        type: Number,
+        required: true,
+        min: [0, "price cannot be negative"]
+    },
     startDate: {
         type: Date,
         required: true
@@ -19,28 +34,12 @@ const PackageSchema = new mongoose.Schema({
         type: Date,
         required: true,
         validate: {
-            validator: function(value) {
-                return value > this.startDate; 
+            validator: function (value) {
+                return value > this.startDate;
             },
             message: "the end date must be after the start date"
         }
     },
-    package_name: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    package_description: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    package_price: {
-        type: Number, 
-        required: true,
-        min: [0, "price cannot be negative"]
-    },
-    
     images: {
         type: [{
             url: { type: String, required: true },
@@ -48,58 +47,50 @@ const PackageSchema = new mongoose.Schema({
         }],
         validate: [
             {
-                validator: function(val) { return val.length > 0; },
+                validator: function (val) { return val.length > 0; },
                 message: 'you must add one image at least'
             },
             {
-                validator: function(val) { return val.length <= 5; },
+                validator: function (val) { return val.length <= 5; },
                 message: 'maximum is 5 images'
             }
         ]
     },
-
     tags: [{
         type: String,
         trim: true
-    }], 
-
-    included_services: [{
-        title: { type: String, required: true, trim: true },
-        description: { type: String, trim: true }
     }],
-
-    excluded_services: [{
-        title: { type: String, required: true, trim: true },
-        description: { type: String, trim: true }
-    }],
-
-    itinerary: [{
-        day_number: { type: Number, required: true, min: 1 },
-        title: { type: String, required: true, trim: true },
-        activities: { type: String, trim: true }
-    }],
-    
     package_type: {
         type: String,
-        required: true,
+        required: [true, "you must specify the type of the package"],
         enum: ['adventure', 'cultural', 'relaxation', 'historical', 'family']
     },
     package_status: {
         type: String,
-        required: true,
+        required: [true, "you must specify the status of the package"],
         enum: ["active", "inactive"],
         default: "active"
     },
     max_people: {
         type: Number,
-        required: true,
-        default: 175,
-        min: [1, "Max people must be at least 1"],
-        max: [300, "Max people cannot exceed 300"]
+        required: [true, "You must specify the maximum number of people for this package"], 
+        min: [1, "Max people must be at least 1"], 
+        max: [100, "Max people cannot exceed 100 per package to ensure quality and safety"] 
     },
     available_seats: {
         type: Number,
-        min: [0, "not seats available"], 
+        min: [0, "no seats available"],
+    },
+    ratingsAverage: {
+        type: Number,
+        default: 0,
+        min: [0, 'Rating must be above 0'],
+        max: [5, 'Rating must be below 5.0'],
+        set: val => Math.round(val * 10) / 10 
+    },
+    ratingsQuantity: {
+        type: Number,
+        default: 0
     },
     isDeleted: {
         type: Boolean,
@@ -115,10 +106,19 @@ const PackageSchema = new mongoose.Schema({
     toObject: { getters: true, virtuals: true }
 });
 
-PackageSchema.pre('save', function() {
+PackageSchema.virtual('details', {
+    ref: 'PackageDetails',     
+    foreignField: 'package_id', 
+    localField: '_id',         
+    justOne: true              
+});
+
+
+PackageSchema.pre('save', function (next) {
     if (this.isNew && this.available_seats === undefined) {
         this.available_seats = this.max_people;
     }
+    next();
 });
 
 module.exports = mongoose.model("Package", PackageSchema);

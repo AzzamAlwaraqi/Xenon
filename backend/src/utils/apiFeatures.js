@@ -48,3 +48,4 @@ class APIFeatures {
 }
 
 module.exports = APIFeatures;
+["سياحية","ثقافية","تاريخية","دينية","تعليمية"]

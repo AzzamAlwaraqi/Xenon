@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-const checkRole = require("../utils/checkRole");
+const { checkRole } = require("../utils/checkvalidete");
 const { MongooseStandardDate } = require("../utils/dateFormatter");
 const { v7: uuidv7 } = require("uuid");
 

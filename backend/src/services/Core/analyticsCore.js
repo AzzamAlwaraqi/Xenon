@@ -4,25 +4,20 @@ const Booking = require("../../Models/BookingModel");
 const Report = require("../../Models/ReportsModels");
 const Complaint = require("../../Models/ComplaintModel");
 const Package = require("../../Models/PackageModel");
+const Review = require("../../Models/ReviewModel"); 
 const AppError = require("../../utils/AppError");
 
-// ==========================================
-// 🛠️ HELPER: Date Filter Builder (DRY Principle)
-// ==========================================
+
 const buildDateFilter = (startDate, endDate) => {
     const dateQuery = {};
-    if (startDate && endDate) {
-        dateQuery.createdAt = { 
-            $gte: new Date(startDate), 
-            $lte: new Date(endDate) 
-        };
+    if (startDate || endDate) {
+        dateQuery.createdAt = {};
+        if (startDate) dateQuery.createdAt.$gte = new Date(startDate);
+        if (endDate) dateQuery.createdAt.$lte = new Date(endDate);
     }
     return dateQuery;
 };
 
-// ==========================================
-// 🧱 INDIVIDUAL FUNCTIONS: ADMIN ANALYTICS
-// ==========================================
 
 const getTrafficVolume = async (startDate, endDate) => {
     const matchStage = buildDateFilter(startDate, endDate);
@@ -33,7 +28,8 @@ const getDemographics = async (startDate, endDate) => {
     const matchStage = buildDateFilter(startDate, endDate);
     return await User.aggregate([
         { $match: matchStage },
-        { $group: { _id: "$role", count: { $sum: 1 } } }
+        { $group: { _id: "$role", count: { $sum: 1 } } },
+        { $project: { role: "$_id", count: 1, _id: 0 } }
     ]);
 };
 
@@ -41,7 +37,8 @@ const getModerationEfficiency = async (startDate, endDate) => {
     const matchStage = buildDateFilter(startDate, endDate);
     const stats = await Report.aggregate([
         { $match: matchStage },
-        { $group: { _id: "$status", count: { $sum: 1 } } }
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+        { $project: { status: "$_id", count: 1, _id: 0 } }
     ]);
     return {
         total_reports: stats.reduce((acc, curr) => acc + curr.count, 0),
@@ -63,28 +60,40 @@ const getActiveDestinations = async (startDate, endDate) => {
             as: 'package_info' 
         }},
         { $unwind: { path: "$package_info", preserveNullAndEmptyArrays: true } },
-        { $project: { _id: 1, total_bookings: "$totalBookings", package_name: "$package_info.name" } }
+        { $project: { package_id: "$_id", total_bookings: "$totalBookings", package_name: "$package_info.package_name", _id: 0 } }
     ]);
 };
 
-// ==========================================
-// 🧱 INDIVIDUAL FUNCTIONS: VENDOR ANALYTICS
-// ==========================================
+const getAdminRevenue = async (startDate, endDate) => {
+    const matchStage = {
+        status: { $in: ['completed', 'accepted'] },
+        ...buildDateFilter(startDate, endDate)
+    };
+    const revenue = await Booking.aggregate([
+        { $match: matchStage },
+        { $group: { _id: null, total_revenue: { $sum: "$total_price" } } } 
+    ]);
+    return revenue.length > 0 ? revenue[0].total_revenue : 0;
+};
 
-const getVendorBookingsStatus = async (vendorObjectId, startDate, endDate) => {
+
+
+const getVendorBookingsStatus = async (vendorId, startDate, endDate) => {
     const matchStage = { 
-        vendor_id: vendorObjectId,
+        vendor_id: vendorId, 
         ...buildDateFilter(startDate, endDate) 
     };
     return await Booking.aggregate([
         { $match: matchStage },
-        { $group: { _id: "$status", count: { $sum: 1 } } }
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+        { $project: { status: "$_id", count: 1, _id: 0 } }
     ]);
 };
 
-const getVendorCapacityLimits = async (vendorObjectId, startDate, endDate) => {
+const getVendorCapacityLimits = async (vendorId, startDate, endDate) => {
     const matchStage = { 
-        vendor_id: vendorObjectId,
+        vendor_id: vendorId, 
+        isDeleted: { $ne: true },
         ...buildDateFilter(startDate, endDate)
     };
     return await Package.aggregate([
@@ -97,19 +106,20 @@ const getVendorCapacityLimits = async (vendorObjectId, startDate, endDate) => {
                     $expr: { $eq: ['$package_id', '$$pkgId'] },
                     status: { $in: ['accepted', 'completed'] }
                 }},
-                { $group: { _id: null, total_pax: { $sum: '$number_of_people' } } }
+                { $group: { _id: null, total_pax: { $sum: '$number_of_people' } } } 
             ],
             as: 'booking_data'
         }},
         { $unwind: { path: "$booking_data", preserveNullAndEmptyArrays: true } },
         { $project: {
-            package_name: "$name",
-            max_capacity: "$capacity",
+            _id: 0,
+            package_name: "$package_name",
+            max_capacity: "$max_people", 
             booked_seats: { $ifNull: ["$booking_data.total_pax", 0] },
             occupancy_percentage: {
                 $cond: [
-                    { $gt: ["$capacity", 0] },
-                    { $round: [ { $multiply: [ { $divide: [ { $ifNull: ["$booking_data.total_pax", 0] }, "$capacity" ] }, 100 ] }, 1 ] },
+                    { $gt: ["$max_people", 0] },
+                    { $round: [ { $multiply: [ { $divide: [ { $ifNull: ["$booking_data.total_pax", 0] }, "$max_people" ] }, 100 ] }, 1 ] },
                     0
                 ]
             }
@@ -117,16 +127,17 @@ const getVendorCapacityLimits = async (vendorObjectId, startDate, endDate) => {
     ]);
 };
 
-const getVendorQualityScore = async (vendorObjectId, startDate, endDate) => {
+const getVendorQualityScore = async (vendorId, startDate, endDate) => {
     const matchStage = { 
-        vendor_id: vendorObjectId,
+        vendor_id: vendorId,
         ...buildDateFilter(startDate, endDate)
     };
+    
     const [complaintsCount, ratingStats] = await Promise.all([
         Complaint.countDocuments(matchStage),
-        Booking.aggregate([
-            { $match: { ...matchStage, rating: { $exists: true } } },
-            { $group: { _id: null, avg_rating: { $avg: "$rating" } } }
+        Review.aggregate([
+            { $match: { vendor_id: vendorId, review_status: "accepted", ...buildDateFilter(startDate, endDate) } },
+            { $group: { _id: null, avg_rating: { $avg: "$review_rating" } } }
         ])
     ]);
     
@@ -136,20 +147,31 @@ const getVendorQualityScore = async (vendorObjectId, startDate, endDate) => {
     };
 };
 
-// ==========================================
-// 🎼 ORCHESTRATORS (General Dashboard Functions)
-// ==========================================
+const getVendorRevenue = async (vendorId, startDate, endDate) => {
+    const matchStage = {
+        vendor_id: vendorId,
+        status: { $in: ['completed', 'accepted'] },
+        ...buildDateFilter(startDate, endDate)
+    };
+    const revenue = await Booking.aggregate([
+        { $match: matchStage },
+        { $group: { _id: null, total_revenue: { $sum: "$total_price" } } }
+    ]);
+    return revenue.length > 0 ? revenue[0].total_revenue : 0;
+};
 
-exports.getAdminDashboard = async function (startDate, endDate) {
-    // Run all Admin queries in parallel
-    const [traffic, demographics, moderation, destinations] = await Promise.all([
+
+exports.getAdminDashboardCore = async function (startDate, endDate) { 
+    const [traffic, demographics, moderation, destinations, revenue] = await Promise.all([
         getTrafficVolume(startDate, endDate),
         getDemographics(startDate, endDate),
         getModerationEfficiency(startDate, endDate),
-        getActiveDestinations(startDate, endDate)
+        getActiveDestinations(startDate, endDate),
+        getAdminRevenue(startDate, endDate) // 🌟
     ]);
 
     return {
+        financials: { total_revenue: revenue },
         platform_traffic: { total_bookings: traffic },
         demographics_overview: demographics,
         moderation_efficiency: moderation,
@@ -157,26 +179,24 @@ exports.getAdminDashboard = async function (startDate, endDate) {
     };
 };
 
-exports.getVendorDashboard = async function (vendorId, startDate, endDate) {
+exports.getVendorDashboardCore = async function (vendorId, startDate, endDate) {
     if (!vendorId) throw new AppError("Vendor ID is required", 400);
-    const vendorObjectId = new mongoose.Types.ObjectId(vendorId);
-
-    // Run all Vendor queries in parallel
-    const [bookingsStatus, capacity, qualityScore] = await Promise.all([
-        getVendorBookingsStatus(vendorObjectId, startDate, endDate),
-        getVendorCapacityLimits(vendorObjectId, startDate, endDate),
-        getVendorQualityScore(vendorObjectId, startDate, endDate)
+    
+    const [bookingsStatus, capacity, qualityScore, revenue] = await Promise.all([
+        getVendorBookingsStatus(vendorId, startDate, endDate),
+        getVendorCapacityLimits(vendorId, startDate, endDate),
+        getVendorQualityScore(vendorId, startDate, endDate),
+        getVendorRevenue(vendorId, startDate, endDate) // 🌟
     ]);
 
     return {
+        financials: { total_revenue: revenue },
         bookings_overview: bookingsStatus,
         capacity_management: capacity,
         quality_score: qualityScore
     };
 };
 
-// 🚀 Export Individual Functions for Specific Metric Requests
 exports.getVendorBookingsStatus = getVendorBookingsStatus;
 exports.getVendorCapacityLimits = getVendorCapacityLimits;
 exports.getVendorQualityScore = getVendorQualityScore;
-// (You can also export admin functions here if needed)

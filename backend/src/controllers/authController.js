@@ -1,8 +1,8 @@
 const authCore = require("../services/Core/authCore");
-const AppError = require("../utils/AppError");
+const  AppError  = require("../utils/AppError");
 const { sendOtpCore } = require("../services/Core/otpCore");
 const UserModel = require("../Models/UserModel");
-const checkRole = require("../utils/checkRole");
+const { checkRole } = require("../utils/checkvalidete");
 const authValidation = require("../validations/authValidation");
 
 exports.register = async (req, res, next) => {
@@ -162,6 +162,47 @@ exports.forgotPassword = async (req, res, next) => {
             message: result.message,
             data: result.expiresAt ? { expiresAt: result.expiresAt } : undefined
         });
+    } catch (error) {
+        next(new AppError(error.message, error.statusCode || 500));
+    }
+};
+
+exports.verifyEmail = async (req, res, next) => {
+   try { // 1. Extract email and otp from request body
+    const { email, otp, purpose } = req.body;
+
+    if (!email || !otp) {
+        return next(new AppError('Please provide both email and OTP code', 400));
+    }
+
+    const cleanEmail = String(email).toLowerCase().trim();
+    const verificationPurpose = purpose || 'registration';
+
+    // 2. Pass pure data to the Core layer for validation (handles expiration, attempts, etc.)
+    await otpCore.verifyOtpCore({
+        email: cleanEmail,
+        otp,
+        purpose: verificationPurpose
+    });
+
+    // 3. Business Logic: If verification succeeds and purpose is registration, activate the user
+    if (verificationPurpose === 'registration') {
+        const user = await User.findOneAndUpdate(
+            { email: cleanEmail },
+            { is_verified: true, is_active: true }, // Activate user account
+            { new: true }
+        );
+
+        if (!user) {
+            return next(new AppError('User not found associated with this email', 404));
+        }
+    }
+
+    // 4. Send success response back to the client
+    res.status(200).json({
+        status: 'success',
+        message: 'Email verified successfully. Your account is now active.'
+    });
     } catch (error) {
         next(new AppError(error.message, error.statusCode || 500));
     }

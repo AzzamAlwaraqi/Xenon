@@ -1,12 +1,12 @@
 const Joi = require('joi');
 const AppError = require('../utils/AppError');
-const { adminposition, vendorposition } = require('../utils/staffposition');
+const { STAFF_POSITIONS } = require('../utils/checkvalidete');
 
 
 const ROLES = ['admin', 'vendor'];
 const WORK_SYSTEMS = ["part-time", "full-time", "contract", "freelance"];
-const ADMIN_POSITIONS = adminposition;
-const VENDOR_POSITIONS = vendorposition;
+const ADMIN_POSITIONS = STAFF_POSITIONS.admin;
+const VENDOR_POSITIONS = STAFF_POSITIONS.vendor;
 
 const MIN_SALARY_JORDAN = 260; 
 const MIN_HOURLY_RATE = 1.25;

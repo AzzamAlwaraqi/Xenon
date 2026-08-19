@@ -21,6 +21,11 @@ const ReviewSchema = new mongoose.Schema({
         required: true,
         ref: "Package"
     },
+    booking_id: { 
+        type: mongoose.Schema.Types.UUID,
+        required: true,
+        ref: "Booking"
+    },
     review_text: {
         type: String,
         required: true,
@@ -37,12 +42,34 @@ const ReviewSchema = new mongoose.Schema({
         required: true,
         enum: ["accepted", "rejected", "in-progress"],
         default: "in-progress"
+    },
+    vendor_reply: {
+        type: String,
+        trim: true,
+        default: null
+    },
+    vendor_replied_at: {
+        type: Date,
+        default: null
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deletionRequestedAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true,
     toJSON: { getters: true, virtuals: true },
     toObject: { getters: true, virtuals: true }
 });
+
+// 🚀 Database Indexes 
+ReviewSchema.index({ package_id: 1, review_status: 1, isDeleted: 1 }); 
+ReviewSchema.index({ booking_id: 1 }, { unique: true });
+
 
 ReviewSchema.virtual('review_time_formatted').get(function() {
     if (!this.createdAt) return null;
@@ -54,43 +81,6 @@ ReviewSchema.virtual('review_date_formatted').get(function() {
     if (!this.createdAt) return null;
     const date = new Date(this.createdAt);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-});
-
-ReviewSchema.statics.calcAverageRatings = async function(packageId) {
-    const stats = await this.aggregate([
-        {
-            $match: { package_id: packageId, review_status: "accepted" }
-        },
-        {
-            $group: {
-                _id: '$package_id',
-                nRating: { $sum: 1 }, 
-                avgRating: { $avg: '$review_rating' } 
-            }
-        }
-    ]);
-
-    if (stats.length > 0) {
-        await mongoose.model('Package').findByIdAndUpdate(packageId, {
-            ratingsQuantity: stats[0].nRating,
-            ratingsAverage: Math.round(stats[0].avgRating * 10) / 10 
-        });
-    } else {
-        await mongoose.model('Package').findByIdAndUpdate(packageId, {
-            ratingsQuantity: 0,
-            ratingsAverage: 0
-        });
-    }
-};
-
-ReviewSchema.post('save', function() {
-    this.constructor.calcAverageRatings(this.package_id);
-});
-
-ReviewSchema.post(/^findOneAnd/, async function(doc) {
-    if (doc) {
-        await doc.constructor.calcAverageRatings(doc.package_id);
-    }
 });
 
 module.exports = mongoose.model("Review", ReviewSchema);
