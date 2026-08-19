@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gp/core/services/auth_service.dart';
+import 'package:gp/core/utils/toast_utils.dart';
 import 'dart:async';
 
 class OtpProvider extends ChangeNotifier {
@@ -60,9 +61,7 @@ class OtpProvider extends ChangeNotifier {
       if (success) {
         Navigator.pushReplacementNamed(context, '/main');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid or expired OTP code.'), backgroundColor: Colors.red),
-        );
+        showTopToast(context, 'Invalid OTP. Please try again.', isError: true);
       }
     }
   }
@@ -74,16 +73,17 @@ class OtpProvider extends ChangeNotifier {
     notifyListeners();
 
     // Re-trigger signup API or a specific resend API if it exists.
-    // For now, simulating resend success.
-    await Future.delayed(const Duration(seconds: 1));
+    final success = await _authService.sendOtp(email);
     
     _isLoading = false;
-    _startCountdown();
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OTP sent to your email.'), backgroundColor: Colors.green),
-      );
+      if (success) {
+        _startCountdown();
+        showTopToast(context, 'OTP sent to your email.', isError: false);
+      } else {
+        showTopToast(context, 'Failed to send OTP. Please try again.', isError: true);
+      }
     }
   }
 

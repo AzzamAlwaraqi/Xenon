@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gp/core/services/auth_service.dart';
+import 'package:gp/core/utils/toast_utils.dart';
 
 class LoginProvider extends ChangeNotifier {
   final TextEditingController emailOrPhoneController = TextEditingController();
@@ -33,12 +34,7 @@ class LoginProvider extends ChangeNotifier {
       if (error == null) {
         Navigator.pushReplacementNamed(context, '/main');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showTopToast(context, error, isError: true);
       }
     }
   }

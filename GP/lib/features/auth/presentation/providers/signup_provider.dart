@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gp/core/services/auth_service.dart';
+import 'package:gp/core/utils/toast_utils.dart';
 
 class SignupProvider extends ChangeNotifier {
   final TextEditingController fullNameController = TextEditingController();
@@ -78,29 +79,24 @@ class SignupProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     
-    final success = await _authService.signUp(
+    final error = await _authService.signUp(
       fullNameController.text.trim(),
       emailController.text.trim(),
       passwordController.text,
     );
-    
+
     _isLoading = false;
     notifyListeners();
 
     if (context.mounted) {
-      if (success) {
+      if (error == null) {
         Navigator.pushReplacementNamed(
           context, 
           '/otp',
           arguments: {'email': emailController.text.trim()},
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Signup failed. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showTopToast(context, error, isError: true);
       }
     }
   }
