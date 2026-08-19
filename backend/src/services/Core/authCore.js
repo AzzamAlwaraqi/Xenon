@@ -199,8 +199,11 @@ exports.logoutCore = async function (user, token) {
     }
 };
 
-exports.resetPasswordCore = async function (email, password, token) {
+exports.resetPasswordCore = async function (email, password,passwordConfirmation,token) {
     try {
+        if (password !== passwordConfirmation) {
+            throw new AppError("Passwords do not match", 400);
+        }
         const cleanEmail = email.toLowerCase().trim();
 
         // 🌟 التحسين: استخدام دالة التحقق من الـ OTP النظيفة التي بنيناها (DRY Principle)

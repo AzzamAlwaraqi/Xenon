@@ -1,6 +1,6 @@
 const authCore = require("../services/Core/authCore");
 const  AppError  = require("../utils/AppError");
-const { sendOtpCore } = require("../services/Core/otpCore");
+const { sendOtpCore, verifyOtpCore } = require("../services/Core/otpCore");
 const UserModel = require("../Models/UserModel");
 const { checkRole } = require("../utils/checkvalidete");
 const authValidation = require("../validations/authValidation");
@@ -167,7 +167,7 @@ exports.forgotPassword = async (req, res, next) => {
     }
 };
 
-exports.verifyEmail = async (req, res, next) => {
+exports.verifyOtp = async (req, res, next) => {
    try { // 1. Extract email and otp from request body
     const { email, otp, purpose } = req.body;
 
@@ -179,7 +179,7 @@ exports.verifyEmail = async (req, res, next) => {
     const verificationPurpose = purpose || 'registration';
 
     // 2. Pass pure data to the Core layer for validation (handles expiration, attempts, etc.)
-    await otpCore.verifyOtpCore({
+    await verifyOtpCore({
         email: cleanEmail,
         otp,
         purpose: verificationPurpose
@@ -187,9 +187,9 @@ exports.verifyEmail = async (req, res, next) => {
 
     // 3. Business Logic: If verification succeeds and purpose is registration, activate the user
     if (verificationPurpose === 'registration') {
-        const user = await User.findOneAndUpdate(
+        const user = await UserModel.findOneAndUpdate(
             { email: cleanEmail },
-            { is_verified: true, is_active: true }, // Activate user account
+            { isEmailVerified: true, isActive: true }, // Activate user account
             { new: true }
         );
 
