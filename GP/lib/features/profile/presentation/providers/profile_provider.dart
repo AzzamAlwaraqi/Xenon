@@ -16,9 +16,7 @@ class ProfileProvider extends ChangeNotifier {
     // Handle navigation
   }
 
-  void navigateToMyCards(BuildContext context) {
-    // Handle navigation
-  }
+
 
   void navigateToResetPassword(BuildContext context) {
     // Handle navigation

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/app/theme/colors.dart';
 import 'package:gp/core/providers/settings_provider.dart';
+import 'package:gp/features/home/presentation/pages/notifications_page.dart';
 
 class ExplorePage extends StatelessWidget {
   const ExplorePage({super.key});
@@ -24,7 +25,9 @@ class ExplorePage extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: isDark ? Colors.white : Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage()));
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -117,25 +120,7 @@ class ExplorePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              isArabic ? 'إجراءات سريعة' : 'QUICK ACTIONS',
-              style: TextStyle(
-                color: isDark ? AppColors.textSecondaryLight : Colors.grey[600],
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildActionButton(Icons.flight, isArabic ? 'رحلات' : 'Flights', isDark),
-                _buildActionButton(Icons.hotel, isArabic ? 'فنادق' : 'Hotels', isDark),
-                _buildActionButton(Icons.local_activity, isArabic ? 'أنشطة' : 'Activities', isDark),
-              ],
-            ),
-            const SizedBox(height: 24),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -148,10 +133,7 @@ class ExplorePage extends StatelessWidget {
                     letterSpacing: 1.2,
                   ),
                 ),
-                TextButton(
-                  onPressed: () {},
-                  child: Text(isArabic ? 'عرض الكل' : 'View All', style: const TextStyle(color: AppColors.primaryRust, fontSize: 10)),
-                ),
+
               ],
             ),
             SizedBox(
@@ -214,26 +196,6 @@ class ExplorePage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildActionButton(IconData icon, String label, bool isDark) {
-    return Column(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceLight : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: isDark ? AppColors.borderLight : Colors.grey[300]!, width: 0.5),
-            boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
-          ),
-          child: Icon(icon, color: isDark ? Colors.white : Colors.blue, size: 24),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: TextStyle(color: isDark ? AppColors.textSecondaryLight : Colors.grey[700], fontSize: 12)),
-      ],
     );
   }
 

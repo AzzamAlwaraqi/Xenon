@@ -4,6 +4,7 @@ import 'package:gp/app/theme/colors.dart';
 import 'package:gp/core/providers/settings_provider.dart';
 import 'package:gp/core/providers/destination_provider.dart';
 import 'destination_details_page.dart';
+import 'notifications_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,7 +17,11 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<DestinationProvider>().fetchDestinations());
+    Future.microtask(() {
+      if (mounted) {
+        context.read<DestinationProvider>().fetchDestinations();
+      }
+    });
   }
 
   @override
@@ -42,7 +47,9 @@ class _HomePageState extends State<HomePage> {
         actions: [
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: isDark ? AppColors.textPrimaryLight : Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage()));
+            },
           ),
           const SizedBox(width: 8),
         ],

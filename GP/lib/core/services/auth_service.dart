@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'api_config.dart';
 
 class AuthService {
@@ -23,7 +24,7 @@ class AuthService {
       }
       return false;
     } catch (e) {
-      print('Login error: $e');
+      debugPrint('Login error: $e');
       return false;
     }
   }
@@ -42,7 +43,7 @@ class AuthService {
 
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
-      print('Signup error: $e');
+      debugPrint('Signup error: $e');
       return false;
     }
   }
@@ -55,7 +56,7 @@ class AuthService {
       );
       // Clear local storage/tokens here if necessary
     } catch (e) {
-      print('Logout error: $e');
+      debugPrint('Logout error: $e');
     }
   }
 }

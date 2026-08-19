@@ -4,6 +4,7 @@ import 'package:gp/app/theme/colors.dart';
 import 'package:gp/core/providers/settings_provider.dart';
 
 import 'package:gp/core/providers/booking_provider.dart';
+import 'package:gp/features/home/presentation/pages/notifications_page.dart';
 
 class BookingsPage extends StatefulWidget {
   const BookingsPage({super.key});
@@ -34,7 +35,9 @@ class _BookingsPageState extends State<BookingsPage> {
         actions: [
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: isDark ? Colors.white : Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage()));
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -259,32 +262,7 @@ class _BookingsPageState extends State<BookingsPage> {
                   )
                 else
                   const SizedBox(),
-                
-                if (showCheckIn)
-                  ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.qr_code, size: 16),
-                    label: const Text('CHECK-IN'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  )
-                else if (showDetails)
-                  OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: isDark ? AppColors.borderLight : Colors.grey[300]!),
-                      foregroundColor: isDark ? Colors.white : Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: const Text('VIEW DETAILS'),
-                  ),
+
               ],
             ),
           ],

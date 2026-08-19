@@ -39,25 +39,32 @@ class _MainLayoutState extends State<MainLayout> {
             top: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight, width: 0.5),
           ),
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: isDark ? AppColors.textSecondaryDark : AppColors.textPrimaryLight,
-          showSelectedLabels: true,
-          showUnselectedLabels: true,
-          selectedFontSize: 12,
-          unselectedFontSize: 12,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          items: [
-            _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0, isDark),
-            _buildNavItem(Icons.explore_outlined, Icons.explore, 'Trips', 1, isDark),
-            _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 2, isDark),
-            _buildNavItem(Icons.settings_outlined, Icons.settings, 'Settings', 3, isDark),
-          ],
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+          ),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            selectedItemColor: Colors.white,
+            unselectedItemColor: isDark ? AppColors.textSecondaryDark : AppColors.textPrimaryLight,
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            selectedFontSize: 12,
+            unselectedFontSize: 12,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            items: [
+              _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0, isDark),
+              _buildNavItem(Icons.explore_outlined, Icons.explore, 'Trips', 1, isDark),
+              _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 2, isDark),
+              _buildNavItem(Icons.settings_outlined, Icons.settings, 'Settings', 3, isDark),
+            ],
+          ),
         ),
       ),
     );
@@ -71,6 +78,15 @@ class _MainLayoutState extends State<MainLayout> {
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primaryRust : Colors.transparent,
           shape: BoxShape.circle,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primaryRust.withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  )
+                ]
+              : [],
         ),
         child: Icon(
           isSelected ? activeIcon : icon,

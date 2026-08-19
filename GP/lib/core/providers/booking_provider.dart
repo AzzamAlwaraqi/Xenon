@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'package:flutter/material.dart';
 
 class Booking {
@@ -9,7 +10,7 @@ class Booking {
   final double price;
   final String? bookingId;
 
-  Booking({
+  const Booking({
     required this.title,
     required this.date,
     required this.status,
@@ -22,15 +23,15 @@ class Booking {
 
 class BookingProvider extends ChangeNotifier {
   final List<Booking> _bookings = [
-    Booking(
+    const Booking(
       title: 'Petra: The Rose City',
       date: 'Oct 14 - Oct 16, 2024',
       status: 'CONFIRMED',
-      statusColor: const Color(0xFF4ADE80),
+      statusColor: Color(0xFF4ADE80),
       icon: Icons.airplanemode_active,
       price: 50,
     ),
-    Booking(
+    const Booking(
       title: 'Wadi Rum Safari',
       date: 'Dec 02 - Dec 04, 2024',
       status: 'PENDING',
@@ -41,10 +42,16 @@ class BookingProvider extends ChangeNotifier {
     ),
   ];
 
-  List<Booking> get bookings => _bookings;
+  UnmodifiableListView<Booking> get bookings => UnmodifiableListView(_bookings);
 
   void addBooking(Booking booking) {
     _bookings.insert(0, booking);
     notifyListeners();
+  }
+
+  void removeBooking(Booking booking) {
+    if (_bookings.remove(booking)) {
+      notifyListeners();
+    }
   }
 }

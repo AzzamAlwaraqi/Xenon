@@ -44,12 +44,6 @@ class _ProfilePageContent extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.settings_outlined, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
-                    },
-                  ),
                 ],
               ),
               
@@ -114,9 +108,13 @@ class _ProfilePageContent extends StatelessWidget {
                 isDark: isDark,
               ),
               _buildMenuTile(
-                icon: Icons.credit_card_outlined,
-                title: 'My Cards',
-                onTap: () => provider.navigateToMyCards(context),
+                icon: Icons.payments_outlined,
+                title: 'Payment Method: Cash',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Cash is currently the only supported payment method')),
+                  );
+                },
                 isDark: isDark,
               ),
               _buildMenuTile(
