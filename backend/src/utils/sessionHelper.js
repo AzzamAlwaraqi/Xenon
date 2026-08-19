@@ -40,3 +40,15 @@ exports.extractAndValidateSessionData = (req, userRole) => {
         device_id
     };
 };
+
+exports.getDeviceType = (val) => val || "Desktop";
+exports.calculateSessionExpiry = (val) => val || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+exports.getClientIp = (val) => val || "127.0.0.1";
+exports.getUserAgent = (val) => val || "Unknown";
+exports.getOsName = (val) => val || "Unknown";
+exports.getBrowserName = (val) => val || "Unknown";
+exports.getDeviceId = (val) => val || "unknown-device-id";
+exports.getRole = (val) => val || "user";
+exports.getIsActive = (val) => val !== undefined ? val : true;
+exports.getSessionStatus = (val) => val || "active";
+exports.getFamilyId = (val) => val || "unknown-family-id";
