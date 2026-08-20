@@ -59,7 +59,7 @@ exports.register = async (req, res, next) => {
 };
 exports.login = async (req, res, next) => {
     try {
-        const role = req.body.role || "user";
+        const role = req.body.role;
         
         const deviceInfo = sessionHelper.extractAndValidateSessionData(req, role);
 

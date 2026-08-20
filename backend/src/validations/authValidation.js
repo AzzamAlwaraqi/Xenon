@@ -125,7 +125,14 @@ exports.changePasswordValidation = function (req, res, next) {
             "any.only": "Confirm password does not match new password"
         })
     });
-    validateMiddleware(Schema, req.body, req, next);
+
+    const cleanData = {
+        old_password: req.body.oldPassword || req.body.old_password,
+        new_password: req.body.newPassword || req.body.new_password,
+        confirm_password: req.body.confirmPassword || req.body.confirm_password || req.body.confiomPassword // Supported user typo 'confiomPassword'
+    };
+
+    validateMiddleware(Schema, cleanData, req, next);
 };
 
 exports.updateProfileValidation = function (req, res, next) {

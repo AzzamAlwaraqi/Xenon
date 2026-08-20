@@ -37,29 +37,29 @@ const respondComplaintSchema = Joi.object({
 // ==========================================
 
 exports.createComplaintValidation = (req, res, next) => {
-    const { error, value } = createComplaintSchema.validate(req.body);
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = createComplaintSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
     req.body = value;
     next();
 };
 
 exports.getComplaintsQueryValidation = (req, res, next) => {
-    const { error, value } = queryComplaintSchema.validate(req.query);
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = queryComplaintSchema.validate(req.query, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
     req.query = value;
     next();
 };
 
 exports.complaintIdParamValidation = (req, res, next) => {
-    const { error, value } = paramIdSchema.validate(req.params);
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = paramIdSchema.validate(req.params, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
     req.params = value;
     next();
 };
 
 exports.respondOnComplaintValidation = (req, res, next) => {
-    const { error, value } = respondComplaintSchema.validate(req.body);
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = respondComplaintSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
     req.body = value;
     next();
 };

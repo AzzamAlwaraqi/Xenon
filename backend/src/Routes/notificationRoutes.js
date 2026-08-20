@@ -11,7 +11,7 @@ router.post("/broadcast", notificationController.sendBroadcastNotification);
 router.get("/", notificationController.getMyNotifications);
 router.patch("/:id/read", notificationController.markAsRead);
 router.patch("/read-all", notificationController.markAllAsRead);
-router.delete("/:id", notificationController.deleteNotification);
-router.delete("/", notificationController.deleteAllNotifications);
+router.patch("/:id", notificationController.deleteNotification);
+router.patch("/delete-all", notificationController.deleteAllNotifications);
 
 module.exports = router;

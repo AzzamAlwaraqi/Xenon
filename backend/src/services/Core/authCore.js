@@ -98,8 +98,8 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
 
     await SesstionModel.create({
         token_id: hashedTokenId,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
+        accessToken: crypto.createHash("sha256").update(tokens.accessToken).digest("hex"),
+        refreshToken: crypto.createHash("sha256").update(tokens.refreshToken).digest("hex"),
         user_id: newUser._id,
         expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
         ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || Body.ip_address || "127.0.0.1"),
@@ -159,8 +159,8 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
 
         await SesstionModel.create({
             token_id: hashedTokenId,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
+            accessToken: crypto.createHash("sha256").update(tokens.accessToken).digest("hex"),
+            refreshToken: crypto.createHash("sha256").update(tokens.refreshToken).digest("hex"),
             user_id: user._id,
             expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
             ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || "127.0.0.1"),
@@ -186,10 +186,14 @@ exports.logoutCore = async function (user, token) {
     try {
         if (!token) throw new AppError("Token is required for logout", 400);
 
-        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+        const hashedInputToken = crypto.createHash("sha256").update(token).digest("hex");
 
         const session = await SesstionModel.findOneAndUpdate(
-            { user_id: user._id, token_id: hashedToken, is_active: true },
+            { 
+                user_id: user._id, 
+                $or: [{ accessToken: hashedInputToken }, { refreshToken: hashedInputToken }],
+                is_active: true 
+            },
             { is_active: false },
             { new: true }
         );
@@ -306,8 +310,8 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
 
         await SesstionModel.create({
             token_id: newHashedTokenId,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
+            accessToken: crypto.createHash("sha256").update(tokens.accessToken).digest("hex"),
+            refreshToken: crypto.createHash("sha256").update(tokens.refreshToken).digest("hex"),
             user_id: user._id,
             expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
             ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || session.ip_address),
