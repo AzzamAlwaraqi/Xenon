@@ -2,7 +2,7 @@ const authCore = require("../services/Core/authCore");
 const { sendOtpCore, verifyOtpCore } = require("../services/Core/otpCore");
 const UserModel = require("../Models/UserModel");
 const {checkRole} = require("../utils/checkvalidete");
-
+const sessionHelper = require("../utils/sessionHelper");
 
 exports.register = async (req, res, next) => {
     try {
@@ -48,6 +48,7 @@ exports.register = async (req, res, next) => {
             data: {
                 newVendor: result.vendor,
                 session: result.session,
+                token,
                 accessToken: result.accessToken,
                 refreshToken: result.refreshToken
             }
@@ -74,6 +75,7 @@ exports.login = async (req, res, next) => {
             message: "Login successful",
             data: {
                 session: result.session,
+                token: result.accessToken,
                 accessToken: result.accessToken,
                 refreshToken: result.refreshToken,
                 user: result.user.role === "user" ? result.user : undefined 
