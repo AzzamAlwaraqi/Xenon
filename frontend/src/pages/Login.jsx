@@ -39,7 +39,7 @@ export default function Login() {
       storage.set('xenon_session', result.data?.session || null)
       storage.set('xenon_user', result.data?.user || null)
       setStatus({ loading: false, message: 'Welcome back. Your session is ready.', type: 'success' })
-      navigate(role === 'vendor' ? ROUTES.VENDOR : ROUTES.DASHBOARD)
+      navigate(role === 'vendor' ? ROUTES.VENDOR : role === 'admin' ? ROUTES.ADMIN : ROUTES.DASHBOARD)
     } catch (error) {
       setStatus({ loading: false, message: error.message, type: 'error' })
     }

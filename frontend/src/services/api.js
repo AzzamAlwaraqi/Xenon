@@ -67,4 +67,33 @@ export const vendorBookingApi = {
   updateStatus: (bookingId, status) => request(`/bookings/update-status/${bookingId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 }
 
+// Traveller booking routes
+export const bookingApi = {
+  create: (data) => request('/bookings/create-booking', { method: 'POST', body: JSON.stringify(data) }),
+  getMine: () => request('/bookings/my-bookings'),
+  getHistory: () => request('/bookings/my-history'),
+  getById: (bookingId) => request(`/bookings/get-booking/${bookingId}`),
+  cancel: (bookingId) => request(`/bookings/delete-booking/${bookingId}`, { method: 'PUT' }),
+}
+
+// Review routes
+export const reviewApi = {
+  create: (data) => request('/reviews/createReview', { method: 'POST', body: JSON.stringify(data) }),
+  getMine: () => request('/reviews/getMyReviews'),
+  getForPackage: (packageId) => request(`/reviews/package/${packageId}`),
+  remove: (reviewId) => request(`/reviews/deleteReview/${reviewId}`, { method: 'DELETE' }),
+  getAll: (query = '') => request(`/reviews/getAllReviews${query}`),
+  updateStatus: (reviewId, status) => request(`/reviews/updateReviewStatus/${reviewId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+}
+
+// Admin routes
+export const adminApi = {
+  getVendors: (query = '') => request(`/admin/vendor-approvals${query}`),
+  getVendor: (vendorId) => request(`/admin/vendor-approvals/${vendorId}`),
+  updateVendorStatus: (vendorId, status, rejectionReason) => request(`/admin/vendor-approvals/${vendorId}/status`, { method: 'PATCH', body: JSON.stringify({ status, rejectionReason }) }),
+  getReports: (query = '') => request(`/admin/reports${query}`),
+  resolveReport: (reportId, action, adminNotes) => request(`/admin/reports/${reportId}/resolve`, { method: 'POST', body: JSON.stringify({ action, adminNotes }) }),
+  escalateReport: (reportId, escalationNotes) => request(`/admin/reports/${reportId}/escalate`, { method: 'POST', body: JSON.stringify({ escalationNotes }) }),
+}
+
 export { BASE_URL, request }

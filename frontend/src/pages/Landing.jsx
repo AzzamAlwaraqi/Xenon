@@ -1,6 +1,7 @@
 // Libraries
 import { ArrowRight, Sparkles, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { ROUTES } from '../routes/routes.config.js'
 
 // Images
 const assets = {
@@ -17,7 +18,7 @@ export default function Landing() {
         <Link className="brand" to="/">Xenon</Link>
         <div className="nav-links">
           <a href="#journey">Destinations</a>
-          <a href="#journey">Experiences</a>
+          <Link to={ROUTES.PACKAGES}>Experiences</Link>
           <span className="nav-divider" />
           <Link to="/login">Login / Register</Link>
         </div>
@@ -28,7 +29,7 @@ export default function Landing() {
             <span className="eyebrow">THE ARTISANAL JOURNEY</span>
             <h1>Travel with<br />Soul &amp; Substance.</h1>
             <p>Curated, slow-luxury experiences for the discerning traveler. Discover destinations that resonate with authenticity and quiet sophistication.</p>
-            <Link className="primary-button pill-button" to="/login">Explore Collections <ArrowRight size={15} /></Link>
+            <Link className="primary-button pill-button" to={ROUTES.PACKAGES}>Explore Collections <ArrowRight size={15} /></Link>
           </div>
           <div className="hero-image" style={{ backgroundImage: `url(${assets.hero})` }} role="img" aria-label="Wadi Rum desert landscape in Jordan" />
         </section>

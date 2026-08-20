@@ -48,6 +48,28 @@ export function validateVendorAccount(form) {
   return ''
 }
 
+export function validateBooking(form) {
+  if (!form.date) return 'Select a travel date.'
+  if (new Date(form.date) <= new Date()) return 'Booking date must be in the future.'
+  const guests = Number(form.guests)
+  if (!guests || guests < 1 || guests > 5) return 'You can book for 1 to 5 people.'
+  return ''
+}
+
+export function validateReview(form) {
+  const rating = Number(form.rating)
+  if (!rating || rating < 1 || rating > 5) return 'Choose a rating from 1 to 5.'
+  if (form.comment && form.comment.trim().length > 0 && form.comment.trim().length < 3) return 'Comment must be at least 3 characters.'
+  return ''
+}
+
+export function validateChangePassword(form) {
+  if (!form.old_password) return 'Enter your current password.'
+  if (!isAcceptablePassword(form.new_password)) return 'Use at least 8 characters with uppercase, lowercase, a number, and a special character.'
+  if (form.new_password !== form.confirm_password) return 'New passwords do not match.'
+  return ''
+}
+
 export function validateVendorBusiness(form) {
   if (form.company_name.trim().length < 2) return 'Business name must contain at least 2 characters.'
   if (!form.vendor_type) return 'Select a business type.'
