@@ -125,36 +125,40 @@ const updateStaffSchema = Joi.object({
 
 const handleJoiError = (error, next) => {
     if (error) {
-        const errorMessage = error.details.map(err => err.message).join(', ');
+        const errorMessage = error.details.map(err => err.message).join(' | ');
         return next(new AppError(errorMessage, 400));
     }
 };
 
 exports.createStaffValidation = (req, res, next) => {
-    const { error } = createStaffSchema.validate(req.body, { abortEarly: false });
+    const { error, value } = createStaffSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (error) return handleJoiError(error, next);
+    req.body = value;
     next();
 };
 
 exports.updateStaffValidation = (req, res, next) => {
-    const { error: idError } = objectIdSchema.validate(req.params);
+    const { error: idError, value: paramValue } = objectIdSchema.validate(req.params, { abortEarly: false, stripUnknown: true });
     if (idError) return handleJoiError(idError, next);
+    req.params = paramValue;
 
-    const { error: bodyError } = updateStaffSchema.validate(req.body, { abortEarly: false });
+    const { error: bodyError, value: bodyValue } = updateStaffSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (bodyError) return handleJoiError(bodyError, next);
+    req.body = bodyValue;
     
     next();
 };
 
-
 exports.getOrDeleteStaffValidation = (req, res, next) => {
-    const { error } = objectIdSchema.validate(req.params);
+    const { error, value } = objectIdSchema.validate(req.params, { abortEarly: false, stripUnknown: true });
     if (error) return handleJoiError(error, next);
+    req.params = value;
     next();
 };
 
 exports.getAllStaffValidation = (req, res, next) => {
-    const { error } = getAllStaffSchema.validate(req.query, { abortEarly: false });
+    const { error, value } = getAllStaffSchema.validate(req.query, { abortEarly: false, stripUnknown: true });
     if (error) return handleJoiError(error, next);
+    req.query = value;
     next();
 };

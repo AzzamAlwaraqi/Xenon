@@ -51,30 +51,30 @@ const queryReviewSchema = Joi.object({
 });
 
 exports.createReviewValidation = (req, res, next) => {
-    const { error, value } = createReviewSchema.validate(req.body);
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = createReviewSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(err => err.message).join(' | '), 400));
     req.body = value;
     next();
 };
 
 exports.updateReviewValidation = (req, res, next) => {
-    const { error, value } = updateReviewBodySchema.validate(req.body);
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = updateReviewBodySchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(err => err.message).join(' | '), 400));
     req.body = value;
     next();
 };
 
 exports.getReviewsQueryValidation = (req, res, next) => {
-    const { error, value } = queryReviewSchema.validate(req.query);
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = queryReviewSchema.validate(req.query, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(err => err.message).join(' | '), 400));
     req.query = value;
     next();
 };
 
 exports.paramIdValidation = (req, res, next) => {
     const idToValidate = req.params.reviewId || req.params.targetId || req.params.id;
-    const { error, value } = paramIdSchema.validate({ id: idToValidate });
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = paramIdSchema.validate({ id: idToValidate }, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(err => err.message).join(' | '), 400));
     req.params.id = value.id;
     next();
 };
@@ -82,15 +82,15 @@ exports.paramIdValidation = (req, res, next) => {
 exports.reviewIdParamValidation = exports.paramIdValidation;
 
 exports.replyOnReviewValidation = (req, res, next) => {
-    const { error, value } = replyReviewSchema.validate(req.body);
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = replyReviewSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(err => err.message).join(' | '), 400));
     req.body = value;
     next();
 };
 
 exports.updateReviewStatusValidation = (req, res, next) => {
-    const { error, value } = updateStatusSchema.validate(req.body);
-    if (error) return next(new AppError(error.details[0].message, 400));
+    const { error, value } = updateStatusSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(err => err.message).join(' | '), 400));
     req.body = value;
     next();
 };

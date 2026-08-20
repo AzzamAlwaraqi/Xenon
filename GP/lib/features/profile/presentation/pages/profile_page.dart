@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/app/theme/colors.dart';
 import 'package:gp/features/profile/presentation/providers/profile_provider.dart';
-import 'package:gp/features/profile/presentation/pages/settings_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -25,7 +24,9 @@ class _ProfilePageContent extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -46,9 +47,9 @@ class _ProfilePageContent extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Avatar
               Container(
                 width: 100,
@@ -65,9 +66,9 @@ class _ProfilePageContent extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Change Picture Text
               Text(
                 'Change Profile Picture',
@@ -77,14 +78,16 @@ class _ProfilePageContent extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // User Info
               Text(
                 'Sarah User',
                 style: TextStyle(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -93,13 +96,15 @@ class _ProfilePageContent extends StatelessWidget {
               Text(
                 'sa***@email.com',
                 style: TextStyle(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                   fontSize: 16,
                 ),
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Menu Options
               _buildMenuTile(
                 icon: Icons.cases_outlined,
@@ -112,7 +117,11 @@ class _ProfilePageContent extends StatelessWidget {
                 title: 'Payment Method: Cash',
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cash is currently the only supported payment method')),
+                    const SnackBar(
+                      content: Text(
+                        'Cash is currently the only supported payment method',
+                      ),
+                    ),
                   );
                 },
                 isDark: isDark,
@@ -123,9 +132,9 @@ class _ProfilePageContent extends StatelessWidget {
                 onTap: () => provider.navigateToResetPassword(context),
                 isDark: isDark,
               ),
-              
+
               const SizedBox(height: 48),
-              
+
               // Logout Button
               SizedBox(
                 width: double.infinity,
@@ -150,7 +159,7 @@ class _ProfilePageContent extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
             ],
           ),
@@ -193,12 +202,19 @@ class _ProfilePageContent extends StatelessWidget {
         title: Text(
           title,
           style: TextStyle(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
-        trailing: Icon(Icons.chevron_right, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: isDark
+              ? AppColors.textSecondaryDark
+              : AppColors.textSecondaryLight,
+        ),
         onTap: onTap,
       ),
     );

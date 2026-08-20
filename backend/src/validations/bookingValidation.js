@@ -1,13 +1,12 @@
 const joi = require('joi');
+const AppError = require("../utils/AppError");
 
-exports.createBookingValidation = function (body) {
+exports.createBookingValidation = function (req, res, next) {
     const Schema = joi.object({
         package_id: joi.string().uuid().required().messages({
             "string.guid": "Package ID must be a valid UUID"
         }),
-        
         booking_date: joi.date().iso().min('now').required(),
-        
         number_of_people: joi.number().integer().min(1).max(5).required().messages({
             'number.min': 'You must be at least one person.',
             'number.max': 'You can book for a maximum of 5 people only.',
@@ -15,10 +14,14 @@ exports.createBookingValidation = function (body) {
         }),
         user_id: joi.string().optional()
     });
-    return Schema.validate(body, { stripUnknown: true });
+
+    const { error, value } = Schema.validate(req.body, { stripUnknown: true, abortEarly: false });
+    if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
+    req.body = value;
+    next();
 };
-////number of people can be updated and booking date  just or can chenge the pakage that can updated 
-exports.updateBookingValidation = function (body) {
+
+exports.updateBookingValidation = function (req, res, next) {
     const Schema = joi.object({
         package_id: joi.string().uuid().optional().messages({
             "string.guid": "Package ID must be a valid UUID"
@@ -31,15 +34,17 @@ exports.updateBookingValidation = function (body) {
             "number.max": "Number of people cannot exceed 5"
         }),
         status: joi.string().valid("pending", "confirmed", "cancelled", "completed").optional()
-        
     }).min(1).messages({
         "object.min": "At least one field must be provided for update"
     });
 
-    return Schema.validate(body, { abortEarly: false, stripUnknown: true });
+    const { error, value } = Schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
+    req.body = value;
+    next();
 };
 
-exports.bookingIdParamValidation = function (params) {
+exports.bookingIdParamValidation = function (req, res, next) {
     const Schema = joi.object({
         id: joi.string().uuid().required().messages({
             "string.empty": "Booking ID is required",
@@ -48,10 +53,13 @@ exports.bookingIdParamValidation = function (params) {
         })
     });
 
-    return Schema.validate(params, { abortEarly: false, stripUnknown: true });
+    const { error, value } = Schema.validate(req.params, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
+    req.params = value;
+    next();
 };
 
-exports.updateBookingStatusValidation = function (body) {
+exports.updateBookingStatusValidation = function (req, res, next) {
     const Schema = joi.object({
         status: joi.string().valid("accepted", "rejected", "completed").required().messages({
             "any.only": "Status must be one of: accepted, rejected, completed",
@@ -59,15 +67,21 @@ exports.updateBookingStatusValidation = function (body) {
         })
     });
 
-    return Schema.validate(body, { abortEarly: false, stripUnknown: true });
+    const { error, value } = Schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
+    req.body = value;
+    next();
 };
 
-exports.getAllRequestsQueryValidation = function (query) {
+exports.getAllRequestsQueryValidation = function (req, res, next) {
     const Schema = joi.object({
         package_id: joi.string().uuid().optional().messages({
             "string.guid": "Invalid Package ID format, must be a valid UUID"
         })
     });
 
-    return Schema.validate(query, { abortEarly: false, stripUnknown: true });
+    const { error, value } = Schema.validate(req.query, { abortEarly: false, stripUnknown: true });
+    if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
+    req.query = value;
+    next();
 };

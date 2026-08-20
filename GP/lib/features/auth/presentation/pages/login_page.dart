@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gp/app/theme/colors.dart';
 import 'package:gp/features/auth/presentation/providers/login_provider.dart';
 
@@ -242,69 +241,7 @@ class _LoginPageContent extends StatelessWidget {
                         ),
                   ),
                   
-                  const SizedBox(height: 32),
-                  
-                  // Or continue with
-                  Row(
-                    children: [
-                      const Expanded(child: Divider(color: AppColors.borderLight)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'Or continue with',
-                          style: TextStyle(
-                            color: AppColors.textPrimaryLight.withValues(alpha: 0.8),
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      const Expanded(child: Divider(color: AppColors.borderLight)),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Social Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: provider.continueWithGoogle,
-                          icon: const FaIcon(FontAwesomeIcons.google, size: 18, color: AppColors.textPrimaryLight),
-                          label: const Text(
-                            'Google',
-                            style: TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.bold),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: const BorderSide(color: AppColors.borderLight),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: provider.continueWithApple,
-                          icon: const FaIcon(FontAwesomeIcons.apple, size: 18, color: AppColors.textPrimaryLight),
-                          label: const Text(
-                            'Apple',
-                            style: TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.bold),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: const BorderSide(color: AppColors.borderLight),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+
                   
                   const SizedBox(height: 40),
                   
