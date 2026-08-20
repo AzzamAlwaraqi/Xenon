@@ -1,53 +1,54 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const Session = require("../Models/SessionModel");
 
-const generateAuthTokens = async (res, user, fingerprintHash, deviceInfo, existingFamilyId = null) => {
+/**
+ * Generates an Access Token and a Refresh Token.
+ * @param {string} userId - The user ID
+ * @param {string} role - The user role
+ * @param {string|null} existingFamilyId - An existing family ID if this is a refresh operation
+ * @returns {object} { accessToken, refreshToken, tokenId, familyId }
+ */
+const generateAuthTokens = (userId, role, existingFamilyId = null) => {
+    const accessSecret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || "default_access_secret";
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "default_refresh_secret";
     
+    // 15 minutes for access token, 7 days for refresh token
+    const accessExpiresIn = process.env.JWT_ACCESS_EXPIRES_IN || "15m";
+    const refreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+
     const accessToken = jwt.sign(
         { 
-            id: user._id,
-            fingerprint: fingerprintHash 
+            id: userId,
+            role: role
         }, 
-        process.env.JWT_ACCESS_SECRET, 
-        { expiresIn: "2m" } 
+        accessSecret, 
+        { expiresIn: accessExpiresIn } 
     );
 
     const tokenId = crypto.randomBytes(16).toString("hex"); 
-    
     const familyId = existingFamilyId || crypto.randomBytes(16).toString("hex"); 
 
     const refreshToken = jwt.sign(
         { 
-            id: user._id,
+            id: userId,
             tokenId: tokenId,
             familyId: familyId 
         }, 
-        process.env.JWT_REFRESH_SECRET, 
-        { expiresIn: "10m" }
+        refreshSecret, 
+        { expiresIn: refreshExpiresIn }
     );
 
-    await Session.create({
-        user_id: user._id,
-        token_id: tokenId,
-        expires_at: new Date(Date.now() + 10 * 60 * 1000),
-        ip_address: deviceInfo.ipAddress,
-        user_agent: deviceInfo.userAgent,
-        device_type: deviceInfo.deviceType,
-        os_name: deviceInfo.osName,
-        browser_name: deviceInfo.browserName,
-        device_id: deviceInfo.deviceId,
-        is_active: true
-    });
-
-    res.cookie('refreshToken', refreshToken, {
-        httpOnly: true, 
-        secure: process.env.NODE_ENV === "production", 
-        sameSite: 'strict', 
-        maxAge: 10 * 60 * 1000 
-    });
-
-    return { accessToken };
+    return { 
+        accessToken, 
+        refreshToken, 
+        tokenId, 
+        familyId 
+    };
 };
 
-module.exports = { generateAuthTokens };
+const verifyRefreshToken = (token) => {
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "default_refresh_secret";
+    return jwt.verify(token, refreshSecret);
+};
+
+module.exports = { generateAuthTokens, verifyRefreshToken };

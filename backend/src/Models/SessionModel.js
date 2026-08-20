@@ -12,6 +12,14 @@ const SessionSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
+    accessToken: {
+        type: String,
+        required: true
+    },
+    refreshToken: {
+        type: String,
+        required: true
+    },
     user_id: {
         type: mongoose.Schema.Types.UUID,
         ref: "User",

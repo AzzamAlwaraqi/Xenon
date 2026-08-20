@@ -37,6 +37,22 @@ const OTPSchema = new mongoose.Schema({
     verifiedAt: {
         type: Date,
         default: null
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    deletionRequestedAt: {
+        type: Date,
+        default: null
+    },
+    isBlocked: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true,
@@ -44,7 +60,7 @@ const OTPSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
-// TTL index — MongoDB auto-removes documents when expiresAt passes
+// TTL index — removed per request to keep OTPs in database forever
 OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Compound indexes for fast lookup by email or phone + purpose

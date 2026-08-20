@@ -1,107 +1,77 @@
 const profileCore = require("../services/Core/profileCore");
-const AppError = require("../utils/AppError");
-const authValidation = require("../validations/authValidation");
+
 
 exports.getProfile = async (req, res, next) => {
     try {
-        const user = req.user;
-        if (!user) return next(new AppError("User not authenticated", 401));
-
-        const profile = await profileCore.getProfileCore(user);
+        const profile = await profileCore.getProfileCore(req.user);
+        
         res.status(200).json({
             status: "success",
             message: "Profile fetched successfully",
-            data: profile
+            data: { profile }
         });
     } catch (error) {
-        next(new AppError(error.message, error.statusCode || 500));
+        next(error);
     }
 };
 
-
 exports.updateProfile = async (req, res, next) => {
     try {
-        const user = req.user;
-        if (!user) return next(new AppError("User not authenticated", 401));
-
-        const role = user.role === "vendor" ? "vendor" : "user";
-        const validationFunction = role === "vendor" ? authValidation.updatevendorValidation : authValidation.updateProfileValidation;
+        const updatedProfile = await profileCore.updateProfileCore(req.user, req.body);
         
-        const { error, value } = validationFunction(req.body);
-        if (error) return next(new AppError(error.details.map(d => d.message).join(", "), 400));
-        req.body = value;
-
-        const updatedProfile = await profileCore.updateProfileCore(user, req.body);
-        res.status(200).json({
+        res.status(200).json({  
             status: "success",
             message: "Profile updated successfully",
-            data: updatedProfile
+            data: { profile: updatedProfile }
         });
     } catch (error) {
-        next(new AppError(error.message, error.statusCode || 500));
+        next(error);
     }
 };
 
 exports.changePassword = async (req, res, next) => {
     try {
-        const user = req.user;
-        if (!user) return next(new AppError("User not authenticated", 401));
-
-        const { error, value } = authValidation.changePasswordValidation(req.body);
-        if (error) return next(new AppError(error.details.map(d => d.message).join(", "), 400));
-        req.body = value;
-
-        const { old_password, new_password, oldPassword, newPassword } = req.body;
+        // Variables are standardized by Joi Middleware before reaching here
+        const { old_password, new_password } = req.body;
         
-        const oldP = old_password || oldPassword;
-        const newP = new_password || newPassword;
-
-        if (!oldP || !newP) {
-            return next(new AppError("Old password and new password are required", 400));
-        }
-
-        const result = await profileCore.updatePasswordCore(user, oldP, newP);
+        const result = await profileCore.updatePasswordCore(req.user, old_password, new_password);
+        
         res.status(200).json({
             status: "success",
             message: result.message
         });
     } catch (error) {
-        next(new AppError(error.message, error.statusCode || 500));
+        next(error);
     }
 };
 
 exports.deleteProfile = async (req, res, next) => {
     try {
-        const user = req.user;
-        if (!user) return next(new AppError("User not authenticated", 401));
-
-        const { error, value } = authValidation.deleteAccountValidation(req.body);
-        if (error) return next(new AppError(error.details.map(d => d.message).join(", "), 400));
-        req.body = value;
-
-        const result = await profileCore.deleteAccountCore(user);
+        const result = await profileCore.deleteAccountCore(req.user);
+        
         res.status(200).json({
             status: "success",
             message: result.message
         });
     } catch (error) {
-        next(new AppError(error.message, error.statusCode || 500));
+        next(error);
     }
 };
 
-// Client specific endpoint
+
 exports.getMyReviews = async (req, res, next) => {
     try {
-        const user = req.user;
-        if (!user) return next(new AppError("User not authenticated", 401));
-
-        const reviews = await profileCore.getAllReviewsCore(user);
+        const reviews = await profileCore.getAllReviewsCore(req.user);
+        
         res.status(200).json({
             status: "success",
             message: "Reviews fetched successfully",
-            data: reviews
+            data: {
+                count: reviews.length, 
+                reviews
+            }
         });
     } catch (error) {
-        next(new AppError(error.message, error.statusCode || 500));
+        next(error);
     }
 };

@@ -10,6 +10,7 @@ const { setStandardDate } = require("../../utils/dateFormatter");
 const { checkRole } = require("../../utils/checkvalidete");
 const { sendOtpCore, verifyOtpCore } = require("./otpCore"); 
 const sesstionHelper = require("../../utils/sessionHelper");
+const { generateAuthTokens, verifyRefreshToken } = require("../../utils/jwtHelper");
 exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}) {
     const cleanEmail = Body.email.toLowerCase().trim();
     const mobileNumber = Body.phone_no || Body.mobileNumber;
@@ -18,13 +19,13 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
     const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
 
-    if (checkRole(role, ["user"]) && !isMobile) {
-        throw new AppError("Access Denied: Clients can only register via the Xenon Mobile App.", 403);
+    // if (checkRole(role, ["user"]) && !isMobile) {
+    //     throw new AppError("Access Denied: Clients can only register via the Xenon Mobile App.", 403);
     
-    }
-    if (checkRole(role, ["vendor"]) && isMobile) {
-        throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
-    }
+    // }
+    // if (checkRole(role, ["vendor"]) && isMobile) {
+    //     throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
+    // }
 
     const existingUserByEmail = await UserModel.findOne({ email: cleanEmail });
     if (existingUserByEmail) throw new AppError("Account with this email already exists", 409);
@@ -91,13 +92,14 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         ]);
     }
 
-    const token = newUser.getJwtToken ? newUser.getJwtToken() : crypto.randomBytes(16).toString("hex");
-    const familyId = deviceInfo.familyId || deviceInfo.family_id || crypto.randomBytes(16).toString("hex");
+    const tokens = generateAuthTokens(newUser._id, role, deviceInfo.familyId || deviceInfo.family_id);
+    const hashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
     const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     await SessionModel.create({
-        token_id: hashedToken,
+        token_id: hashedTokenId,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         user_id: newUser._id,
         expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
         ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || Body.ip_address || "127.0.0.1"),
@@ -109,10 +111,10 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         role: sesstionHelper.getRole(role),
         is_active: sesstionHelper.getIsActive(deviceInfo.isActive || deviceInfo.is_active),
         session_status: sesstionHelper.getSessionStatus(deviceInfo.sessionStatus || deviceInfo.session_status),
-        family_id: sesstionHelper.getFamilyId(familyId)
+        family_id: sesstionHelper.getFamilyId(tokens.familyId)
     });
 
-    return { user: newUser, vendor: newVendor, token };
+    return { user: newUser, vendor: newVendor, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
 };
 
 exports.loginCore = async function (email, password, roleExpected, deviceInfo = {}) {
@@ -129,12 +131,12 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
             throw new AppError("You are not authorized to login to this portal", 403);
         }
 
-        if (checkRole(user.role, ["user"]) && !isMobile) {
-            throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
-        }
-        if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
-            throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
-        }
+        // if (checkRole(user.role, ["user"]) && !isMobile) {
+        //     throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
+        // }
+        // if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
+        //     throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
+        // }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) throw new AppError("Invalid email or password", 401);
@@ -151,13 +153,14 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
 
         if (user.isActive === false) throw new AppError("Your account has been blocked or deactivated", 403);
 
-        const token = user.getJwtToken ? user.getJwtToken() : crypto.randomBytes(16).toString("hex");
-        const familyId = deviceInfo.familyId || deviceInfo.family_id || crypto.randomBytes(16).toString("hex");
+        const tokens = generateAuthTokens(user._id, user.role, deviceInfo.familyId || deviceInfo.family_id);
+        const hashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
         const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
-        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
         await SessionModel.create({
-            token_id: hashedToken,
+            token_id: hashedTokenId,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
             user_id: user._id,
             expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
             ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || "127.0.0.1"),
@@ -169,12 +172,13 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
             role: user.role, 
             is_active: true,
             session_status: "active",
-            family_id: familyId
+            family_id: tokens.familyId
         });
 
-        return { user, token };
+        return { user, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
     } catch (error) {
         if (error.statusCode) throw error;
+    
         throw new AppError(error.message, 500);
     }
 };
@@ -255,6 +259,71 @@ exports.forgotPasswordCore = async function (email) {
             message: "OTP sent to your email successfully",
             expiresAt: otpResponse.expiresAt 
         };
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
+    }
+};
+
+exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
+    try {
+        if (!refreshToken) throw new AppError("Refresh token is required", 400);
+
+        let decoded;
+        try {
+            decoded = verifyRefreshToken(refreshToken);
+        } catch (err) {
+            throw new AppError("Invalid or expired refresh token", 401);
+        }
+
+        const hashedTokenId = crypto.createHash("sha256").update(decoded.tokenId).digest("hex");
+        
+        const session = await SessionModel.findOne({ token_id: hashedTokenId, user_id: decoded.id });
+        if (!session) {
+            throw new AppError("Session not found. Please log in again.", 401);
+        }
+        if (!session.is_active) {
+            throw new AppError("Session has been revoked. Please log in again.", 401);
+        }
+
+        const user = await UserModel.findById(decoded.id);
+        if (!user || user.isActive === false) {
+            throw new AppError("User account is disabled or does not exist", 401);
+        }
+
+        // Deactivate old session (Token Rotation)
+        session.is_active = false;
+        session.session_status = "refreshed";
+        await session.save();
+
+        const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || "Desktop";
+        const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
+
+        // Generate new tokens
+        const tokens = generateAuthTokens(user._id, user.role, session.family_id);
+        const newHashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
+        const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
+
+        await SessionModel.create({
+            token_id: newHashedTokenId,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            user_id: user._id,
+            expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
+            ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || session.ip_address),
+            user_agent: sesstionHelper.getUserAgent(deviceInfo.userAgent || session.user_agent),
+            device_type: resolvedDeviceType, 
+            os_name: sesstionHelper.getOsName(deviceInfo.osName || session.os_name),
+            browser_name: sesstionHelper.getBrowserName(deviceInfo.browserName || session.browser_name),
+            device_id: sesstionHelper.getDeviceId(deviceId),
+            role: user.role, 
+            is_active: true,
+            session_status: "active",
+            family_id: tokens.familyId
+        });
+
+        return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
+
     } catch (error) {
         if (error.statusCode) throw error;
         throw new AppError(error.message, 500);
