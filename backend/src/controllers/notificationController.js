@@ -1,9 +1,26 @@
 const notificationCore = require("../services/Core/notificationCore");
+const AppError = require("../utils/AppError");
+
+exports.sendUpdateToClient = async (req, res, next) => {
+    try {
+        const { userId, type, message } = req.body;
+        const vendorId = req.user._id;
+
+        if (req.user.role !== "vendor") {
+            return next(new AppError("Only vendors can send updates to clients.", 403));
+        }
+
+        const result = await notificationCore.vendorSendUpdateCore(vendorId, userId, type, message);
+        return res.status(201).json({ status: "success", data: result });
+    } catch (error) {
+        next(error);
+    }
+};
 
 exports.sendNotification = async (req, res, next) => {
     try {
-        const { recipientId, recipientRole, notificationData } = req.body;
-        const result = await notificationCore.sendNotificationCore(recipientId, recipientRole, notificationData);
+        const { userId, vendorId, adminId, type, message } = req.body;
+        const result = await notificationCore.sendNotificationCore(userId, vendorId, adminId, type, message);
         return res.status(201).json({ status: "success", data: result });
     } catch (error) {
         next(error);
@@ -12,8 +29,8 @@ exports.sendNotification = async (req, res, next) => {
 
 exports.sendBroadcastNotification = async (req, res, next) => {
     try {
-        const { recipientIds, targetRole, notificationData } = req.body;
-        const result = await notificationCore.sendBroadcastNotificationCore(recipientIds, targetRole, notificationData);
+        const { userIds, vendorId, type, message } = req.body;
+        const result = await notificationCore.sendBroadcastNotificationCore(userIds, vendorId, type, message);
         return res.status(201).json(result);
     } catch (error) {
         next(error);

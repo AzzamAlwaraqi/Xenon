@@ -36,6 +36,9 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     if (checkRole(role, ["vendor"])) {
         const existingVendor = await VendorModel.findOne({ vendor_email: cleanEmail });
         if (existingVendor) throw new AppError("Vendor account with this email already exists", 409);
+        
+        const existingCompany = await VendorModel.findOne({ vendor_name: Body.company_name || Body.name });
+        if (existingCompany) throw new AppError("A vendor with this company name already exists. Please choose a different name.", 409);
     }
 
     if (Body.DateOfBirth) {

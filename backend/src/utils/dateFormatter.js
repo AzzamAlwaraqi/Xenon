@@ -2,10 +2,24 @@
 const setStandardDate = (val) => {
     if (!val) return val;
     
-    if (typeof val === 'string' && val.includes('/')) {
-        const [day, month, year] = val.split('/');
-        
-        return new Date(year, month - 1, day);
+    if (typeof val === 'string') {
+        const separator = val.includes('/') ? '/' : (val.includes('-') ? '-' : null);
+        if (separator) {
+            const parts = val.split(separator);
+            // Check if first part is a year (e.g., 2026)
+            if (parts[0].length === 4) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                return new Date(year, month, day);
+            } else {
+                // Assume dd/mm/yyyy
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const year = parseInt(parts[2], 10);
+                return new Date(year, month, day);
+            }
+        }
     }
     
     return new Date(val);

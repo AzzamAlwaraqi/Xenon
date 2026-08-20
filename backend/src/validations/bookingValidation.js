@@ -1,16 +1,28 @@
 const joi = require('joi');
 const AppError = require("../utils/AppError");
+const { setStandardDate } = require("../utils/dateFormatter");
 
 exports.createBookingValidation = function (req, res, next) {
+    if (req.body.date) {
+        req.body.date = setStandardDate(req.body.date);
+    }
+
     const Schema = joi.object({
-        package_id: joi.string().uuid().required().messages({
-            "string.guid": "Package ID must be a valid UUID"
+        package_Name: joi.string().required().messages({
+            "any.required": "Package name is required"
         }),
-        booking_date: joi.date().iso().min('now').required(),
-        number_of_people: joi.number().integer().min(1).max(5).required().messages({
+        VENDOR_Name: joi.string().required().messages({
+            "any.required": "Vendor name is required"
+        }),
+        date: joi.date().min('now').required().messages({
+            "any.required": "Booking date is required",
+            "date.min": "Booking date must be in the future"
+        }),
+        guests: joi.number().integer().min(1).max(5).required().messages({
             'number.min': 'You must be at least one person.',
             'number.max': 'You can book for a maximum of 5 people only.',
-            'number.base': 'Number of people must be a number.'
+            'number.base': 'Number of guests must be a number.',
+            'any.required': 'Number of guests is required'
         }),
         user_id: joi.string().optional()
     });
@@ -80,8 +92,14 @@ exports.getAllRequestsQueryValidation = function (req, res, next) {
         })
     });
 
-    const { error, value } = Schema.validate(req.query, { abortEarly: false, stripUnknown: true });
+    const dataToValidate = req.params.package_id ? req.params : req.query;
+    const { error, value } = Schema.validate(dataToValidate, { abortEarly: false, stripUnknown: true });
     if (error) return next(new AppError(error.details.map(d => d.message).join(" | "), 400));
-    req.query = value;
+    
+    if (req.params.package_id) {
+        req.params = value;
+    } else {
+        req.query = value;
+    }
     next();
 };

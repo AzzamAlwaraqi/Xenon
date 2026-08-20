@@ -48,7 +48,7 @@ exports.register = async (req, res, next) => {
             data: {
                 newVendor: result.vendor,
                 session: result.session,
-                token,
+                token: result.accessToken,
                 accessToken: result.accessToken,
                 refreshToken: result.refreshToken
             }

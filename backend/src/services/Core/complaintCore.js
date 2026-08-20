@@ -20,7 +20,7 @@ exports.createComplaintCore = async function (user, complaintData, files) {
             booking_id
         } = complaintData;
 
-        let finalVendorId = vendor_id || null;
+        let finalVendorId = null;
 
         if (booking_id) {
             const booking = await BookingModel.findById(booking_id);
@@ -40,6 +40,15 @@ exports.createComplaintCore = async function (user, complaintData, files) {
             if (existingComplaint) {
                 throw new AppError("You already have an active complaint for this booking. Please wait for the admin to resolve it.", 409);
             }
+        } else if (complaintData.vendor_id) {
+            // If complaining directly against a vendor without a specific booking
+            const mongoose = require("mongoose");
+            const VendorModel = mongoose.model("Vendor");
+            const vendorExists = await VendorModel.findById(complaintData.vendor_id);
+            if (!vendorExists) {
+                throw new AppError("Vendor not found", 404);
+            }
+            finalVendorId = complaintData.vendor_id;
         }
 
         if (files && files.length > 0) {
@@ -209,16 +218,21 @@ exports.cancelComplaintCore = async function (user, complaintId) {
 
 exports.getAllComplaintsCore = async function (user, queryParams = {}) {
     try {
-        if (!checkRole(user.role, ['admin'])) {
-            throw new AppError("Unauthorized access. Admin role required.", 403);
+        if (!checkRole(user.role, ['admin', 'vendor', 'company'])) {
+            throw new AppError("Unauthorized access. Admin or Vendor role required.", 403);
         }
 
         let query = { isDeleted: false };
 
+        if (checkRole(user.role, ['vendor', 'company'])) {
+            query.vendor_id = user._id; // Force filter for vendors
+        } else if (queryParams.vendor_id) {
+            query.vendor_id = queryParams.vendor_id; // Admins can optionally filter
+        }
+
         if (queryParams.status) query.complaint_status = queryParams.status;
         if (queryParams.priority) query.complaint_priority = queryParams.priority;
         if (queryParams.type) query.complaint_type = queryParams.type;
-        if (queryParams.vendor_id) query.vendor_id = queryParams.vendor_id;
 
         if (queryParams.search) {
             query.$or = [
@@ -260,11 +274,13 @@ exports.getAllComplaintsCore = async function (user, queryParams = {}) {
 
 exports.respondToComplaintCore = async function (user, complaintId, responseData) {
     try {
-        if (!checkRole(user.role, ['admin'])) {
-            throw new AppError("Unauthorized access. Admin role required.", 403);
+        console.log("DEBUG: user.role is =>", user.role);
+        
+        if (!checkRole(user.role, ['admin', 'vendor'])) {
+            throw new AppError(`Unauthorized access. Your role is: ${user.role}. Admin or Vendor role required.`, 403);
         }
 
-        const { status, admin_response } = responseData;
+        const { status, admin_response, reply } = responseData;
 
         if (status && !checkStatus(status, ['pending', 'in_progress', 'resolved', 'cancelled'])) {
             throw new AppError("Invalid complaint status update", 400);
@@ -275,9 +291,18 @@ exports.respondToComplaintCore = async function (user, complaintId, responseData
         if (!complaint || complaint.isDeleted) {
             throw new AppError("Complaint not found", 404);
         }
+        
+        if (checkRole(user.role, ['vendor'])) {
+            console.log('DEBUG: complaint.vendor_id =', complaint.vendor_id?.toString());
+            console.log('DEBUG: user._id =', user._id.toString());
+            if (complaint.vendor_id?.toString() !== user._id.toString()) {
+                throw new AppError(`You can only respond to complaints related to your packages. (Complaint vendor: ${complaint.vendor_id}, Your user_id: ${user._id})`, 403);
+            }
+        }
 
         if (status) complaint.complaint_status = status;
-        if (admin_response) complaint.admin_response = admin_response;
+        if (admin_response && checkRole(user.role, ['admin'])) complaint.admin_response = admin_response;
+        if (reply) complaint.reply = reply;
 
         await complaint.save();
 

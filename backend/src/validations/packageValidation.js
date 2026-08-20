@@ -17,7 +17,15 @@ const createPackageSchema = Joi.object({
     startDate: Joi.date().required(),
     endDate: Joi.date().min(Joi.ref('startDate')).required().messages({
         'date.min': 'End date must be after start date'
-    })
+    }),
+    max_people: Joi.number().min(1).max(100).required(),
+    itinerary: Joi.any().optional(),
+    included_services: Joi.any().optional(),
+    excluded_services: Joi.any().optional(),
+    meeting_point: Joi.any().optional(),
+    location_coordinates: Joi.any().optional(),
+    cancellation_policy: Joi.any().optional(),
+    important_notes: Joi.any().optional()
 });
 
 const updatePackageSchema = Joi.object({
@@ -42,6 +50,26 @@ exports.validateCreatePackage = (req, res, next) => {
     if (req.body.startDate) req.body.startDate = setStandardDate(req.body.startDate);
     if (req.body.endDate) req.body.endDate = setStandardDate(req.body.endDate);
 
+    // Parse array/object fields if they are sent as strings (e.g. via multipart/form-data)
+    const jsonFields = ['itinerary', 'included_services', 'excluded_services', 'location_coordinates'];
+    jsonFields.forEach(field => {
+        if (req.body[field] && typeof req.body[field] === 'string') {
+            try {
+                req.body[field] = JSON.parse(req.body[field]);
+            } catch (err) {
+                // Smart Fallback for Postman Testing:
+                // If it's just a regular text string, auto-wrap it into the correct array format!
+                if (field === 'itinerary') {
+                    req.body[field] = [{ day_number: 1, title: "Day 1", activities: req.body[field] }];
+                } else if (field === 'included_services' || field === 'excluded_services') {
+                    req.body[field] = [{ title: "Service", description: req.body[field] }];
+                } else {
+                    return next(new AppError(`Invalid JSON format for field: ${field}. Details: ${err.message}. Value received: ${req.body[field]}`, 400));
+                }
+            }
+        }
+    });
+
     const { error, value } = createPackageSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (error) {
         const errorMessage = error.details.map(err => err.message).join(' | ');
@@ -54,6 +82,26 @@ exports.validateCreatePackage = (req, res, next) => {
 exports.validateUpdatePackage = (req, res, next) => {
     if (req.body.startDate) req.body.startDate = setStandardDate(req.body.startDate);
     if (req.body.endDate) req.body.endDate = setStandardDate(req.body.endDate);
+
+    // Parse array/object fields if they are sent as strings (e.g. via multipart/form-data)
+    const jsonFields = ['itinerary', 'included_services', 'excluded_services', 'location_coordinates'];
+    jsonFields.forEach(field => {
+        if (req.body[field] && typeof req.body[field] === 'string') {
+            try {
+                req.body[field] = JSON.parse(req.body[field]);
+            } catch (err) {
+                // Smart Fallback for Postman Testing:
+                // If it's just a regular text string, auto-wrap it into the correct array format!
+                if (field === 'itinerary') {
+                    req.body[field] = [{ day_number: 1, title: "Day 1", activities: req.body[field] }];
+                } else if (field === 'included_services' || field === 'excluded_services') {
+                    req.body[field] = [{ title: "Service", description: req.body[field] }];
+                } else {
+                    return next(new AppError(`Invalid JSON format for field: ${field}. Details: ${err.message}. Value received: ${req.body[field]}`, 400));
+                }
+            }
+        }
+    });
 
     const { error, value } = updatePackageSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (error) {

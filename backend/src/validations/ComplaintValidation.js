@@ -28,7 +28,8 @@ const paramIdSchema = Joi.object({
 
 const respondComplaintSchema = Joi.object({
     status: Joi.string().valid("pending", "accepted", "rejected", "completed").optional(),
-    admin_response: Joi.string().max(1000).optional().trim()
+    admin_response: Joi.string().max(1000).optional().trim(),
+    reply: Joi.string().max(1000).optional().trim()
 }).min(1); 
 
 

@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.use(authMiddleware.protect);
 
+router.post("/send-update", notificationController.sendUpdateToClient);
 router.post("/send", notificationController.sendNotification);
 router.post("/broadcast", notificationController.sendBroadcastNotification);
 router.get("/", notificationController.getMyNotifications);

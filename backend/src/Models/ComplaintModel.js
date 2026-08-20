@@ -76,6 +76,12 @@ const ComplaintSchema = new mongoose.Schema({
         maxlength: [1000, "Admin response cannot exceed 1000 characters"],
         default: null
     },
+    reply: {
+        type: String,
+        trim: true,
+        maxlength: [1000, "Reply cannot exceed 1000 characters"],
+        default: null
+    },
     isDeleted: { 
         type: Boolean,
         default: false

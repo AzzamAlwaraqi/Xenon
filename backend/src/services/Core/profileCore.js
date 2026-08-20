@@ -23,6 +23,7 @@ exports.getProfileCore = async function (user) {
         } else if (checkRole(user.role, ["vendor"])) {
             const profile = await VendorModel.findOne({
                 $or: [
+                    { _id: user._id },
                     { vendor_owner_id: user._id },
                     { vendor_user_id: user._id }
                 ]
@@ -59,7 +60,8 @@ exports.getProfileCore = async function (user) {
 // ==========================================
 exports.updateProfileCore = async function (user, updates) {
     try {
-        if (!user.isActive) throw new AppError("Your account has been blocked", 403);
+        if (user.isActive === false) throw new AppError("Your account has been blocked", 403);
+        if (user.vendor_status && user.vendor_status !== 'active') throw new AppError("Your account has been blocked", 403);
 
         // 🌟 استخراج البيانات المشتركة
         const mobileNum = updates.phone_no || updates.mobile || updates.mobileNumber;
@@ -97,20 +99,23 @@ exports.updateProfileCore = async function (user, updates) {
 
         } else if (checkRole(user.role, ["vendor"])) {
             const vendor = await VendorModel.findOne({
-                $or: [{ vendor_owner_id: user._id }, { vendor_user_id: user._id }]
+                $or: [{ _id: user._id }, { vendor_owner_id: user._id }, { vendor_user_id: user._id }]
             });
 
             if (!vendor) throw new AppError("Vendor profile not found", 404);
 
             // تحديث موديل اليوزر
-            const userDoc = await UserModel.findById(user._id);
-            if (updates.name) userDoc.name = updates.name;
-            if (mobileNum) userDoc.mobileNumber = mobileNum;
-            if (cleanEmail && cleanEmail !== userDoc.email) {
-                userDoc.email = cleanEmail;
-                userDoc.is_verified = false; // Security Check
+            const userId = vendor.vendor_owner_id || user._id; // Fallback
+            const userDoc = await UserModel.findById(userId);
+            if (userDoc) {
+                if (updates.name) userDoc.name = updates.name;
+                if (mobileNum) userDoc.mobileNumber = mobileNum;
+                if (cleanEmail && cleanEmail !== userDoc.email) {
+                    userDoc.email = cleanEmail;
+                    userDoc.is_verified = false; // Security Check
+                }
+                await userDoc.save();
             }
-            await userDoc.save();
 
             // تحديث الفيندور
             if (updates.company_name) vendor.vendor_name = updates.company_name;
@@ -144,7 +149,8 @@ exports.updatePasswordCore = async function (user, oldPassword, newPassword) {
             throw new AppError("New password cannot be the same as old password", 400);
         }
 
-        const userDoc = await UserModel.findById(user._id).select("+password");
+        const userId = user.vendor_owner_id || user._id; // Fallback
+        const userDoc = await UserModel.findById(userId).select("+password");
         if (!userDoc) throw new AppError("User not found", 404);
 
         const isMatch = await bcrypt.compare(oldPassword, userDoc.password);
@@ -198,7 +204,9 @@ exports.deleteAccountCore = async function (user) {
 
         } else if (checkRole(user.role, ["vendor"])) {
             // المنطق الخاص بالفيندور
-            const vendor = await VendorModel.findOne({ vendor_owner_id: user._id }).session(session);
+            const vendor = await VendorModel.findOne({ 
+                $or: [{ _id: user._id }, { vendor_owner_id: user._id }] 
+            }).session(session);
 
             if (!vendor) throw new AppError("Only the store owner can request to delete this vendor account", 403);
 
@@ -219,9 +227,10 @@ exports.deleteAccountCore = async function (user) {
             );
 
             // 🌟 2. استدعاء دالة الـ Approval وإرسال الطلب للآدمن (مع تمرير الـ session)
+            const userId = vendor.vendor_owner_id || user._id;
             await vendorApprovalCore.submitDowngradeRequestCore({
                 vendor_id: vendor._id,
-                user_id: user._id,
+                user_id: userId,
                 reason: 'Vendor requested account deletion and downgrade to regular user'
             }, session);
 

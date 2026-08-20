@@ -30,6 +30,6 @@ router.get("/getComplaintsAgainstMe",protect,getComplaintsQueryValidation,compla
 // Admin routes
 router.get("/getAllComplaints",protect,getComplaintsQueryValidation,complaintController.getAllComplaintsController);
 
-router.put("/respondToComplaint/:complaintId",protect,complaintIdParamValidation,respondOnComplaintValidation,complaintController.respondToComplaintController);
+router.post("/respondToComplaint/:complaintId",protect,complaintIdParamValidation,respondOnComplaintValidation,complaintController.respondToComplaintController);
 
 module.exports = router;

@@ -68,7 +68,8 @@ exports.deletebooking = async (req, res, next) => {
 
 exports.getAllRequests = async (req, res, next) => {
     try {
-        const requests = await bookingCore.getAllRequestsCore(req.user, req.query.package_id);
+        const packageId = req.params.package_id || req.query.package_id;
+        const requests = await bookingCore.getAllRequestsCore(req.user, packageId);
         return res.status(200).json(requests);
     } catch (error) {
         next(error);

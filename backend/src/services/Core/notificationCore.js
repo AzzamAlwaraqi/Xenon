@@ -3,58 +3,83 @@ const Notification = require("../../Models/NotificationModel");
 const AppError = require("../../utils/AppError");
 const { checkRole } = require("../../utils/checkvalidete"); 
 
-exports.sendNotificationCore = async function (recipientId, recipientRole, notificationData, session = null) {
+exports.vendorSendUpdateCore = async function (vendorId, userId, type, message, session = null) {
     try {
-        const { title, message, type, related_entity_id } = notificationData;
-
         const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
         const duplicateNotification = await Notification.findOne({
-            recipient_id: recipientId,
-            type: type,
-            related_entity_id: related_entity_id || null,
-            createdAt: { $gte: oneMinuteAgo },
-            isDeleted: { $ne: true }
+            user_id: userId,
+            vendor_id: vendorId,
+            notification_type: type,
+            notification_message: message,
+            createdAt: { $gte: oneMinuteAgo }
         });
 
         if (duplicateNotification) {
-            console.log(`[Anti-Spam] Suppressed duplicate notification for user ${recipientId}`);
+            console.log(`[Anti-Spam] Suppressed duplicate vendor notification for user ${userId}`);
             return duplicateNotification; 
         }
 
         const newNotification = await Notification.create([{
-            recipient_id: recipientId,
-            recipient_role: recipientRole, 
-            title: title,
-            message: message,
-            type: type, 
-            related_entity_id: related_entity_id || null, 
-            isRead: false
+            user_id: userId,
+            vendor_id: vendorId,
+            notification_type: type,
+            notification_message: message,
+            is_read: false
         }], { session });
 
         if (global.io) {
-            let roomName = '';
-            
-            if (checkRole(recipientRole, ["admin"])) {
-                roomName = 'admins_room';
-            } else if (checkRole(recipientRole, ["vendor"])) {
-                roomName = `vendor_${recipientId}`;
-            } else {
-                roomName = `user_${recipientId}`;
-            }
-
-            global.io.to(roomName).emit('new_notification', {
+            global.io.to(`user_${userId}`).emit('new_notification', {
                 notification_id: newNotification[0]._id,
-                title: title,
-                message: message,
-                type: type,
-                related_entity_id: related_entity_id,
+                notification_type: type,
+                notification_message: message,
+                vendor_id: vendorId,
                 createdAt: new Date()
             });
         }
 
-        // 🌟 4. FCM Push Notification Hook
-        // TODO: check user.notification_preferences before sending FCM
-        // if (recipientPushToken) { sendPushNotification(recipientPushToken, title, message); }
+        return newNotification[0];
+    } catch (error) {
+        console.error("Failed to send vendor update notification:", error);
+        return null; 
+    }
+};
+
+exports.sendNotificationCore = async function (userId, vendorId, adminId, type, message, session = null) {
+    try {
+        const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+        const duplicateNotification = await Notification.findOne({
+            user_id: userId,
+            vendor_id: vendorId,
+            notification_type: type,
+            createdAt: { $gte: oneMinuteAgo }
+        });
+
+        if (duplicateNotification) {
+            console.log(`[Anti-Spam] Suppressed duplicate notification for user ${userId}`);
+            return duplicateNotification; 
+        }
+
+        const payload = {
+            user_id: userId,
+            vendor_id: vendorId,
+            notification_type: type,
+            notification_message: message,
+            is_read: false
+        };
+        
+        if (adminId) payload.admin_id = adminId;
+
+        const newNotification = await Notification.create([payload], { session });
+
+        if (global.io) {
+            let roomName = `user_${userId}`;
+            global.io.to(roomName).emit('new_notification', {
+                notification_id: newNotification[0]._id,
+                notification_type: type,
+                notification_message: message,
+                createdAt: new Date()
+            });
+        }
 
         return newNotification[0];
     } catch (error) {
@@ -63,36 +88,29 @@ exports.sendNotificationCore = async function (recipientId, recipientRole, notif
     }
 };
 
-exports.sendBroadcastNotificationCore = async function (recipientIds, targetRole, notificationData) {
+exports.sendBroadcastNotificationCore = async function (userIds, vendorId, type, message) {
     try {
-        if (!recipientIds || recipientIds.length === 0) return null;
+        if (!userIds || userIds.length === 0) return null;
 
-        const { title, message, type, related_entity_id } = notificationData;
-
-        const bulkNotifications = recipientIds.map(id => ({
-            recipient_id: id,
-            recipient_role: targetRole,
-            title,
-            message,
-            type,
-            related_entity_id: related_entity_id || null,
-            isRead: false
+        const bulkNotifications = userIds.map(id => ({
+            user_id: id,
+            vendor_id: vendorId,
+            notification_type: type,
+            notification_message: message,
+            is_read: false
         }));
 
         await Notification.insertMany(bulkNotifications);
 
         if (global.io) {
-            const roomName =  checkRole(targetRole, ["vendor"]) ? 'all_vendors' : 'all_users';
-            global.io.to(roomName).emit('new_notification', {
-                title,
-                message,
-                type,
-                related_entity_id: related_entity_id || null,
+            global.io.to('all_users').emit('new_notification', {
+                notification_type: type,
+                notification_message: message,
                 createdAt: new Date()
             });
         }
 
-        return { status: "success", message: `Broadcasted to ${recipientIds.length} ${targetRole}s` };
+        return { status: "success", message: `Broadcasted to ${userIds.length} users` };
     } catch (error) {
         console.error("Failed to broadcast notification:", error);
         return null;
@@ -101,24 +119,22 @@ exports.sendBroadcastNotificationCore = async function (recipientIds, targetRole
 
 exports.getMyNotificationsCore = async function (user) {
     try {
-        let query = { recipient_id: user._id, isDeleted: { $ne: true } };
+        let query = {};
 
-        if (checkRole(user.role, ["admin"])) {
-            query = { 
-                $or: [
-                    { recipient_id: user._id },
-                    { recipient_role: 'admin' }
-                ],
-                isDeleted: { $ne: true }
-            };
+        if (checkRole(user.role, ["vendor"])) {
+            query = { vendor_id: user._id };
+        } else if (checkRole(user.role, ["admin"])) {
+            query = { admin_id: user._id };
+        } else {
+            query = { user_id: user._id };
         }
 
         const [notifications, unreadCount] = await Promise.all([
             Notification.find(query)
-                .sort({ isRead: 1, createdAt: -1 }) 
+                .sort({ is_read: 1, createdAt: -1 }) 
                 .limit(20), 
             
-            Notification.countDocuments({ ...query, isRead: false })
+            Notification.countDocuments({ ...query, is_read: false })
         ]);
 
         return {
@@ -136,18 +152,23 @@ exports.markAsReadCore = async function (user, notificationId) {
     try {
         const notification = await Notification.findById(notificationId);
 
-        if (!notification || notification.isDeleted) {
+        if (!notification) {
             throw new AppError("Notification not found", 404);
         }
 
-        if (notification.recipient_id && notification.recipient_id.toString() !== user._id.toString() && !checkRole(user.role, ["admin"])) {
+        // Access control check
+        let isAuthorized = false;
+        if (checkRole(user.role, ["admin"])) isAuthorized = true;
+        if (checkRole(user.role, ["vendor"]) && notification.vendor_id && notification.vendor_id.toString() === user._id.toString()) isAuthorized = true;
+        if (checkRole(user.role, ["user"]) && notification.user_id && notification.user_id.toString() === user._id.toString()) isAuthorized = true;
+
+        if (!isAuthorized) {
             throw new AppError("Not authorized to modify this notification", 403);
         }
 
-        if (notification.isRead) return { status: "success", message: "Already marked as read" };
+        if (notification.is_read) return { status: "success", message: "Already marked as read" };
 
-        notification.isRead = true;
-        notification.readAt = new Date();
+        notification.is_read = true;
         await notification.save();
 
         if (global.io) {
@@ -165,15 +186,19 @@ exports.markAsReadCore = async function (user, notificationId) {
     }
 };
 
-
 exports.markAllAsReadCore = async function (user) {
     try {
-        const query = checkRole(user.role, ["admin"]) 
-            ? { $or: [{ recipient_id: user._id }, { recipient_role: 'admin' }], isRead: false, isDeleted: { $ne: true } }
-            : { recipient_id: user._id, isRead: false, isDeleted: { $ne: true } };
+        let query = { is_read: false };
+        if (checkRole(user.role, ["vendor"])) {
+            query.vendor_id = user._id;
+        } else if (checkRole(user.role, ["admin"])) {
+            query.admin_id = user._id;
+        } else {
+            query.user_id = user._id;
+        }
 
         const result = await Notification.updateMany(query, { 
-            $set: { isRead: true, readAt: new Date() } 
+            $set: { is_read: true } 
         });
 
         if (global.io && result.modifiedCount > 0) {
@@ -193,18 +218,21 @@ exports.deleteNotificationCore = async function (user, notificationId) {
     try {
         const notification = await Notification.findById(notificationId);
 
-        if (!notification || notification.isDeleted) {
+        if (!notification) {
             throw new AppError("Notification not found", 404);
         }
 
-        if (notification.recipient_id && notification.recipient_id.toString() !== user._id.toString() && !checkRole(user.role, ["admin"])) {
+        // Access control check
+        let isAuthorized = false;
+        if (checkRole(user.role, ["admin"])) isAuthorized = true;
+        if (checkRole(user.role, ["vendor"]) && notification.vendor_id && notification.vendor_id.toString() === user._id.toString()) isAuthorized = true;
+        if (checkRole(user.role, ["user"]) && notification.user_id && notification.user_id.toString() === user._id.toString()) isAuthorized = true;
+
+        if (!isAuthorized) {
             throw new AppError("Not authorized to delete this notification", 403);
         }
 
-        await Notification.findByIdAndUpdate(notificationId, {
-            isDeleted: true,
-            deletionRequestedAt: new Date()
-        });
+        await Notification.findByIdAndDelete(notificationId);
 
         return { status: "success", message: "Notification deleted" };
     } catch (error) {
@@ -215,15 +243,18 @@ exports.deleteNotificationCore = async function (user, notificationId) {
 
 exports.deleteAllNotificationsCore = async function (user) {
     try {
-        const query = checkRole(user.role, ["admin"]) 
-            ? { $or: [{ recipient_id: user._id }, { recipient_role: 'admin' }], isDeleted: { $ne: true } }
-            : { recipient_id: user._id, isDeleted: { $ne: true } };
+        let query = {};
+        if (checkRole(user.role, ["vendor"])) {
+            query.vendor_id = user._id;
+        } else if (checkRole(user.role, ["admin"])) {
+            query.admin_id = user._id;
+        } else {
+            query.user_id = user._id;
+        }
 
-        const result = await Notification.updateMany(query, { 
-            $set: { isDeleted: true, deletionRequestedAt: new Date() } 
-        });
+        const result = await Notification.deleteMany(query);
 
-        return { status: "success", message: `All your notifications have been deleted (${result.modifiedCount} updated)` };
+        return { status: "success", message: `All your notifications have been deleted (${result.deletedCount} deleted)` };
     } catch (error) {
         throw new AppError(error.message, 500);
     }

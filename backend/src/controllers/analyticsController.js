@@ -47,8 +47,7 @@ exports.getAdminAnalytics = async (req, res, next) => {
 
 exports.getVendorAnalytics = async (req, res, next) => {
     try {
-        const vendorId = req.user.id; 
-        const vendorObjectId = new mongoose.Types.ObjectId(vendorId);
+        const vendorId = req.user._id; 
         
         const { metric, startDate, endDate } = req.query;
         let analyticsData;
@@ -56,20 +55,20 @@ exports.getVendorAnalytics = async (req, res, next) => {
         // توجيه طلبات الفيندور
         switch (metric) {
             case 'bookings':
-                analyticsData = await analyticsCore.getVendorBookingsStatus(vendorObjectId, startDate, endDate);
+                analyticsData = await analyticsCore.getVendorBookingsStatus(vendorId, startDate, endDate);
                 break;
                 
             case 'capacity':
-                analyticsData = await analyticsCore.getVendorCapacityLimits(vendorObjectId, startDate, endDate);
+                analyticsData = await analyticsCore.getVendorCapacityLimits(vendorId, startDate, endDate);
                 break;
                 
             case 'quality':
-                analyticsData = await analyticsCore.getVendorQualityScore(vendorObjectId, startDate, endDate);
+                analyticsData = await analyticsCore.getVendorQualityScore(vendorId, startDate, endDate);
                 break;
 
             case 'all':
             default:
-                analyticsData = await analyticsCore.getVendorDashboard(vendorId, startDate, endDate);
+                analyticsData = await analyticsCore.getVendorDashboardCore(vendorId, startDate, endDate);
                 break;
         }
 

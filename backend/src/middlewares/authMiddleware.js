@@ -26,7 +26,12 @@ exports.protect = async (req, res, next) => {
         let currentUser;
 
         if (checkRole(decoded.role, ["vendor"])) {
-            currentUser = await Vendor.findById(decoded.id);
+            // decoded.id is the User ID, so we need to find the Vendor by vendor_owner_id
+            currentUser = await Vendor.findOne({ vendor_owner_id: decoded.id });
+            if (!currentUser) {
+                // Fallback in case decoded.id was actually the Vendor ID
+                currentUser = await Vendor.findById(decoded.id);
+            }
         } else {
             currentUser = await User.findById(decoded.id);
         }
@@ -37,6 +42,7 @@ exports.protect = async (req, res, next) => {
 
         // Attach user to request
         req.user = currentUser;
+        req.user.role = decoded.role; // Ensure role is available for checkRole function
         next();
     } catch (error) {
         next(error);

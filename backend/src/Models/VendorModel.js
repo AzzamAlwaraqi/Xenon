@@ -10,7 +10,8 @@ const VendorSchema = new mongoose.Schema({
     },
     vendor_name: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     vendor_email: {
         type: String,

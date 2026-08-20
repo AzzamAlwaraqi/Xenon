@@ -2,7 +2,7 @@ const PackageCore = require("../../services/Core/Vendor/PackageCore");
 
 exports.createPackage = async (req, res, next) => {
     try {
-        const package = await PackageCore.createPackage(req.user, req.body, req.file);
+        const package = await PackageCore.createPackageCore(req.user, req.body, req.file);
         res.status(201).json({
             status: "success",
             data: {
@@ -16,7 +16,7 @@ exports.createPackage = async (req, res, next) => {
 
 exports.getAllPackages = async (req, res, next) => {
     try {
-        const packages = await PackageCore.getAllPackages(req, res);
+        const packages = await PackageCore.getAllPackagesCore(req.query);
         res.status(200).json({
             status: "success",
             data: {
@@ -31,7 +31,7 @@ exports.getAllPackages = async (req, res, next) => {
 exports.getPackage = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const package = await PackageCore.getPackage(req, res, id);
+        const package = await PackageCore.getPackageCore(id, req.query);
         res.status(200).json({
             status: "success",
             data: {
@@ -46,7 +46,7 @@ exports.getPackage = async (req, res, next) => {
 exports.updatePackage = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const package = await PackageCore.updatePackage(req, res, id);
+        const package = await PackageCore.updatePackageCore(req.user, id, req.body, req.file);
         res.status(200).json({
             status: "success",
             data: {
@@ -61,7 +61,7 @@ exports.updatePackage = async (req, res, next) => {
 exports.deletePackage = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const package = await PackageCore.deletePackageCore(req, res, id);
+        const package = await PackageCore.deletePackageCore(req.user, id);
         res.status(200).json({
             status: "success",
             data: {
