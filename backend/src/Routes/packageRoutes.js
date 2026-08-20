@@ -1,13 +1,8 @@
 const express = require("express");
 const multer = require("multer");
 const { protect } = require("../middlewares/authMiddleware");
-const { 
-    getAllPackages, 
-    getPackage, 
-    createPackage, 
-    updatePackage, 
-    deletePackage 
-} = require("../controllers/Vendor/packageController");
+const packageValidation = require("../validations/packageValidation");
+const {  getAllPackages, getPackage, createPackage, updatePackage, deletePackage } = require("../controllers/Vendor/packageController");
 
 const router = express.Router();
 
@@ -21,9 +16,9 @@ const upload = multer({
 });
 
 router.get("/", getAllPackages);
-router.get("/package/:id", getPackage);
-router.post("/create-package", protect, upload.single("package_image"), createPackage);
-router.put("/package/:id", upload.single("package_image"), updatePackage);
-router.put("/delete-package/:id", deletePackage);
+router.get("/package/:id", packageValidation.packageIdParamValidation, getPackage);
+router.post("/create-package", protect, upload.single("package_image"), packageValidation.validateCreatePackage, createPackage);
+router.put("/package/:id", protect, upload.single("package_image"), packageValidation.packageIdParamValidation, packageValidation.validateUpdatePackage, updatePackage);
+router.put("/delete-package/:id", protect, packageValidation.packageIdParamValidation, deletePackage);
 
 module.exports = router;

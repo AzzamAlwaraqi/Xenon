@@ -6,9 +6,9 @@ const UserModel = require("../../Models/UserModel");
 const ReviewModel = require("../../Models/ReviewModel");
 const BookingModel = require("../../Models/BookingModel");
 const NotificationModel = require("../../Models/NotificationModel");
-const SessionModel = require("../../Models/SessionModel"); // 🌟 لغايات تدمير الجلسات
+const SesstionModel = require("../../Models/SesstionModel"); // 🌟 لغايات تدمير الجلسات
 const { checkRole } = require("../../utils/checkvalidete");
-const vendorApprovalCore = require("./Admin/vendorApprovalCore"); 
+const vendorApprovalCore = require("./Admin/vendorApprovalCore");
 
 // ==========================================
 // 1. Get Profile
@@ -29,8 +29,8 @@ exports.getProfileCore = async function (user) {
             });
 
             if (!profile) throw new AppError("Vendor not found", 404);
-            
-            if(profile.deletionRequestedAt){
+
+            if (profile.deletionRequestedAt) {
                 const timeSinceRequest = Date.now() - new Date(profile.deletionRequestedAt).getTime();
                 const thirtyDaysInMillis = 30 * 24 * 60 * 60 * 1000;
 
@@ -89,7 +89,7 @@ exports.updateProfileCore = async function (user, updates) {
             // 🌟 Security: إذا غير الإيميل، يجب أن نطلب منه تفعيله من جديد!
             if (cleanEmail && cleanEmail !== user.email) {
                 userUpdates.email = cleanEmail;
-                userUpdates.is_verified = false; 
+                userUpdates.is_verified = false;
             }
 
             const updatedUser = await UserModel.findByIdAndUpdate(user._id, userUpdates, { new: true, runValidators: true });
@@ -118,7 +118,7 @@ exports.updateProfileCore = async function (user, updates) {
 
             if (mobileNum) vendor.vendor_mobile = mobileNum;
             if (cleanEmail) vendor.vendor_email = cleanEmail;
-            
+
             if (updates.address) vendor.vendor_address = updates.address;
             if (updates.city) vendor.vendor_city = updates.city;
             if (updates.state) vendor.vendor_state = updates.state;
@@ -167,9 +167,9 @@ exports.updatePasswordCore = async function (user, oldPassword, newPassword) {
         }
 
         // 🌟 Security: تدمير جميع الجلسات النشطة ليضطر لتسجيل الدخول من جديد
-        await SessionModel.updateMany(
+        await SesstionModel.updateMany(
             { user_id: user._id },
-            { is_active: false, session_status: 'terminated' }
+            { is_active: false, sesstion_status: 'terminated' }
         );
 
         return { message: "Password changed successfully. You will be logged out of all devices." };
@@ -195,26 +195,26 @@ exports.deleteAccountCore = async function (user) {
         if (checkRole(user.role, ["user", "admin"])) {
             // تعطيل حساب المستخدم أو الآدمن مباشرة
             await UserModel.findByIdAndUpdate(user._id, { isActive: false, updatedAt: new Date() }, { new: true, session });
-        
+
         } else if (checkRole(user.role, ["vendor"])) {
             // المنطق الخاص بالفيندور
             const vendor = await VendorModel.findOne({ vendor_owner_id: user._id }).session(session);
-            
+
             if (!vendor) throw new AppError("Only the store owner can request to delete this vendor account", 403);
-            
+
             if (vendor.vendor_status !== 'active' || vendor.deletionRequestedAt) {
                 throw new AppError("Account is already inactive or pending deletion", 400);
             }
 
             // 1. تعليق متجر الفيندور (نوقف عمله كمتجر ولكن لا نحذف اليوزر الأساسي)
             await VendorModel.findByIdAndUpdate(
-                vendor._id, 
-                { 
-                    vendor_status: 'pending_deletion', 
+                vendor._id,
+                {
+                    vendor_status: 'pending_deletion',
                     deletionRequestedAt: Date.now(),
                     vendor_password: null, // تدمير الباسوورد كإجراء أمني
                     vendor_old_password: null
-                }, 
+                },
                 { new: true, session }
             );
 
@@ -230,9 +230,9 @@ exports.deleteAccountCore = async function (user) {
         }
 
         // 🌟 Security: طرد المستخدم من جميع الأجهزة النشطة
-        await SessionModel.updateMany(
+        await SesstionModel.updateMany(
             { user_id: user._id },
-            { is_active: false, session_status: 'terminated' },
+            { is_active: false, sesstion_status: 'terminated' },
             { session }
         );
 
@@ -241,12 +241,12 @@ exports.deleteAccountCore = async function (user) {
         session.endSession();
 
         // إرجاع رسالة مناسبة حسب الرتبة
-        const successMessage = checkRole(user.role, ["vendor"]) 
+        const successMessage = checkRole(user.role, ["vendor"])
             ? "Your request to close the store has been sent to the admin. You will be logged out."
             : "Your account has been successfully deleted/deactivated.";
 
         return { message: successMessage };
-        
+
     } catch (error) {
         // في حال حدوث أي خطأ، يتم التراجع عن كل شيء!
         await session.abortTransaction();
@@ -263,7 +263,7 @@ exports.getAllReviewsCore = async function (user) {
     try {
         if (!checkRole(user.role, ["user"])) throw new AppError("Unauthorized", 403);
         const reviews = await ReviewModel.find({ user_id: user._id })
-            .populate("vendor_id", "vendor_name -_id"); 
+            .populate("vendor_id", "vendor_name -_id");
         return reviews;
     } catch (error) {
         if (error.statusCode) throw error;
@@ -288,7 +288,7 @@ exports.getAllNotificationsCore = async function (user) {
     try {
         if (!checkRole(user.role, ["user"])) throw new AppError("Unauthorized", 403);
         const getAllNotifications = await NotificationModel.find({ user_id: user._id })
-            .sort({ createdAt: -1 }); 
+            .sort({ createdAt: -1 });
         return getAllNotifications;
     } catch (error) {
         if (error.statusCode) throw error;

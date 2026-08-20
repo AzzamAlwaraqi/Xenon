@@ -4,11 +4,11 @@ const crypto = require("crypto");
 const AppError = require("../../utils/AppError");
 const UserModel = require("../../Models/UserModel");
 const VendorModel = require("../../Models/VendorModel");
-const SessionModel = require("../../Models/SessionModel");
+const SesstionModel = require("../../Models/SesstionModel");
 const OTPModel = require("../../Models/OTPModel");
 const { setStandardDate } = require("../../utils/dateFormatter");
 const { checkRole } = require("../../utils/checkvalidete");
-const { sendOtpCore, verifyOtpCore } = require("./otpCore"); 
+const { sendOtpCore, verifyOtpCore } = require("./otpCore");
 const sesstionHelper = require("../../utils/sessionHelper");
 const { generateAuthTokens, verifyRefreshToken } = require("../../utils/jwtHelper");
 exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}) {
@@ -21,7 +21,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
 
     // if (checkRole(role, ["user"]) && !isMobile) {
     //     throw new AppError("Access Denied: Clients can only register via the Xenon Mobile App.", 403);
-    
+
     // }
     // if (checkRole(role, ["vendor"]) && isMobile) {
     //     throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
@@ -29,7 +29,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
 
     const existingUserByEmail = await UserModel.findOne({ email: cleanEmail });
     if (existingUserByEmail) throw new AppError("Account with this email already exists", 409);
-    
+
     const existingUserByMobile = await UserModel.findOne({ mobileNumber: mobileNumber });
     if (existingUserByMobile) throw new AppError("Account with this mobile number already exists", 409);
 
@@ -52,9 +52,9 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         }
 
         const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-        
+
         if (dob > eighteenYearsAgo) {
-            throw new AppError("Access Denied: You must be at least 18 years old to create an account on Xenon.", 403); 
+            throw new AppError("Access Denied: You must be at least 18 years old to create an account on Xenon.", 403);
         }
     }
 
@@ -96,7 +96,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     const hashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
     const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
 
-    await SessionModel.create({
+    await SesstionModel.create({
         token_id: hashedTokenId,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
@@ -110,7 +110,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         device_id: sesstionHelper.getDeviceId(deviceId),
         role: sesstionHelper.getRole(role),
         is_active: sesstionHelper.getIsActive(deviceInfo.isActive || deviceInfo.is_active),
-        session_status: sesstionHelper.getSessionStatus(deviceInfo.sessionStatus || deviceInfo.session_status),
+        sesstion_status: sesstionHelper.getSessionStatus(deviceInfo.sessionStatus || deviceInfo.sesstion_status),
         family_id: sesstionHelper.getFamilyId(tokens.familyId)
     });
 
@@ -157,7 +157,7 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
         const hashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
         const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
 
-        await SessionModel.create({
+        await SesstionModel.create({
             token_id: hashedTokenId,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
@@ -165,20 +165,20 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
             expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
             ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || "127.0.0.1"),
             user_agent: sesstionHelper.getUserAgent(deviceInfo.userAgent || "Unknown"),
-            device_type: resolvedDeviceType, 
+            device_type: resolvedDeviceType,
             os_name: sesstionHelper.getOsName(deviceInfo.osName || "Unknown"),
             browser_name: sesstionHelper.getBrowserName(deviceInfo.browserName || "Unknown"),
             device_id: sesstionHelper.getDeviceId(deviceId),
-            role: user.role, 
+            role: user.role,
             is_active: true,
-            session_status: "active",
+            sesstion_status: "active",
             family_id: tokens.familyId
         });
 
         return { user, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
     } catch (error) {
         if (error.statusCode) throw error;
-    
+
         throw new AppError(error.message, 500);
     }
 };
@@ -188,7 +188,7 @@ exports.logoutCore = async function (user, token) {
 
         const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-        const session = await SessionModel.findOneAndUpdate(
+        const session = await SesstionModel.findOneAndUpdate(
             { user_id: user._id, token_id: hashedToken, is_active: true },
             { is_active: false },
             { new: true }
@@ -203,7 +203,7 @@ exports.logoutCore = async function (user, token) {
     }
 };
 
-exports.resetPasswordCore = async function (email, password,passwordConfirmation,token) {
+exports.resetPasswordCore = async function (email, password, passwordConfirmation, token) {
     try {
         if (password !== passwordConfirmation) {
             throw new AppError("Passwords do not match", 400);
@@ -219,7 +219,7 @@ exports.resetPasswordCore = async function (email, password,passwordConfirmation
 
         const user = await UserModel.findOne({ email: cleanEmail });
         if (!user) throw new AppError("Account not found", 404);
-        
+
         if (user.isActive === false) throw new AppError("Account has been blocked or deactivated", 403);
 
         user.password = password;
@@ -246,7 +246,7 @@ exports.forgotPasswordCore = async function (email) {
         if (!user) {
             return { message: "If an account with that email exists, an OTP has been sent." };
         }
-        
+
         if (user.isActive === false) throw new AppError("Account has been blocked or deactivated", 403);
 
         const otpResponse = await sendOtpCore({
@@ -255,9 +255,9 @@ exports.forgotPasswordCore = async function (email) {
             length: 6
         });
 
-        return { 
+        return {
             message: "OTP sent to your email successfully",
-            expiresAt: otpResponse.expiresAt 
+            expiresAt: otpResponse.expiresAt
         };
     } catch (error) {
         if (error.statusCode) throw error;
@@ -277,8 +277,8 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
         }
 
         const hashedTokenId = crypto.createHash("sha256").update(decoded.tokenId).digest("hex");
-        
-        const session = await SessionModel.findOne({ token_id: hashedTokenId, user_id: decoded.id });
+
+        const session = await SesstionModel.findOne({ token_id: hashedTokenId, user_id: decoded.id });
         if (!session) {
             throw new AppError("Session not found. Please log in again.", 401);
         }
@@ -293,7 +293,7 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
 
         // Deactivate old session (Token Rotation)
         session.is_active = false;
-        session.session_status = "refreshed";
+        session.sesstion_status = "refreshed";
         await session.save();
 
         const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || "Desktop";
@@ -304,7 +304,7 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
         const newHashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
         const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
 
-        await SessionModel.create({
+        await SesstionModel.create({
             token_id: newHashedTokenId,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
@@ -312,13 +312,13 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
             expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
             ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || session.ip_address),
             user_agent: sesstionHelper.getUserAgent(deviceInfo.userAgent || session.user_agent),
-            device_type: resolvedDeviceType, 
+            device_type: resolvedDeviceType,
             os_name: sesstionHelper.getOsName(deviceInfo.osName || session.os_name),
             browser_name: sesstionHelper.getBrowserName(deviceInfo.browserName || session.browser_name),
             device_id: sesstionHelper.getDeviceId(deviceId),
-            role: user.role, 
+            role: user.role,
             is_active: true,
-            session_status: "active",
+            sesstion_status: "active",
             family_id: tokens.familyId
         });
 

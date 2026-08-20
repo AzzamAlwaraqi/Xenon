@@ -10,7 +10,7 @@ exports.createComplaintController = async (req, res, next) => {
             data: complaint
         });
     } catch (error) {
-        return next(error instanceof AppError ? error : new AppError(error.message, 500));
+        next(error);
     }
 };
 
@@ -19,7 +19,7 @@ exports.getMyComplaintsController = async (req, res, next) => {
         const result = await complaintCore.getMyComplaintsCore(req.user, req.query);
         return res.status(200).json(result);
     } catch (error) {
-        return next(error instanceof AppError ? error : new AppError(error.message, 500));
+        next(error);
     }
 };
 
@@ -28,7 +28,7 @@ exports.getComplaintByIdController = async (req, res, next) => {
         const result = await complaintCore.getComplaintByIdCore(req.user, req.params.complaintId);
         return res.status(200).json(result);
     } catch (error) {
-        return next(error instanceof AppError ? error : new AppError(error.message, 500));
+        next(error);
     }
 };
 
@@ -37,7 +37,7 @@ exports.cancelComplaintController = async (req, res, next) => {
         const result = await complaintCore.cancelComplaintCore(req.user, req.params.complaintId);
         return res.status(200).json(result);
     } catch (error) {
-        return next(error instanceof AppError ? error : new AppError(error.message, 500));
+        next(error);
     }
 };
 
@@ -46,7 +46,7 @@ exports.getComplaintsAgainstMeController = async (req, res, next) => {
         const result = await complaintCore.getComplaintsAgainstMeCore(req.user, req.query);
         return res.status(200).json(result);
     } catch (error) {
-        return next(error instanceof AppError ? error : new AppError(error.message, 500));
+        next(error);
     }
 };
 
@@ -56,7 +56,7 @@ exports.getAllComplaintsController = async (req, res, next) => {
         const result = await complaintCore.getAllComplaintsCore(req.user, req.query);
         return res.status(200).json(result);
     } catch (error) {
-        return next(error instanceof AppError ? error : new AppError(error.message, 500));
+        next(error);
     }
 };
 
@@ -65,6 +65,6 @@ exports.respondToComplaintController = async (req, res, next) => {
         const result = await complaintCore.respondToComplaintCore(req.user, req.params.complaintId, req.body);
         return res.status(200).json(result);
     } catch (error) {
-        return next(error instanceof AppError ? error : new AppError(error.message, 500));
+        next(error);
     }
 };

@@ -9,6 +9,8 @@ const adminRoutes = require("./Routes/adminRoutes");
 const aiRoutes = require("./Routes/aiRoutes");
 const complaintRoutes = require("./Routes/complaintRouter");
 const reviewRoutes = require("./Routes/reviewRouter");
+const notificationRoutes = require("./Routes/notificationRoutes");
+const reportRoutes = require("./Routes/reportRoutes");
 const adminAuth = require("./adminAuth");
 const { registerAdminValidator } = require("./adminValidation");
 const app = express();
@@ -41,8 +43,9 @@ app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/ai", aiRoutes);
 app.use("/api/v1/complaints", complaintRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/reports", reportRoutes);
 app.post("/api/v1/admin/auth/register", registerAdminValidator, adminAuth.registerAdmin);
-
 
 app.get('/', (req, res) => {
     res.send('Hello World!');

@@ -11,6 +11,24 @@ const passwordMessages = {
     "any.required": "Password is required"
 };
 
+const customDateValidator = (value, helpers) => {
+    let date;
+    if (typeof value === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+        const [day, month, year] = value.split('/');
+        date = new Date(`${year}-${month}-${day}T00:00:00Z`);
+    } else {
+        date = new Date(value);
+    }
+
+    if (isNaN(date.getTime())) {
+        return helpers.message(`"${helpers.state.path.join('.')}" must be a valid date in DD/MM/YYYY or ISO format`);
+    }
+    if (date >= new Date()) {
+        return helpers.message(`"${helpers.state.path.join('.')}" must be in the past`);
+    }
+    return date;
+};
+
 const mobileMessages = {
     "string.pattern.base": "Mobile number must start with 077, 078, or 079 and be exactly 10 digits long",
     "any.required": "Mobile number is required"
@@ -52,7 +70,7 @@ exports.createAccountValidation = function (req, res, next) {
         mobileNumber: baseUserSchema.mobileNumber.required(),
         
         gender: joi.string().valid("male", "female").optional(),
-        DateOfBirth: joi.date().iso().less("now").optional(),
+        DateOfBirth: joi.any().custom(customDateValidator).optional(),
         
         ...baseVendorSchema
     });
@@ -119,7 +137,7 @@ exports.updateProfileValidation = function (req, res, next) {
     };
 
     if (checkRole(role, ["user"])) {
-        schemaObj.DateOfBirth = joi.date().iso().less("now").optional();
+        schemaObj.DateOfBirth = joi.any().custom(customDateValidator).optional();
         schemaObj.gender = joi.string().valid("male", "female").optional();
     }
 

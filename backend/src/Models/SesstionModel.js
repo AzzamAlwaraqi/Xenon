@@ -57,7 +57,7 @@ const SessionSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-    session_status: {
+    sesstion_status: {
         type: String,
         default: "active"
     },
@@ -76,8 +76,8 @@ const SessionSchema = new mongoose.Schema({
     toObject: { getters: true, virtuals: true }
 });
 
-SessionSchema.virtual('session_id').get(function() {
+SessionSchema.virtual('sesstion_id').get(function() {
     return this._id;
 });
 
-module.exports = mongoose.model("Session", SessionSchema);
+module.exports = mongoose.model("Sesstion", SessionSchema);
