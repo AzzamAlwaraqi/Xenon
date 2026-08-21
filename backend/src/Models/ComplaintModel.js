@@ -76,6 +76,12 @@ const ComplaintSchema = new mongoose.Schema({
         maxlength: [1000, "Admin response cannot exceed 1000 characters"],
         default: null
     },
+    reply: {
+        type: String,
+        trim: true,
+        maxlength: [1000, "Reply cannot exceed 1000 characters"],
+        default: null
+    },
     isDeleted: { 
         type: Boolean,
         default: false
@@ -91,12 +97,11 @@ const ComplaintSchema = new mongoose.Schema({
 });
 
 
-ComplaintSchema.pre('validate', function (next) {
+ComplaintSchema.pre('validate', function () {
     if (this.isNew && !this.complaint_id) {
         const randomString = Math.random().toString(36).substring(2, 8).toUpperCase();
         this.complaint_id = `CMP-${randomString}`;
     }
-    next();
 });
 
 ComplaintSchema.index({ user_id: 1 });

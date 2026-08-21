@@ -15,6 +15,10 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     const cleanEmail = Body.email.toLowerCase().trim();
     const mobileNumber = Body.phone_no || Body.mobileNumber;
 
+    if (Body.password !== Body.passwordConfirm) {
+        throw new AppError("Passwords do not match", 400);
+    }
+
     const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || Body.device_type || "Desktop";
     const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
     const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
@@ -36,6 +40,9 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     if (checkRole(role, ["vendor"])) {
         const existingVendor = await VendorModel.findOne({ vendor_email: cleanEmail });
         if (existingVendor) throw new AppError("Vendor account with this email already exists", 409);
+        
+        const existingCompany = await VendorModel.findOne({ vendor_name: Body.company_name || Body.name });
+        if (existingCompany) throw new AppError("A vendor with this company name already exists. Please choose a different name.", 409);
     }
 
     if (Body.DateOfBirth) {
@@ -98,8 +105,8 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
 
     await SesstionModel.create({
         token_id: hashedTokenId,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
+        accessToken: crypto.createHash("sha256").update(tokens.accessToken).digest("hex"),
+        refreshToken: crypto.createHash("sha256").update(tokens.refreshToken).digest("hex"),
         user_id: newUser._id,
         expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
         ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || Body.ip_address || "127.0.0.1"),
@@ -131,12 +138,12 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
             throw new AppError("You are not authorized to login to this portal", 403);
         }
 
-        // if (checkRole(user.role, ["user"]) && !isMobile) {
-        //     throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
-        // }
-        // if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
-        //     throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
-        // }
+        if (checkRole(user.role, ["user"]) && !isMobile) {
+            throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
+        }
+        if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
+            throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
+        }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) throw new AppError("Invalid email or password", 401);
@@ -159,8 +166,8 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
 
         await SesstionModel.create({
             token_id: hashedTokenId,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
+            accessToken: crypto.createHash("sha256").update(tokens.accessToken).digest("hex"),
+            refreshToken: crypto.createHash("sha256").update(tokens.refreshToken).digest("hex"),
             user_id: user._id,
             expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
             ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || "127.0.0.1"),
@@ -186,10 +193,14 @@ exports.logoutCore = async function (user, token) {
     try {
         if (!token) throw new AppError("Token is required for logout", 400);
 
-        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+        const hashedInputToken = crypto.createHash("sha256").update(token).digest("hex");
 
         const session = await SesstionModel.findOneAndUpdate(
-            { user_id: user._id, token_id: hashedToken, is_active: true },
+            { 
+                user_id: user._id, 
+                $or: [{ accessToken: hashedInputToken }, { refreshToken: hashedInputToken }],
+                is_active: true 
+            },
             { is_active: false },
             { new: true }
         );
@@ -306,8 +317,8 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
 
         await SesstionModel.create({
             token_id: newHashedTokenId,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
+            accessToken: crypto.createHash("sha256").update(tokens.accessToken).digest("hex"),
+            refreshToken: crypto.createHash("sha256").update(tokens.refreshToken).digest("hex"),
             user_id: user._id,
             expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
             ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || session.ip_address),

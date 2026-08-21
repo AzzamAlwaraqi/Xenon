@@ -36,8 +36,8 @@ export default function VendorPackages() {
               <div className="vendor-package-thumb">{item.image && <img src={item.image} alt="" />}</div>
               <div>
                 <h2>{item.package_name || item.name}</h2>
-                <p>{item.location || item.city || 'Jordan'} · {item.duration || 'Duration pending'} · JOD {item.price || item.package_price || '—'}</p>
-                <VendorStatus value={item.status || 'Published'} />
+                <p>{item.package_type || 'Jordan experience'} · {item.startDate ? new Date(item.startDate).toLocaleDateString() : 'Dates pending'} · JOD {item.package_price ?? '—'}</p>
+                <VendorStatus value={item.package_status || 'inactive'} />
               </div>
               <div className="row-actions">
                 <Link className="vendor-button secondary" to={`/vendor/packages/${id}`}>View</Link>

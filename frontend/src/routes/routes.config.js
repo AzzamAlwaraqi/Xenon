@@ -1,9 +1,11 @@
 export const ROUTES = {
   HOME: '/home',
   LOGIN: '/login',
-  TRAVELLER_REGISTER: '/register/traveller',
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
   VENDOR_REGISTER: '/register/vendor',
-  DASHBOARD: '/dashboard',
+  PRIVACY: '/privacy',
+  TERMS: '/terms',
   VENDOR: '/vendor',
   VENDOR_PACKAGES: '/vendor/packages',
   VENDOR_PACKAGE_CREATE: '/vendor/packages/new',
@@ -11,5 +13,6 @@ export const ROUTES = {
   VENDOR_ANALYTICS: '/vendor/analytics',
   VENDOR_PROFILE: '/vendor/profile',
   VENDOR_SETTINGS: '/vendor/settings',
+  ADMIN: '/admin',
   NOT_FOUND: '*',
 }

@@ -1,6 +1,9 @@
 const jwt = require("jsonwebtoken");
 const User = require("../Models/UserModel");
 const AppError = require("../utils/AppError");
+const { checkRole } = require("../utils/checkvalidete");
+const Vendor = require("../Models/VendorModel");
+
 
 exports.protect = async (req, res, next) => {
     try {
@@ -10,24 +13,36 @@ exports.protect = async (req, res, next) => {
         }
 
         if (!token) {
-            return res.AppError("You are not logged in! Please log in to get access.", 401);
+            return next(new AppError("You are not logged in! Please log in to get access.", 401));
         }
 
         let decoded;
         try {
             decoded = jwt.verify(token, process.env.JWT_SECRET);
         } catch (err) {
-            return res.AppError("Invalid token. Please log in again!", 401);
+            return next(new AppError("Invalid token. Please log in again!", 401));
         }
 
-        // Check if user still exists
-        const currentUser = await User.findById(decoded.id);
+        let currentUser;
+
+        if (checkRole(decoded.role, ["vendor"])) {
+            // decoded.id is the User ID, so we need to find the Vendor by vendor_owner_id
+            currentUser = await Vendor.findOne({ vendor_owner_id: decoded.id });
+            if (!currentUser) {
+                // Fallback in case decoded.id was actually the Vendor ID
+                currentUser = await Vendor.findById(decoded.id);
+            }
+        } else {
+            currentUser = await User.findById(decoded.id);
+        }
+
         if (!currentUser) {
-            return res.AppError("The user belonging to this token no longer exists.", 401);
+            return next(new AppError("The user belonging to this token no longer exists.", 401));
         }
 
         // Attach user to request
         req.user = currentUser;
+        req.user.role = decoded.role; // Ensure role is available for checkRole function
         next();
     } catch (error) {
         next(error);

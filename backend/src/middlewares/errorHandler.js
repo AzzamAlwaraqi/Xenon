@@ -57,23 +57,22 @@ exports.Error = (err, req, res, next) => {
         }
     }
 
-    err.statusCode = err.statusCode || 500;
-    err.status = err.status || 'error';
+    let error = Object.assign(err);
+    error.message = err.message;
+    error.name = err.name;
+    
+    if (error.name === 'CastError') error = handleCastErrorDB(error);
+    if (error.code === 11000) error = handleDuplicateFieldsDB(error);
+    if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
+    if (error.name === 'JsonWebTokenError') error = handleTokenError();
+    if (error.name === 'TokenExpiredError') error = handleTokenExpiredError();
+
+    error.statusCode = error.statusCode || err.statusCode || 500;
+    error.status = error.status || err.status || 'error';
 
     if (process.env.NODE_ENV === 'development') {
-        sendErrorDev(err, res);
+        sendErrorDev(error, res);
     } else {
-        let error = Object.assign(err);
-        error.message = err.message;
-        error.name = err.name;
-        
-        if (error.name === 'CastError') error = handleCastErrorDB(error);
-        if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-        if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
-        
-        if (error.name === 'JsonWebTokenError') error = handleTokenError();
-        if (error.name === 'TokenExpiredError') error = handleTokenExpiredError();
-
         sendErrorProd(error, res);
     }
 };

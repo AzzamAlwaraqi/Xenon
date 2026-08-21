@@ -11,6 +11,7 @@ const complaintRoutes = require("./Routes/complaintRouter");
 const reviewRoutes = require("./Routes/reviewRouter");
 const notificationRoutes = require("./Routes/notificationRoutes");
 const reportRoutes = require("./Routes/reportRoutes");
+const analysisRoutes = require("./Routes/analysisRouter");
 const adminAuth = require("./adminAuth");
 const { registerAdminValidator } = require("./adminValidation");
 const app = express();
@@ -37,6 +38,7 @@ app.use((req, res, next) => {
 // Routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/profile", profileRoutes);
+app.use("/api/v1/staff", require("./Routes/staffRoutes"))
 app.use("/api/v1/bookings", bookingRoutes);
 app.use("/api/v1/packages", packageRoutes);
 app.use("/api/v1/admin", adminRoutes);
@@ -45,6 +47,7 @@ app.use("/api/v1/complaints", complaintRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/reports", reportRoutes);
+app.use("/api/v1/analytics", analysisRoutes);
 app.post("/api/v1/admin/auth/register", registerAdminValidator, adminAuth.registerAdmin);
 
 app.get('/', (req, res) => {

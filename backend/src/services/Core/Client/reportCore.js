@@ -37,7 +37,6 @@ exports.createReportCore = async function (reportData, userId) {
             data: newReport
         };
     } catch (error) {
-        if (error.statusCode) throw error;
-        throw new AppError(error.message, 500);
+        throw error;
     }
 };

@@ -2,9 +2,11 @@ const Joi = require('joi');
 const AppError = require("../utils/AppError");
 
 const createReviewSchema = Joi.object({
-    booking_id: Joi.string().uuid().required().messages({
-        'string.guid': 'The format of this booking id is not valid (must be UUID)',
-        'any.required': 'Booking id is required'
+    PACKAGE_Name: Joi.string().required().messages({
+        'any.required': 'Package name is required'
+    }),
+    VENDOR_Name: Joi.string().required().messages({
+        'any.required': 'Vendor name is required'
     }),
     rating: Joi.number().min(1).max(5).required().messages({
         'number.base': 'Rating must be a number',

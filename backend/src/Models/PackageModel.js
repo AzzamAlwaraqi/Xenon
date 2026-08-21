@@ -114,11 +114,10 @@ PackageSchema.virtual('details', {
 });
 
 
-PackageSchema.pre('save', function (next) {
+PackageSchema.pre('save', function () {
     if (this.isNew && this.available_seats === undefined) {
         this.available_seats = this.max_people;
     }
-    next();
 });
 
 module.exports = mongoose.model("Package", PackageSchema);

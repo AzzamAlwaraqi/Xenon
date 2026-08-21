@@ -15,7 +15,7 @@ router.put("/update-booking/:id", protect, bookingValidation.bookingIdParamValid
 router.patch("/update-status/:id", protect, bookingValidation.bookingIdParamValidation, bookingValidation.updateBookingStatusValidation, bookingController.updateBookingStatus);
 router.put("/delete-booking/:id", protect, bookingValidation.bookingIdParamValidation, bookingController.deletebooking);
 
-router.get('/vendor/booking-requests', protect, bookingValidation.getAllRequestsQueryValidation, bookingController.getAllRequests);
+router.get('/vendor/booking-requests/:package_id', protect, bookingValidation.getAllRequestsQueryValidation, bookingController.getAllRequests);
 
 router.get('/user/pending-requests', protect, bookingController.getUserPendingRequests);
 router.get('/vendor/pending-requests-count', protect, bookingController.getPendingRequestsCount);

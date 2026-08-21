@@ -45,20 +45,34 @@ const updatePackageAverageRating = async (packageId, session = null) => {
 // 1. Client Functions (العميل)
 // ==========================================
 
-exports.createReviewCore = async function (user, booking_id, reviewData) {
+exports.createReviewCore = async function (user, reviewData) {
     try {
-        const booking = await Booking.findById(booking_id);
-        
-        if (!booking || booking.isDeleted) {
-            throw new AppError('Booking not found.', 404); 
-        }
+        const { PACKAGE_Name, VENDOR_Name, rating, comment } = reviewData;
 
-        if (booking.user_id.toString() !== user._id.toString()) {
-            throw new AppError('Not authorized to review this booking.', 403);
-        }
+        // 1. Find Vendor by name
+        const Vendor = mongoose.model('Vendor');
+        const vendor = await Vendor.findOne({ vendor_name: VENDOR_Name, isDelete: { $ne: true } });
+        if (!vendor) throw new AppError(`Vendor '${VENDOR_Name}' not found`, 404);
 
-        if (booking.status !== 'Completed' && booking.status !== 'completed') {
-            throw new AppError('Cannot review a booking before its completion.', 400);
+        // 2. Find Package by name
+        const PackageModel = mongoose.model('Package');
+        const packageDoc = await PackageModel.findOne({ 
+            package_name: PACKAGE_Name, 
+            vendor_id: vendor._id,
+            isDeleted: { $ne: true }
+        });
+        if (!packageDoc) throw new AppError(`Package '${PACKAGE_Name}' not found for vendor '${VENDOR_Name}'`, 404);
+
+        // 3. Find completed or accepted booking for this user and package
+        const booking = await Booking.findOne({
+            user_id: user._id,
+            package_id: packageDoc._id,
+            status: { $in: ['Completed', 'completed', 'accepted', 'Accepted'] },
+            isDeleted: { $ne: true }
+        }).sort({ updatedAt: -1 }); // Get the most recent booking
+
+        if (!booking) {
+            throw new AppError(`You cannot review this package because you do not have an accepted or completed booking for it.`, 400);
         }
 
         // 🌟 نافذة التقييم الزمنية (30 يوماً من تاريخ تحديث الحجز للاكتمال)
@@ -76,11 +90,11 @@ exports.createReviewCore = async function (user, booking_id, reviewData) {
 
         const newReview = await Review.create({
             user_id: user._id,
-            vendor_id: booking.vendor_id,
-            package_id: booking.package_id,
+            vendor_id: vendor._id,
+            package_id: packageDoc._id,
             booking_id: booking._id, // حفظ رقم الحجز
-            review_text: reviewData.comment || reviewData.review_text || "",
-            review_rating: reviewData.rating || reviewData.review_rating,
+            review_text: comment || reviewData.review_text || "",
+            review_rating: rating || reviewData.review_rating,
             review_status: "in-progress"
         });
 
@@ -90,8 +104,7 @@ exports.createReviewCore = async function (user, booking_id, reviewData) {
             data: newReview
         };
     } catch (error) {
-        if (error.statusCode) throw error;
-        throw new AppError(error.message, 500); 
+        throw error; 
     }
 };
 

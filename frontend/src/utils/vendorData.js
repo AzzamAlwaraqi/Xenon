@@ -22,3 +22,11 @@ export function getPackageId(item) {
 export function getBookingId(item) {
   return item?._id || item?.id || item?.booking_id
 }
+
+export function getBookingTraveller(item) {
+  return item?.user_id?.name || item?.user?.name || item?.client?.name || item?.name || 'Traveller'
+}
+
+export function getBookingPackage(item) {
+  return item?.package_id?.package_name || item?.package?.package_name || item?.package_name || 'Package'
+}

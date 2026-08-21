@@ -3,7 +3,7 @@ const AppError = require("../../utils/AppError");
 
 exports.createReview = async (req, res, next) => {
     try {
-        const review = await reviewCore.createReviewCore(req.user, req.body.booking_id, req.body);
+        const review = await reviewCore.createReviewCore(req.user, req.body);
         return res.status(201).json({
             status: "success",
             data: review

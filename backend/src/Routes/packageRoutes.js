@@ -21,4 +21,18 @@ router.post("/create-package", protect, upload.single("package_image"), packageV
 router.put("/package/:id", protect, upload.single("package_image"), packageValidation.packageIdParamValidation, packageValidation.validateUpdatePackage, updatePackage);
 router.put("/delete-package/:id", protect, packageValidation.packageIdParamValidation, deletePackage);
 
+// TODO: Remove this temporary route after fixing ownership
+router.get("/fix-ownership", async (req, res) => {
+    const Package = require("../Models/PackageModel");
+    try {
+        await Package.updateMany(
+            {},
+            { $set: { vendor_id: '01a01ff1-2de8-7bf9-95c2-8b0d46cc28f5' } }
+        );
+        res.json({ message: "Ownership fixed! All old packages belong to your vendor account now." });
+    } catch(err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;

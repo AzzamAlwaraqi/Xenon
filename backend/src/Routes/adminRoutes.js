@@ -1,5 +1,5 @@
 const express = require("express");
-const staffController = require("../controllers/Admin/staffController");
+const staffController = require("../controllers/staffController");
 const moderationController = require("../controllers/Admin/moderationController");
 const vendorApprovalController = require("../controllers/Admin/vendorApprovalController");
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -14,13 +14,13 @@ router.use(authMiddleware.protect);
 // Let's just add the routes.
 
 // ==========================================
-// 1. Staff Management Routes
+// 🧑‍💼 1. Staff (Employees) Management
 // ==========================================
-router.post("/staff", staffValidation.createStaffValidation,staffController.addEmployee);
-router.get("/staff", staffController.getAllEmployees);
-router.get("/staff/:id", staffValidation.getOrDeleteStaffValidation, staffController.getEmployee);
-router.patch("/staff/:id", staffValidation.getOrDeleteStaffValidation,staffValidation.updateStaffValidation,staffController.updateEmployee);
-router.delete("/staff/:id", staffValidation.getOrDeleteStaffValidation,staffController.deleteEmployee);
+router.post("/staff", staffValidation.createStaffValidation, staffController.addStaff);
+router.get("/staff", staffValidation.getAllStaffValidation, staffController.getAllStaff);
+router.get("/staff/:id", staffValidation.getOrDeleteStaffValidation, staffController.getStaff);
+router.patch("/staff/:id", staffValidation.getOrDeleteStaffValidation, staffValidation.updateStaffValidation, staffController.updateStaff);
+router.delete("/staff/:id", staffValidation.getOrDeleteStaffValidation, staffController.deleteStaff);
 
 // ==========================================
 // 2. Moderation / Report Routes

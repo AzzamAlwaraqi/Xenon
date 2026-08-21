@@ -15,9 +15,14 @@ const checkPackageOwnership = (userOrVendor, packageDoc) => {
     if (checkRole(userOrVendor.role, ["vendor"])) {
         const vendorId = packageDoc.vendor_id && packageDoc.vendor_id._id 
             ? packageDoc.vendor_id._id.toString() 
-            : packageDoc.vendor_id.toString();
+            : (packageDoc.vendor_id ? packageDoc.vendor_id.toString() : null);
             
-        if (vendorId !== userOrVendor._id.toString()) {
+        // Allow if it matches Vendor ID, OR if it matches the Vendor's Owner (User) ID
+        if (vendorId !== userOrVendor._id.toString() && vendorId !== userOrVendor.vendor_owner_id?.toString()) {
+            console.log("OWNERSHIP FAILED!");
+            console.log("Package vendorId:", vendorId);
+            console.log("userOrVendor._id:", userOrVendor._id.toString());
+            console.log("userOrVendor.vendor_owner_id:", userOrVendor.vendor_owner_id?.toString());
             throw new AppError("You do not have permission to modify or delete this package", 403);
         }
     } else {
@@ -30,8 +35,10 @@ const checkPackageOwnership = (userOrVendor, packageDoc) => {
 // ==========================================
 exports.getAllPackagesCore = async function (queryString) {
     try {
-        const baseQuery = Package.find({ isDeleted: { $ne: true } })
-                                 .populate('vendor_id', 'vendor_name vendor_email -_id');
+        const baseQuery = Package.find({ 
+            isDeleted: { $ne: true },
+            startDate: { $gt: new Date() } // 🌟 Filter to only show upcoming packages
+        }).populate('vendor_id', 'vendor_name vendor_email -_id');
         
         const features = new APIFeatures(baseQuery, queryString)
             .filter()
@@ -85,6 +92,10 @@ exports.createPackageCore = async function (user, packageData, file) {
     session.startTransaction();
 
     try {
+        if (!checkRole(user.role, ["vendor", "admin"])) {
+            throw new AppError("Only vendors and admins can create packages. You are logged in as a regular user.", 403);
+        }
+
         const secureVendorId = user._id;
         const vendorName = user.company_name || user.vendor_name || user.name || 'Vendor';
 
@@ -300,10 +311,8 @@ exports.deletePackageCore = async function (userOrVendor, packageId) {
         packageDoc.package_status = 'inactive'; 
         
         await packageDoc.save();
-
-        // 💡 ملاحظة هندسية: لا نحتاج لعمل Soft Delete لجدول PackageDetails
-        // لأننا في دالة الـ Get نعتمد على أن Package نفسها isDeleted: false
-
+        
+        await PackageDetails.updateOne({ package_id: packageId }, { $set: { package_status: 'inactive' } });
         return { message: "Package deleted and deactivated successfully" };
     } catch (error) {
         if (error.statusCode) throw error;

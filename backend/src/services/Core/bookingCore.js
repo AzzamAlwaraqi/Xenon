@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 const AppError = require("../../utils/AppError");
 const BookingModel = require("../../Models/BookingModel");
 const PackageModel = require("../../Models/PackageModel");
+const VendorModel = require("../../Models/VendorModel");
 const { checkRole, checkStatus } = require("../../utils/checkvalidete");
-
 // ==========================================
 // 🛡️ HELPERS: Role & Authorization Checks
 // ==========================================
@@ -57,37 +57,65 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
         throw new AppError('not authorized to perform this action', 403);
     }
 
-    const requestedSeats = parseInt(bookingData.number_of_people, 10) || 1;
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const updatedPackage = await PackageModel.findOneAndUpdate(
-            { 
-                _id: bookingData.package_id, 
-                available_seats: { $gte: requestedSeats },
-                package_status: 'active',
-                isDeleted: false
-            },
-            { $inc: { available_seats: -requestedSeats } },
-            { new: true, session }
-        );
+        // --- LOOKUP VENDOR BY NAME ---
+        const vendor = await VendorModel.findOne({ vendor_name: bookingData.VENDOR_Name }).session(session);
+        if (!vendor) throw new AppError(`Vendor not found with the name: ${bookingData.VENDOR_Name}`, 404);
 
-        if (!updatedPackage) {
-            throw new AppError('The requested seats are not available or the package is currently unavailable.', 400);
+        const requestedSeats = parseInt(bookingData.guests, 10) || 1;
+
+        const packageDoc = await PackageModel.findOne({
+            package_name: bookingData.package_Name,
+            vendor_id: vendor._id,
+            isDeleted: false
+        }).session(session);
+
+        if (!packageDoc) {
+            throw new AppError('The requested package was not found.', 404);
         }
 
+        // 🌟 Auto-deactivate logic if the package has already started
+        if (new Date(packageDoc.startDate) <= new Date()) {
+            if (packageDoc.package_status !== 'inactive') {
+                packageDoc.package_status = 'inactive';
+                await packageDoc.save({ session });
+            }
+            throw new AppError('This package has already started and is no longer accepting new bookings. It has been marked as inactive.', 400);
+        }
+
+        if (packageDoc.package_status !== 'active') {
+            throw new AppError('This package is not currently active.', 400);
+        }
+
+        if (packageDoc.available_seats < requestedSeats) {
+            throw new AppError('There are not enough available seats in this package.', 400);
+        }
+
+        // Decrement the seats
+        packageDoc.available_seats -= requestedSeats;
+        await packageDoc.save({ session });
+        
+        const updatedPackage = packageDoc;
+
         const calculatedTotalPrice = updatedPackage.package_price * requestedSeats;
+        
+        // Auto-Acceptance Logic:
+        // If remaining available seats are 5 or less, status is pending (vendor needs to manually accept/manage tight capacity).
+        // Otherwise, auto-accept the booking immediately.
+        const initialStatus = updatedPackage.available_seats <= 5 ? 'pending' : 'accepted';
 
         const finalBookingPayload = {
-            package_id: bookingData.package_id,
-            booking_date: bookingData.booking_date,
+            package_id: updatedPackage._id,
+            booking_date: bookingData.date,
             user_id: finalUserId,
-            vendor_id: updatedPackage.vendor_id, 
+            vendor_id: vendor._id, 
             creator_role: creatorRole,
             number_of_people: requestedSeats,
             total_price: calculatedTotalPrice,
-            status: 'pending' 
+            status: initialStatus 
         };
 
         const newBooking = await BookingModel.create([finalBookingPayload], { session });

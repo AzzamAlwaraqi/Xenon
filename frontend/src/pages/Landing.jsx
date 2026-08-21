@@ -56,7 +56,7 @@ export default function Landing() {
       </main>
       <footer className="footer">
         <span className="serif" style={{ fontSize: 20 }}>Xenon</span>
-        <div className="footer-links"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">Contact Support</a></div>
+        <div className="footer-links"><Link to="/privacy">Privacy Policy</Link><Link to="/terms">Terms of Service</Link><a href="mailto:support@xenon.example">Contact Support</a></div>
         <span>© 2026 Xenon Artisanal Travel. All rights reserved.</span>
       </footer>
     </div>

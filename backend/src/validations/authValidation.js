@@ -67,6 +67,10 @@ exports.createAccountValidation = function (req, res, next) {
         name: baseUserSchema.name.required(),
         email: baseUserSchema.email.required(),
         password: baseUserSchema.password.required(),
+        passwordConfirm: joi.string().valid(joi.ref('password')).required().messages({
+            "any.only": "Passwords do not match",
+            "any.required": "Confirm password is required"
+        }),
         mobileNumber: baseUserSchema.mobileNumber.required(),
         
         gender: joi.string().valid("male", "female").optional(),
@@ -74,7 +78,14 @@ exports.createAccountValidation = function (req, res, next) {
         
         ...baseVendorSchema
     });
-    validateMiddleware(Schema, req.body, req, next);
+    
+    // Support various naming conventions for confirm password
+    const cleanData = {
+        ...req.body,
+        passwordConfirm: req.body.passwordConfirm || req.body.confirmPassword || req.body.confirm_password || req.body.password_confirm
+    };
+
+    validateMiddleware(Schema, cleanData, req, next);
 };
 
 exports.loginValidation = function (req, res, next) {
@@ -125,7 +136,14 @@ exports.changePasswordValidation = function (req, res, next) {
             "any.only": "Confirm password does not match new password"
         })
     });
-    validateMiddleware(Schema, req.body, req, next);
+
+    const cleanData = {
+        old_password: req.body.oldPassword || req.body.old_password,
+        new_password: req.body.newPassword || req.body.new_password,
+        confirm_password: req.body.confirmPassword || req.body.confirm_password || req.body.confiomPassword // Supported user typo 'confiomPassword'
+    };
+
+    validateMiddleware(Schema, cleanData, req, next);
 };
 
 exports.updateProfileValidation = function (req, res, next) {

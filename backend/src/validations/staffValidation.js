@@ -2,7 +2,6 @@ const Joi = require('joi');
 const AppError = require('../utils/AppError');
 const { STAFF_POSITIONS } = require('../utils/checkvalidete');
 
-
 const ROLES = ['admin', 'vendor'];
 const WORK_SYSTEMS = ["part-time", "full-time", "contract", "freelance"];
 const ADMIN_POSITIONS = STAFF_POSITIONS.admin;
@@ -12,7 +11,7 @@ const MIN_SALARY_JORDAN = 260;
 const MIN_HOURLY_RATE = 1.25;
 
 const CORPORATE_EMAIL_REGEX = /@xenon\.com$/i;
-const STRONG_PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+const STRONG_PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
 
 const objectIdSchema = Joi.object({
@@ -37,6 +36,10 @@ const createStaffSchema = Joi.object({
     email: Joi.string().email().pattern(CORPORATE_EMAIL_REGEX).required().messages({
         'string.pattern.base': 'Employees must use a corporate email ending with @xenon.com'
     }),
+
+    mobileNumber: Joi.string().pattern(/^\d{10}$/).required().messages({
+        'string.pattern.base': 'Mobile number must be exactly 10 digits'
+    }),
     
     password: Joi.string().pattern(STRONG_PASSWORD_REGEX).required().messages({
         'string.pattern.base': 'Password must be at least 8 characters long and contain at least one letter and one number'
@@ -58,14 +61,8 @@ const createStaffSchema = Joi.object({
         })
     }),
 
-    salary: Joi.number().min(MIN_SALARY_JORDAN).when('workSystem', {
-        is: Joi.valid('full-time', 'contract'),
-        then: Joi.required().messages({
-            'any.required': "A fixed salary is required for full-time or contract-based positions."
-        }),
-        otherwise: Joi.forbidden().messages({
-            'any.unknown': "A fixed salary is not allowed for part-time or freelance positions. Please use 'hourOfWork' instead."
-        })
+    basePay: Joi.number().min(0).required().messages({
+        'any.required': "Base pay (salary or hourly rate) is required."
     }),
 
     allowances: Joi.number().min(0).when('workSystem', {
@@ -74,16 +71,6 @@ const createStaffSchema = Joi.object({
             'number.min': "Allowances cannot be a negative number."
         }),
         otherwise: Joi.forbidden()
-    }),
-
-    hourOfWork: Joi.number().min(MIN_HOURLY_RATE).when('workSystem', {
-        is: Joi.valid('part-time', 'freelance'),
-        then: Joi.required().messages({
-            'any.required': "An hourly rate is required for part-time or freelance positions."
-        }),
-        otherwise: Joi.forbidden().messages({
-            'any.unknown': "An hourly rate is not allowed for full-time or contract-based positions. Please use 'salary' instead."
-        })
     })
 });
 
@@ -94,43 +81,37 @@ const updateStaffSchema = Joi.object({
         'string.pattern.base': 'Employees must use a corporate email ending with @xenon.com'
     }),
 
+    mobileNumber: Joi.string().pattern(/^\d{10}$/).optional().messages({
+        'string.pattern.base': 'Mobile number must be exactly 10 digits'
+    }),
+
     workSystem: Joi.string().valid(...WORK_SYSTEMS).optional(),
 
     position: Joi.string().optional(),
 
-    salary: Joi.number().min(MIN_SALARY_JORDAN).optional(),
+    basePay: Joi.number().min(0).optional(),
 
     allowances: Joi.number().min(0).optional(),
 
-    hourOfWork: Joi.number().min(MIN_HOURLY_RATE).optional(),
-
     job_active: Joi.boolean().optional()
 })
-.min(1)
-.when(Joi.object({ workSystem: Joi.valid('full-time', 'contract') }).unknown(), {
-    then: Joi.object({
-        hourOfWork: Joi.forbidden().messages({
-            'any.unknown': "Cannot add an hourly rate to full-time or contract systems."
-        })
-    })
-})
-.when(Joi.object({ workSystem: Joi.valid('freelance', 'part-time') }).unknown(), {
-    then: Joi.object({
-        salary: Joi.forbidden().messages({
-            'any.unknown': "Cannot add a fixed salary to freelance or part-time systems."
-        }),
-        allowances: Joi.forbidden()
-    })
-});
+.min(1);
 
 const handleJoiError = (error, next) => {
     if (error) {
-        const errorMessage = error.details.map(err => err.message).join(' | ');
+        const errorMessage = error.details.map(err => err.message).join(', ');
         return next(new AppError(errorMessage, 400));
     }
 };
 
 exports.createStaffValidation = (req, res, next) => {
+    if (!req.body.role && req.user) {
+        if (req.user.role === 'vendor') {
+            req.body.role = 'vendor';
+        } else if (req.user.role === 'admin') {
+            req.body.role = req.body.vendor_id ? 'vendor' : 'admin';
+        }
+    }
     const { error, value } = createStaffSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (error) return handleJoiError(error, next);
     req.body = value;
@@ -138,21 +119,19 @@ exports.createStaffValidation = (req, res, next) => {
 };
 
 exports.updateStaffValidation = (req, res, next) => {
-    const { error: idError, value: paramValue } = objectIdSchema.validate(req.params, { abortEarly: false, stripUnknown: true });
+    const { error: idError } = objectIdSchema.validate(req.params);
     if (idError) return handleJoiError(idError, next);
-    req.params = paramValue;
 
-    const { error: bodyError, value: bodyValue } = updateStaffSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    const { error: bodyError } = updateStaffSchema.validate(req.body, { abortEarly: false });
     if (bodyError) return handleJoiError(bodyError, next);
-    req.body = bodyValue;
     
     next();
 };
 
+
 exports.getOrDeleteStaffValidation = (req, res, next) => {
-    const { error, value } = objectIdSchema.validate(req.params, { abortEarly: false, stripUnknown: true });
+    const { error } = objectIdSchema.validate(req.params);
     if (error) return handleJoiError(error, next);
-    req.params = value;
     next();
 };
 
@@ -162,3 +141,5 @@ exports.getAllStaffValidation = (req, res, next) => {
     req.query = value;
     next();
 };
+
+exports.staffIdParamValidation = exports.getOrDeleteStaffValidation;
