@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_config.dart';
 
 class AuthService {
@@ -16,7 +17,18 @@ class AuthService {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        // You would typically save the token here
+        final data = jsonDecode(response.body);
+        if (data['data'] != null && data['data']['accessToken'] != null) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('accessToken', data['data']['accessToken']);
+            if (data['data']['refreshToken'] != null) {
+              await prefs.setString('refreshToken', data['data']['refreshToken']);
+            }
+          } catch (spError) {
+            debugPrint('Failed to save token, missing plugin? $spError');
+          }
+        }
         return null; // Success
       }
       
@@ -78,7 +90,9 @@ class AuthService {
         Uri.parse('${ApiConfig.baseUrl}/auth/logout'),
         headers: ApiConfig.headers,
       );
-      // Clear local storage/tokens here if necessary
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('accessToken');
+      await prefs.remove('refreshToken');
     } catch (e) {
       debugPrint('Logout error: $e');
     }
@@ -132,6 +146,7 @@ class AuthService {
         body: jsonEncode({
           'email': email,
           'password': password,
+          'confirm_password': password,
           'otpCode': otpCode,
         }),
       ).timeout(const Duration(seconds: 10));
@@ -139,6 +154,23 @@ class AuthService {
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       debugPrint('Reset Password error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> forgotPassword(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/forgot-password'),
+        headers: ApiConfig.headers,
+        body: jsonEncode({
+          'email': email,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      debugPrint('Forgot Password error: $e');
       return false;
     }
   }

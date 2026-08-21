@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/providers/profile_provider.dart';
+import 'package:gp/widgets/compass_loading_overlay.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ProfileProvider(),
-      child: const _ProfilePageContent(),
-    );
+    return const _ProfilePageContent();
   }
 }
 
@@ -27,141 +25,150 @@ class _ProfilePageContent extends StatelessWidget {
       backgroundColor: isDark
           ? AppColors.backgroundDark
           : AppColors.backgroundLight,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Ahlan wa Sahlan',
-                    style: TextStyle(
-                      color: AppColors.primaryRust,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 40),
-
-              // Avatar
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0), // Light bluish grey
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 40,
-                    color: AppColors.primaryRust,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Change Picture Text
-              Text(
-                'Change Profile Picture',
-                style: TextStyle(
-                  color: AppColors.primaryRust,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // User Info
-              Text(
-                'Sarah User',
-                style: TextStyle(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'sa***@email.com',
-                style: TextStyle(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                  fontSize: 16,
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // Menu Options
-              _buildMenuTile(
-                icon: Icons.cases_outlined,
-                title: 'All Bookings',
-                onTap: () => provider.navigateToAllBookings(context),
-                isDark: isDark,
-              ),
-              _buildMenuTile(
-                icon: Icons.payments_outlined,
-                title: 'Payment Method: Cash',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Cash is currently the only supported payment method',
+      body: CompassLoadingOverlay(
+        isLoading: provider.isLoading,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 16.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Ahlan wa Sahlan',
+                      style: TextStyle(
+                        color: AppColors.primaryRust,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  );
-                },
-                isDark: isDark,
-              ),
-              _buildMenuTile(
-                icon: Icons.lock_reset_outlined,
-                title: 'Reset Password',
-                onTap: () => provider.navigateToResetPassword(context),
-                isDark: isDark,
-              ),
+                  ],
+                ),
 
-              const SizedBox(height: 48),
+                const SizedBox(height: 40),
 
-              // Logout Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => provider.logout(context),
-                  icon: const Icon(Icons.logout, color: Color(0xFFA02B2B)),
-                  label: const Text(
-                    'Log Out',
-                    style: TextStyle(
-                      color: Color(0xFFA02B2B),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                // Avatar
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0), // Light bluish grey
+                    shape: BoxShape.circle,
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFE5E5),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                  child: Center(
+                    child: Icon(
+                      Icons.person_outline,
+                      size: 40,
+                      color: AppColors.primaryRust,
                     ),
-                    elevation: 0,
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 16),
+
+                // Edit Profile Link
+                GestureDetector(
+                  onTap: () => provider.navigateToEditProfile(context),
+                  child: Text(
+                    'Edit Profile Details',
+                    style: TextStyle(
+                      color: AppColors.primaryRust,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // User Info
+                Text(
+                  provider.userData?['name'] ?? 'User Name',
+                  style: TextStyle(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  provider.userData?['email'] ?? 'user@email.com',
+                  style: TextStyle(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                    fontSize: 16,
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                // Menu Options
+                _buildMenuTile(
+                  icon: Icons.cases_outlined,
+                  title: 'All Bookings',
+                  onTap: () => provider.navigateToAllBookings(context),
+                  isDark: isDark,
+                ),
+                _buildMenuTile(
+                  icon: Icons.payments_outlined,
+                  title: 'Payment Method: Cash',
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Cash is currently the only supported payment method',
+                        ),
+                      ),
+                    );
+                  },
+                  isDark: isDark,
+                ),
+                _buildMenuTile(
+                  icon: Icons.lock_reset_outlined,
+                  title: 'Reset Password',
+                  onTap: () => provider.navigateToResetPassword(context),
+                  isDark: isDark,
+                ),
+
+                const SizedBox(height: 48),
+
+                // Logout Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => provider.logout(context),
+                    icon: const Icon(Icons.logout, color: Color(0xFFA02B2B)),
+                    label: const Text(
+                      'Log Out',
+                      style: TextStyle(
+                        color: Color(0xFFA02B2B),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFE5E5),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
