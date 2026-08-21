@@ -138,12 +138,12 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
             throw new AppError("You are not authorized to login to this portal", 403);
         }
 
-        if (checkRole(user.role, ["user"]) && !isMobile) {
-            throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
-        }
-        if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
-            throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
-        }
+        // if (checkRole(user.role, ["user"]) && !isMobile) {
+        //     throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
+        // }
+        // if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
+        //     throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
+        // }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) throw new AppError("Invalid email or password", 401);

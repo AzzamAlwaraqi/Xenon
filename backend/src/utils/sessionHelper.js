@@ -1,6 +1,6 @@
 const UAParser = require('ua-parser-js');
-const AppError = require('./AppError');
-const checkRole = require('./checkvalidete');
+const AppError = require('./AppError'); 
+const { checkRole } = require('./checkvalidete');
 /**
  * @param {Object} req 
  * @param {String} userRole 
@@ -15,15 +15,13 @@ exports.extractAndValidateSessionData = (req, userRole) => {
     const user_agent = userAgentString;
     const os_name = result.os.name || 'Unknown OS';
     const browser_name = result.browser.name || 'Unknown Browser';
-
+    
     const device_id = req.headers['x-device-id'] || 'unknown-device-id';
 
     const parsedDeviceType = result.device.type;
     const isMobile = parsedDeviceType === 'mobile' || parsedDeviceType === 'tablet' || req.headers['x-client-type'] === 'mobile';
-
+    
     const device_type = isMobile ? 'mobile' : 'web';
-
-
 
     return {
         ip_address,
