@@ -1,24 +1,26 @@
 // Libraries
-import { Flag, LayoutDashboard, LogOut, ShieldCheck, Star } from 'lucide-react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { BarChart3, Bell, BookOpen, LayoutDashboard, LogOut, MessageSquareWarning, Store, Users, UserCog } from 'lucide-react'
 
 // Services
 import { authApi } from '../../services/api.js'
 import { storage } from '../../services/storage.js'
 
-const navigation = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/admin/vendors', label: 'Vendor Approvals', icon: ShieldCheck },
-  { to: '/admin/reports', label: 'Moderation Reports', icon: Flag },
-  { to: '/admin/reviews', label: 'Reviews', icon: Star },
+const links = [
+  ['/admin', 'Dashboard', LayoutDashboard],
+  ['/admin/bookings', 'Bookings', BookOpen],
+  ['/admin/users', 'Users', Users],
+  ['/admin/vendors', 'Vendors', Store],
+  ['/admin/reviews', 'Reviews', MessageSquareWarning],
+  ['/admin/staff', 'Staff', UserCog],
+  ['/admin/reports', 'Reports', MessageSquareWarning],
+  ['/admin/analytics', 'Analytics', BarChart3],
+  ['/admin/notifications', 'Notifications', Bell],
 ]
 
-// Shared admin console layout
-export default function AdminShell({ title, subtitle, children }) {
+// Shared admin portal layout
+export default function AdminShell() {
   const navigate = useNavigate()
-  const location = useLocation()
-  const isPreview = import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === '1'
-  const previewSuffix = isPreview ? '?preview=1' : ''
 
   async function logout() {
     try {
@@ -26,39 +28,18 @@ export default function AdminShell({ title, subtitle, children }) {
     } catch {
       // Local logout must still succeed when the API is unavailable.
     }
-
-    storage.clear()
+    storage.clearAuth()
     navigate('/login')
   }
 
   return (
-    <div className="vendor-app">
-      <aside className="vendor-sidebar">
-        <Link className="vendor-logo" to={`/admin${previewSuffix}`}>Xenon</Link>
-        <span className="vendor-kicker">ADMIN CONSOLE</span>
-
-        <nav className="vendor-nav">
-          {navigation.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} end={end} to={`${to}${previewSuffix}`}>
-              <Icon size={18} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <button className="vendor-logout" type="button" onClick={logout}>
-          <LogOut size={18} />
-          Log out
-        </button>
+    <div className="admin-layout">
+      <aside className="admin-sidebar">
+        <div className="admin-brand"><span>Xenon</span><small>PREMIUM TRAVEL</small></div>
+        <nav>{links.map(([to, label, Icon]) => <NavLink key={to} end={to === '/admin'} to={to}><Icon size={18} />{label}</NavLink>)}</nav>
+        <button className="admin-logout" onClick={logout}><LogOut size={18} />Logout</button>
       </aside>
-
-      <main className="vendor-main">
-        <header className="vendor-header">
-          <h1>{title}</h1>
-          <p>{subtitle}</p>
-        </header>
-        {children}
-      </main>
+      <main className="admin-main"><Outlet /></main>
     </div>
   )
 }

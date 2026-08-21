@@ -5,20 +5,19 @@ import { useNavigate } from 'react-router-dom'
 // Components and services
 import VendorShell from '../../components/vendor/VendorShell.jsx'
 import { VendorField } from '../../components/vendor/VendorUi.jsx'
+import PasswordField from '../../components/PasswordField.jsx'
 import { profileApi } from '../../services/api.js'
 import { storage } from '../../services/storage.js'
+import { isAcceptablePassword } from '../../utils/formValidation.js'
 
 // Constants
-const EMPTY_PASSWORDS = { current_password: '', new_password: '' }
+const EMPTY_PASSWORDS = { old_password: '', new_password: '', confirm_password: '' }
 
 // Page component
 export default function VendorSettings() {
   const navigate = useNavigate()
   const [passwords, setPasswords] = useState(EMPTY_PASSWORDS)
-  const [message, setMessage] = useState('')
-  const strongEnough = passwords.new_password.length >= 8
-    && /[A-Za-z]/.test(passwords.new_password)
-    && /\d/.test(passwords.new_password)
+  const [status, setStatus] = useState({ message: '', type: '', loading: false })
 
   function updatePassword(key) {
     return (event) => setPasswords((current) => ({ ...current, [key]: event.target.value }))
@@ -26,17 +25,30 @@ export default function VendorSettings() {
 
   async function changePassword(event) {
     event.preventDefault()
-    if (!strongEnough) {
-      setMessage('Use at least 8 characters with letters and numbers.')
+    if (!passwords.old_password) {
+      setStatus({ message: 'Enter your current password.', type: 'error', loading: false })
+      return
+    }
+    if (!isAcceptablePassword(passwords.new_password)) {
+      setStatus({ message: 'Use at least 8 characters with uppercase, lowercase, a number, and a special character.', type: 'error', loading: false })
+      return
+    }
+    if (passwords.new_password !== passwords.confirm_password) {
+      setStatus({ message: 'The new passwords do not match.', type: 'error', loading: false })
+      return
+    }
+    if (passwords.old_password === passwords.new_password) {
+      setStatus({ message: 'Choose a new password that differs from the current password.', type: 'error', loading: false })
       return
     }
 
+    setStatus({ message: '', type: '', loading: true })
     try {
       await profileApi.changePassword(passwords)
-      setMessage('Password updated.')
+      setStatus({ message: 'Password updated.', type: 'success', loading: false })
       setPasswords(EMPTY_PASSWORDS)
     } catch (error) {
-      setMessage(error.message)
+      setStatus({ message: error.message, type: 'error', loading: false })
     }
   }
 
@@ -44,10 +56,10 @@ export default function VendorSettings() {
     if (!window.confirm('Permanently delete this vendor account?')) return
     try {
       await profileApi.delete('Vendor requested account deletion')
-      storage.clear()
+      storage.clearAuth()
       navigate('/')
     } catch (error) {
-      setMessage(error.message)
+      setStatus({ message: error.message, type: 'error', loading: false })
     }
   }
 
@@ -62,11 +74,12 @@ export default function VendorSettings() {
 
       <form className="vendor-card vendor-form settings-form" onSubmit={changePassword}>
         <h2>Change password</h2>
-        <VendorField label="Current password" type="password" value={passwords.current_password} onChange={updatePassword('current_password')} />
-        <VendorField label="New password" type="password" value={passwords.new_password} onChange={updatePassword('new_password')} />
-        <p className="vendor-hint">Letters and numbers with 8+ characters are required. A symbol and 12+ characters make it stronger.</p>
-        {message && <p>{message}</p>}
-        <button className="vendor-button">Update password</button>
+        <VendorField label="Current password" type="password" autoComplete="current-password" value={passwords.old_password} onChange={updatePassword('old_password')} required />
+        <PasswordField label="New password" value={passwords.new_password} onChange={updatePassword('new_password')} />
+        <PasswordField label="Confirm new password" value={passwords.confirm_password} onChange={updatePassword('confirm_password')} showStrength={false} />
+        <p className="vendor-hint">The current backend requires 8+ characters with uppercase, lowercase, a number, and a symbol. Twelve characters are recommended.</p>
+        {status.message && <p className={`form-message ${status.type}`} role="alert">{status.message}</p>}
+        <button className="vendor-button" disabled={status.loading}>{status.loading ? 'Updating…' : 'Update password'}</button>
       </form>
 
       <section className="vendor-card danger-zone">

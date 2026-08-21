@@ -1,34 +1,70 @@
 // Storage
 import { storage, TOKEN_KEY } from './storage.js'
+import { retrySimultaneousLogin } from '../utils/retryLogin.js'
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
+function resolveBaseUrl(value) {
+  const configured = value || '/api/v1'
+  if (!/^https?:\/\//i.test(configured)) return configured.replace(/\/$/, '')
+
+  try {
+    const url = new URL(configured)
+    const browserIsRemote = !['localhost', '127.0.0.1'].includes(window.location.hostname)
+    if (browserIsRemote && ['localhost', '127.0.0.1'].includes(url.hostname)) {
+      url.hostname = window.location.hostname
+    }
+    return url.toString().replace(/\/$/, '')
+  } catch {
+    return configured.replace(/\/$/, '')
+  }
+}
+
+const BASE_URL = resolveBaseUrl(import.meta.env.VITE_API_URL)
 
 // Shared API request handler
 async function request(path, options = {}) {
   const token = storage.get(TOKEN_KEY)
   const isFormData = options.body instanceof FormData
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 12000)
   let response
   try {
     response = await fetch(`${BASE_URL}${path}`, {
-      credentials: 'include',
+      credentials: 'same-origin',
       ...options,
+      signal: controller.signal,
       headers: {
         ...(!isFormData && { 'Content-Type': 'application/json' }),
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
     })
-  } catch {
-    throw new Error('Cannot reach the Xenon API. Start the backend on port 3000 or update VITE_API_URL to its actual address.')
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('The Xenon API took too long to respond. Check the backend and try again.', { cause: error })
+    throw new Error('Cannot connect to the Xenon API. Start the backend on the host computer and use the frontend LAN address so requests can pass through the Vite proxy.', { cause: error })
+  } finally {
+    window.clearTimeout(timeout)
   }
 
   const payload = await response.json().catch(() => ({}))
-  if (response.status === 401) storage.remove(TOKEN_KEY)
+  if (response.status === 401) storage.clearAuth()
   if (!response.ok) {
-    const proxyUnavailable = response.status >= 500 && !payload.message && !payload.error
-    throw new Error(proxyUnavailable
-      ? 'The frontend proxy could not reach the Xenon backend on port 3000.'
-      : payload.message || payload.error || 'Something went wrong. Please try again.')
+    const serverMessage = payload.message || payload.error
+    const messages = {
+      400: serverMessage || 'The submitted information is invalid. Review the highlighted fields.',
+      401: 'Your login session is missing or has expired. Please sign in again.',
+      403: serverMessage || 'Your account does not have permission to perform this action.',
+      404: `This feature is not available from the current backend (${path}).`,
+      409: serverMessage || 'This record conflicts with information that already exists.',
+      413: 'The uploaded file is too large.',
+      422: serverMessage || 'The server could not process the submitted information.',
+      429: 'Too many requests were sent. Wait a moment and try again.',
+    }
+    const error = new Error(messages[response.status] || (response.status >= 500
+      ? 'The backend could not complete this request. A server component or database service may be unavailable.'
+      : serverMessage || `The request failed with status ${response.status}.`))
+    error.status = response.status
+    error.serverMessage = serverMessage || ''
+    throw error
   }
   return payload
 }
@@ -36,7 +72,7 @@ async function request(path, options = {}) {
 // Unified authentication routes
 export const authApi = {
   register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-  login: (data) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data) => retrySimultaneousLogin(() => request('/auth/login', { method: 'POST', body: JSON.stringify(data) })),
   logout: () => request('/auth/logout', { method: 'POST' }),
   forgotPassword: (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
   resetPassword: (data) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
@@ -61,39 +97,25 @@ export const packageApi = {
 
 // Vendor booking routes
 export const vendorBookingApi = {
+  getAll: () => request('/bookings/all-bookings'),
   getRequests: () => request('/bookings/vendor/booking-requests'),
   getPendingCount: () => request('/bookings/vendor/pending-requests-count'),
   getById: (bookingId) => request(`/bookings/get-booking/${bookingId}`),
   updateStatus: (bookingId, status) => request(`/bookings/update-status/${bookingId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 }
 
-// Traveller booking routes
-export const bookingApi = {
-  create: (data) => request('/bookings/create-booking', { method: 'POST', body: JSON.stringify(data) }),
-  getMine: () => request('/bookings/my-bookings'),
-  getHistory: () => request('/bookings/my-history'),
-  getById: (bookingId) => request(`/bookings/get-booking/${bookingId}`),
-  cancel: (bookingId) => request(`/bookings/delete-booking/${bookingId}`, { method: 'PUT' }),
-}
-
-// Review routes
-export const reviewApi = {
-  create: (data) => request('/reviews/createReview', { method: 'POST', body: JSON.stringify(data) }),
-  getMine: () => request('/reviews/getMyReviews'),
-  getForPackage: (packageId) => request(`/reviews/package/${packageId}`),
-  remove: (reviewId) => request(`/reviews/deleteReview/${reviewId}`, { method: 'DELETE' }),
-  getAll: (query = '') => request(`/reviews/getAllReviews${query}`),
-  updateStatus: (reviewId, status) => request(`/reviews/updateReviewStatus/${reviewId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-}
-
-// Admin routes
+// Admin routes follow the backend contract. Several are currently not mounted by the backend.
 export const adminApi = {
-  getVendors: (query = '') => request(`/admin/vendor-approvals${query}`),
-  getVendor: (vendorId) => request(`/admin/vendor-approvals/${vendorId}`),
-  updateVendorStatus: (vendorId, status, rejectionReason) => request(`/admin/vendor-approvals/${vendorId}/status`, { method: 'PATCH', body: JSON.stringify({ status, rejectionReason }) }),
-  getReports: (query = '') => request(`/admin/reports${query}`),
-  resolveReport: (reportId, action, adminNotes) => request(`/admin/reports/${reportId}/resolve`, { method: 'POST', body: JSON.stringify({ action, adminNotes }) }),
-  escalateReport: (reportId, escalationNotes) => request(`/admin/reports/${reportId}/escalate`, { method: 'POST', body: JSON.stringify({ escalationNotes }) }),
+  analytics: () => request('/admin/analytics'),
+  users: () => request('/admin/users'),
+  vendors: () => request('/admin/vendors'),
+  staff: () => request('/admin/staff'),
+  reports: () => request('/admin/reports'),
+  notifications: () => request('/notifications'),
+  bookings: () => request('/bookings/all-bookings'),
+  reviews: () => request('/reviews/getAllReviews'),
+  complaints: () => request('/complaints/getAllComplaints'),
+  updateReviewStatus: (reviewId, status) => request(`/reviews/updateReviewStatus/${reviewId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 }
 
 export { BASE_URL, request }

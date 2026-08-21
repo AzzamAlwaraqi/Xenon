@@ -1,6 +1,6 @@
 // Libraries
 import { BarChart3, Box, CalendarDays, CircleUserRound, LayoutDashboard, LogOut, Settings } from 'lucide-react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 
 // Services
 import { authApi } from '../../services/api.js'
@@ -18,9 +18,6 @@ const navigation = [
 // Shared vendor portal layout
 export default function VendorShell({ title, subtitle, children }) {
   const navigate = useNavigate()
-  const location = useLocation()
-  const isPreview = import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === '1'
-  const previewSuffix = isPreview ? '?preview=1' : ''
 
   async function logout() {
     try {
@@ -29,19 +26,19 @@ export default function VendorShell({ title, subtitle, children }) {
       // Local logout must still succeed when the API is unavailable.
     }
 
-    storage.clear()
+    storage.clearAuth()
     navigate('/login')
   }
 
   return (
     <div className="vendor-app">
       <aside className="vendor-sidebar">
-        <Link className="vendor-logo" to={`/vendor${previewSuffix}`}>Xenon</Link>
+        <Link className="vendor-logo" to="/vendor">Xenon</Link>
         <span className="vendor-kicker">VENDOR PORTAL</span>
 
         <nav className="vendor-nav">
           {navigation.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} end={end} to={`${to}${previewSuffix}`}>
+            <NavLink key={to} end={end} to={to}>
               <Icon size={18} />
               <span>{label}</span>
             </NavLink>
