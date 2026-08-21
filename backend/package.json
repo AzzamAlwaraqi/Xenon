@@ -27,6 +27,8 @@
     "multer": "^2.2.0",
     "node-cron": "^4.6.0",
     "nodemailer": "^9.0.5",
+    "nodemon": "^3.1.14",
+    "nodeone": "^1.0.0",
     "rate-limiter-flexible": "^11.2.0",
     "sharp": "^0.35.3",
     "ua-parser-js": "^2.0.10",
