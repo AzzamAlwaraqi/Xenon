@@ -1,6 +1,10 @@
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const phonePattern = /^\+?[0-9\s()-]{8,18}$/
 
+export function isValidEmail(email) {
+  return emailPattern.test(String(email).trim())
+}
+
 export function isStrongPassword(password) {
   return (
     password.length >= 12 &&
@@ -22,14 +26,22 @@ export function isAcceptablePassword(password) {
 }
 
 export function validateLogin(form) {
-  if (!emailPattern.test(form.email.trim())) return 'Enter a valid email address.'
+  if (!isValidEmail(form.email)) return 'Enter a valid email address.'
   if (!form.password) return 'Enter your password.'
+  return ''
+}
+
+export function validatePasswordReset(form) {
+  if (!isValidEmail(form.email)) return 'Enter a valid email address.'
+  if (!/^\d{6}$/.test(String(form.otpCode).trim())) return 'Enter the six-digit verification code from your email.'
+  if (!isAcceptablePassword(form.password)) return 'Use at least 8 characters with uppercase, lowercase, a number, and a special character.'
+  if (form.password !== form.confirm_password) return 'Passwords do not match.'
   return ''
 }
 
 export function validateTraveller(form, agreed) {
   if (form.name.trim().length < 2) return 'Full name must contain at least 2 characters.'
-  if (!emailPattern.test(form.email.trim())) return 'Enter a valid email address.'
+  if (!isValidEmail(form.email)) return 'Enter a valid email address.'
   if (!isAcceptablePassword(form.password)) return 'Use at least 8 characters with uppercase, lowercase, a number, and a special character.'
   if (!/^07[789]\d{7}$/.test(form.mobileNumber.replace(/\D/g, ''))) return 'Use a Jordanian mobile number beginning with 077, 078, or 079.'
   if (form.password !== form.confirm) return 'Passwords do not match.'
@@ -43,8 +55,9 @@ export function validateTraveller(form, agreed) {
 
 export function validateVendorAccount(form) {
   if (form.name.trim().length < 2) return 'Full name must contain at least 2 characters.'
-  if (!emailPattern.test(form.email.trim())) return 'Enter a valid work email address.'
+  if (!isValidEmail(form.email)) return 'Enter a valid work email address.'
   if (!isAcceptablePassword(form.password)) return 'Use at least 8 characters with uppercase, lowercase, a number, and a special character.'
+  if (form.confirm !== undefined && form.password !== form.confirm) return 'Passwords do not match.'
   return ''
 }
 

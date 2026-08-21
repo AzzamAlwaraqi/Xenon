@@ -19,13 +19,13 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
     const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
 
-    // if (checkRole(role, ["user"]) && !isMobile) {
-    //     throw new AppError("Access Denied: Clients can only register via the Xenon Mobile App.", 403);
+    if (checkRole(role, ["user"]) && !isMobile) {
+        throw new AppError("Access Denied: Clients can only register via the Xenon Mobile App.", 403);
 
-    // }
-    // if (checkRole(role, ["vendor"]) && isMobile) {
-    //     throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
-    // }
+    }
+    if (checkRole(role, ["vendor"]) && isMobile) {
+        throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
+    }
 
     const existingUserByEmail = await UserModel.findOne({ email: cleanEmail });
     if (existingUserByEmail) throw new AppError("Account with this email already exists", 409);
@@ -134,12 +134,12 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
             throw new AppError("You are not authorized to login to this portal", 403);
         }
 
-        // if (checkRole(user.role, ["user"]) && !isMobile) {
-        //     throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
-        // }
-        // if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
-        //     throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
-        // }
+        if (checkRole(user.role, ["user"]) && !isMobile) {
+            throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
+        }
+        if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
+            throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
+        }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) throw new AppError("Invalid email or password", 401);

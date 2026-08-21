@@ -3,7 +3,7 @@ import { Check, Eye, EyeOff, LockKeyhole, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 // Shared password input and strength feedback
-export default function PasswordField({ label = 'Password', value, onChange, placeholder = '••••••••', required = true }) {
+export default function PasswordField({ label = 'Password', value, onChange, placeholder = '••••••••', required = true, showStrength = true, autoComplete = 'new-password' }) {
   const [visible, setVisible] = useState(false)
   const [active, setActive] = useState(false)
   // Password rules used by the live meter
@@ -35,19 +35,20 @@ export default function PasswordField({ label = 'Password', value, onChange, pla
         <input
           className="has-icon has-eye"
           type={visible ? 'text' : 'password'}
+          autoComplete={autoComplete}
           value={value}
           onChange={onChange}
           onFocus={() => setActive(true)}
           onBlur={() => setActive(Boolean(value))}
           placeholder={placeholder}
           required={required}
-          aria-describedby={`${label.replace(/\s+/g, '-').toLowerCase()}-strength`}
+          aria-describedby={showStrength ? `${label.replace(/\s+/g, '-').toLowerCase()}-strength` : undefined}
         />
         <button className="eye" type="button" onClick={() => setVisible((current) => !current)} aria-label={visible ? 'Hide password' : 'Show password'}>
           {visible ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
-      <div className={`password-strength strength-${strengthLabel.toLowerCase().replace(' ', '-')}`} id={`${label.replace(/\s+/g, '-').toLowerCase()}-strength`}>
+      {showStrength && <div className={`password-strength strength-${strengthLabel.toLowerCase().replace(' ', '-')}`} id={`${label.replace(/\s+/g, '-').toLowerCase()}-strength`}>
         <div className="password-strength-heading">
           <div className="password-meter" aria-hidden="true">
             {rules.map((rule) => <span className={rule.passed ? 'passed' : ''} key={rule.label} />)}
@@ -64,7 +65,7 @@ export default function PasswordField({ label = 'Password', value, onChange, pla
             ))}
           </ul>
         )}
-      </div>
+      </div>}
     </div>
   )
 }

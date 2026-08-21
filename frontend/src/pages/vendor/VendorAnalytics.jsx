@@ -22,10 +22,10 @@ export default function VendorAnalytics() {
   return (
     <VendorShell title="Analytics" subtitle="Understand bookings and the experiences travellers value.">
       <section className="vendor-metrics">
-        <VendorMetric label="Revenue" value={`JOD ${revenue.toLocaleString()}`} />
+        <VendorMetric label="Revenue" value={bookingsState.error ? 'Unavailable' : `JOD ${revenue.toLocaleString()}`} />
         <VendorMetric label="Bookings" value={bookings.length} />
         <VendorMetric label="Confirmed" value={confirmedBookings.length} />
-        <VendorMetric label="Packages" value={packages.length} />
+        <VendorMetric label="Packages" value={packagesState.error ? 'Unavailable' : packages.length} />
       </section>
 
       <div className="vendor-card analytics-card">

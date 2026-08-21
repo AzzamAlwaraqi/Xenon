@@ -7,9 +7,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import AuthImage from '../components/AuthImage.jsx'
 import PasswordField from '../components/PasswordField.jsx'
 import { authApi } from '../services/api.js'
-import { storage, ROLE_KEY, TOKEN_KEY } from '../services/storage.js'
+import { ROLE_KEY, SESSION_KEY, TOKEN_KEY, USER_KEY, storage } from '../services/storage.js'
 import { validateVendorAccount, validateVendorBusiness } from '../utils/formValidation.js'
 import { ROUTES } from '../routes/routes.config.js'
+import { getPortalRole } from '../utils/authToken.js'
 
 // Page image
 const vendorImage = 'https://images.unsplash.com/photo-1666689468289-bd7ae53d5ba9?auto=format&fit=crop&w=1800&q=88'
@@ -18,7 +19,7 @@ const vendorImage = 'https://images.unsplash.com/photo-1666689468289-bd7ae53d5ba
 export default function VendorRegistration() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState({ name: '', email: '', password: '', company_name: '', phone_no: '', vendor_type: 'Tourism', address: '', city: '', state: '', pincode: '', country: 'Jordan' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', company_name: '', phone_no: '', vendor_type: 'Tourism', address: '', city: '', state: '', pincode: '', country: 'Jordan' })
   const [status, setStatus] = useState({ loading: false, message: '', type: '' })
   // Keep form field updates reusable
   const update = (key) => (event) => setForm((current)=>({...current,[key]:event.target.value}))
@@ -45,13 +46,16 @@ export default function VendorRegistration() {
     }
     setStatus({ loading: true, message: '', type: '' })
     try {
-      const result = await authApi.register({ ...form, phone_no: form.phone_no.replace(/\D/g, ''), role: 'vendor' })
+      const account = Object.fromEntries(Object.entries(form).filter(([key]) => key !== 'confirm'))
+      const result = await authApi.register({ ...account, name: account.name.trim(), email: account.email.trim().toLowerCase(), phone_no: account.phone_no.replace(/\D/g, ''), role: 'vendor' })
       const token = result.data?.token
       if (!token) throw new Error('The API did not return an authentication token.')
+      const authenticatedRole = getPortalRole(token, 'vendor')
+      if (authenticatedRole !== 'vendor') throw new Error('The API returned a token for the wrong portal role.')
       storage.set(TOKEN_KEY, token)
-      storage.set(ROLE_KEY, 'vendor')
-      storage.set('xenon_session', result.data?.session || null)
-      storage.set('xenon_user', result.data?.user || null)
+      storage.set(ROLE_KEY, authenticatedRole)
+      storage.set(SESSION_KEY, result.data?.session || null)
+      storage.set(USER_KEY, result.data?.newVendor || null)
       setStatus({ loading: false, message: 'Partner account created successfully.', type: 'success' })
       navigate(ROUTES.VENDOR)
     } catch (error) {
@@ -71,7 +75,8 @@ export default function VendorRegistration() {
               <div className="field"><label>Full Name</label><input placeholder="Jane Doe" value={form.name} onChange={update('name')} required /></div>
               <div className="field"><label>Work Email</label><input type="email" placeholder="jane@example.com" value={form.email} onChange={update('email')} required /></div>
               <PasswordField value={form.password} onChange={update('password')} />
-              {status.message && <p className={`form-message ${status.type}`}>{status.message}</p>}
+              <PasswordField label="Confirm password" value={form.confirm} onChange={update('confirm')} showStrength={false} />
+              {status.message && <p className={`form-message ${status.type}`} role="status">{status.message}</p>}
               <div className="vendor-actions"><button className="primary-button">Continue to Business Details <ArrowRight size={15}/></button></div>
             </form>
           ) : (
