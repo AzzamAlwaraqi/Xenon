@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/providers/signup_provider.dart';
+import 'package:gp/widgets/app_textfield.dart';
 
 class SignUpPage extends StatelessWidget {
   const SignUpPage({super.key});
@@ -61,7 +62,7 @@ class _SignUpPageContent extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // White Card Section
             Container(
               transform: Matrix4.translationValues(0, -30, 0),
@@ -97,103 +98,59 @@ class _SignUpPageContent extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  
                   // Form Fields
-                  _buildLabel('Full Name'),
-                  _buildTextField(
+                  const FieldLabel(text: 'Full Name'),
+                  AppTextField(
                     controller: provider.fullNameController,
                     hint: 'John Doe',
-                    icon: Icons.person_outline,
+                    prefixIcon: Icons.person_outline,
                   ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  _buildLabel('Email Address'),
-                  _buildTextField(
-                    controller: provider.emailController,
-                    hint: 'john@example.com',
-                    icon: Icons.email_outlined,
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  _buildLabel('Phone Number'),
-                  _buildTextField(
-                    controller: provider.phoneController,
-                    hint: '+962 7 9000 0000',
-                    icon: Icons.phone_outlined,
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  _buildLabel('Password'),
-                  TextFormField(
-                    controller: provider.passwordController,
-                    obscureText: provider.obscurePassword,
-                    style: const TextStyle(color: AppColors.textPrimaryLight),
-                    decoration: InputDecoration(
-                      hintText: '••••••••',
-                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondaryLight),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          provider.obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: AppColors.textSecondaryLight,
-                        ),
-                        onPressed: provider.togglePasswordVisibility,
-                      ),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.borderLight),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.borderLight),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primaryRust),
-                      ),
-                    ),
-                  ),
-                  
+
                   const SizedBox(height: 16),
 
-                  _buildLabel('Confirm Password'),
-                  TextFormField(
-                    controller: provider.confirmPasswordController,
-                    obscureText: provider.obscureConfirmPassword,
-                    style: const TextStyle(color: AppColors.textPrimaryLight),
-                    decoration: InputDecoration(
-                      hintText: '••••••••',
-                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondaryLight),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          provider.obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: AppColors.textSecondaryLight,
-                        ),
-                        onPressed: provider.toggleConfirmPasswordVisibility,
-                      ),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.borderLight),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.borderLight),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primaryRust),
-                      ),
-                    ),
+                  const FieldLabel(text: 'Email Address'),
+                  AppTextField(
+                    controller: provider.emailController,
+                    hint: 'john@example.com',
+                    prefixIcon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
+                  const FieldLabel(text: 'Phone Number'),
+                  AppTextField(
+                    controller: provider.phoneController,
+                    hint: '+962 7 9000 0000',
+                    prefixIcon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  const FieldLabel(text: 'Password'),
+                  AppTextField(
+                    controller: provider.passwordController,
+                    hint: '••••••••',
+                    prefixIcon: Icons.lock_outline,
+                    isPassword: provider.obscurePassword,
+                    onToggleVisibility: provider.togglePasswordVisibility,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  const FieldLabel(text: 'Confirm Password'),
+                  AppTextField(
+                    controller: provider.confirmPasswordController,
+                    hint: '••••••••',
+                    prefixIcon: Icons.lock_outline,
+                    isPassword: provider.obscureConfirmPassword,
+                    onToggleVisibility:
+                        provider.toggleConfirmPasswordVisibility,
+                  ),
+
+                  const SizedBox(height: 16),
+
                   // Password Strength Bar
                   if (provider.passwordController.text.isNotEmpty)
                     Column(
@@ -201,39 +158,71 @@ class _SignUpPageContent extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Expanded(child: _buildStrengthSegment(provider.passwordStrengthLevel >= 1, provider.passwordStrengthLevel)),
+                            Expanded(
+                              child: _buildStrengthSegment(
+                                provider.passwordStrengthLevel >= 1,
+                                provider.passwordStrengthLevel,
+                              ),
+                            ),
                             const SizedBox(width: 4),
-                            Expanded(child: _buildStrengthSegment(provider.passwordStrengthLevel >= 2, provider.passwordStrengthLevel)),
+                            Expanded(
+                              child: _buildStrengthSegment(
+                                provider.passwordStrengthLevel >= 2,
+                                provider.passwordStrengthLevel,
+                              ),
+                            ),
                             const SizedBox(width: 4),
-                            Expanded(child: _buildStrengthSegment(provider.passwordStrengthLevel >= 3, provider.passwordStrengthLevel)),
+                            Expanded(
+                              child: _buildStrengthSegment(
+                                provider.passwordStrengthLevel >= 3,
+                                provider.passwordStrengthLevel,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _getStrengthText(provider.passwordStrengthLevel),
                           style: TextStyle(
-                            color: _getStrengthColor(provider.passwordStrengthLevel),
+                            color: _getStrengthColor(
+                              provider.passwordStrengthLevel,
+                            ),
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 12),
                         // Checklist
-                        _buildChecklistItem('At least 8 characters', provider.hasMinLength),
-                        _buildChecklistItem('At least 1 capital letter', provider.hasCapital),
-                        _buildChecklistItem('At least 1 number', provider.hasNumber),
-                        _buildChecklistItem('At least 1 special character', provider.hasSpecial),
-                        _buildChecklistItem('Passwords match', provider.passwordsMatch),
+                        _buildChecklistItem(
+                          'At least 8 characters',
+                          provider.hasMinLength,
+                        ),
+                        _buildChecklistItem(
+                          'At least 1 capital letter',
+                          provider.hasCapital,
+                        ),
+                        _buildChecklistItem(
+                          'At least 1 number',
+                          provider.hasNumber,
+                        ),
+                        _buildChecklistItem(
+                          'At least 1 special character',
+                          provider.hasSpecial,
+                        ),
+                        _buildChecklistItem(
+                          'Passwords match',
+                          provider.passwordsMatch,
+                        ),
                       ],
                     ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Create Account Button
                   ElevatedButton(
-                    onPressed: (provider.isLoading || !provider.isPasswordValid) 
-                      ? null 
-                      : () => provider.signup(context),
+                    onPressed: (provider.isLoading || !provider.isPasswordValid)
+                        ? null
+                        : () => provider.signup(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryRust,
                       foregroundColor: Colors.white,
@@ -243,30 +232,33 @@ class _SignUpPageContent extends StatelessWidget {
                       ),
                       elevation: 0,
                     ),
-                    child: provider.isLoading 
-                      ? const SizedBox(
-                          height: 20, 
-                          width: 20, 
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Create Account',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                    child: provider.isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
                             ),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward, size: 18),
-                          ],
-                        ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Create Account',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(Icons.arrow_forward, size: 18),
+                            ],
+                          ),
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Log In link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -276,7 +268,8 @@ class _SignUpPageContent extends StatelessWidget {
                         style: TextStyle(color: AppColors.textSecondaryLight),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.pushReplacementNamed(context, '/login'),
+                        onTap: () =>
+                            Navigator.pushReplacementNamed(context, '/login'),
                         child: const Text(
                           'Log In',
                           style: TextStyle(
@@ -292,50 +285,6 @@ class _SignUpPageContent extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: AppColors.textPrimaryLight,
-          fontWeight: FontWeight.w600,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-  }) {
-    return TextFormField(
-      controller: controller,
-      style: const TextStyle(color: AppColors.textPrimaryLight),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: AppColors.textSecondaryLight.withValues(alpha: 0.5)),
-        prefixIcon: Icon(icon, color: AppColors.textSecondaryLight),
-        filled: true,
-        fillColor: Colors.transparent,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.borderLight),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.borderLight),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primaryRust),
         ),
       ),
     );

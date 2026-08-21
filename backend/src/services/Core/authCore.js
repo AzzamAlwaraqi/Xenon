@@ -15,17 +15,21 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     const cleanEmail = Body.email.toLowerCase().trim();
     const mobileNumber = Body.phone_no || Body.mobileNumber;
 
+    if (Body.password !== Body.passwordConfirm) {
+        throw new AppError("Passwords do not match", 400);
+    }
+
     const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || Body.device_type || "Desktop";
     const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
     const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
 
-    if (checkRole(role, ["user"]) && !isMobile) {
-        throw new AppError("Access Denied: Clients can only register via the Xenon Mobile App.", 403);
+    // if (checkRole(role, ["user"]) && !isMobile) {
+    //     throw new AppError("Access Denied: Clients can only register via the Xenon Mobile App.", 403);
 
-    }
-    if (checkRole(role, ["vendor"]) && isMobile) {
-        throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
-    }
+    // }
+    // if (checkRole(role, ["vendor"]) && isMobile) {
+    //     throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
+    // }
 
     const existingUserByEmail = await UserModel.findOne({ email: cleanEmail });
     if (existingUserByEmail) throw new AppError("Account with this email already exists", 409);
