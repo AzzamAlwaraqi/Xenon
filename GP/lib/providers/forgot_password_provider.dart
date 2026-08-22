@@ -101,7 +101,9 @@ class ForgotPasswordProvider extends ChangeNotifier {
   Future<void> submitNewPassword(BuildContext context) async {
     if (otpController.text.isEmpty || 
         newPasswordController.text.isEmpty || 
-        confirmPasswordController.text.isEmpty) return;
+        confirmPasswordController.text.isEmpty) {
+      return;
+    }
 
     if (newPasswordController.text != confirmPasswordController.text) {
       if (context.mounted) {
