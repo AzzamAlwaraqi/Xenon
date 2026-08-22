@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gp/services/auth_service.dart';
+import 'package:gp/models/auth_service.dart';
 import 'package:gp/utils/toast_utils.dart';
 
 class LoginProvider extends ChangeNotifier {

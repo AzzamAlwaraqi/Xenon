@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gp/services/profile_service.dart';
-import 'package:gp/services/auth_service.dart';
+import 'package:gp/models/profile_service.dart';
+import 'package:gp/models/auth_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   final ProfileService _profileService = ProfileService();

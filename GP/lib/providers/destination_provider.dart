@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gp/services/destination_service.dart';
 import 'package:gp/models/destination_model.dart';
 
 class DestinationProvider extends ChangeNotifier {
-  final DestinationService _service = DestinationService();
-  
   List<Destination> _destinations = [];
   bool _isLoading = false;
   String? _error;
@@ -19,7 +16,7 @@ class DestinationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _destinations = await _service.getDestinations();
+      _destinations = await Destination.getDestinations();
       _isLoading = false;
     } catch (e) {
       _isLoading = false;
