@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gp/models/auth_service.dart';
+import 'package:gp/models/auth_model.dart';
 import 'package:gp/utils/toast_utils.dart';
 import 'package:intl/intl.dart';
 
@@ -9,7 +9,6 @@ class SignupProvider extends ChangeNotifier {
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
-  final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -102,7 +101,7 @@ class SignupProvider extends ChangeNotifier {
     
     final formattedDate = DateFormat('dd/MM/yyyy').format(_dateOfBirth!);
 
-    final error = await _authService.signUp(
+    final error = await AuthService.signUp(
       name: fullNameController.text.trim(),
       email: emailController.text.trim(),
       password: passwordController.text,

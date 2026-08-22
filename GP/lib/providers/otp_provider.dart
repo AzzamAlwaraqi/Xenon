@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:gp/models/auth_service.dart';
+import 'package:gp/models/auth_model.dart';
 import 'package:gp/utils/toast_utils.dart';
 import 'dart:async';
 
 class OtpProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
   final String email;
 
   List<TextEditingController> controllers = List.generate(6, (_) => TextEditingController());
@@ -52,7 +51,7 @@ class OtpProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final success = await _authService.verifyOtp(email, code);
+    final success = await AuthService.verifyOtp(email, code);
 
     _isLoading = false;
     notifyListeners();
@@ -73,7 +72,7 @@ class OtpProvider extends ChangeNotifier {
     notifyListeners();
 
     // Re-trigger signup API or a specific resend API if it exists.
-    final success = await _authService.sendOtp(email);
+    final success = await AuthService.sendOtp(email);
     
     _isLoading = false;
 

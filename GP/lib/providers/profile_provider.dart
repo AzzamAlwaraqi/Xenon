@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gp/models/profile_service.dart';
-import 'package:gp/models/auth_service.dart';
+import 'package:gp/models/auth_model.dart';
 
 class ProfileProvider extends ChangeNotifier {
   final ProfileService _profileService = ProfileService();
-  final AuthService _authService = AuthService();
 
   Map<String, dynamic>? _userData;
   bool _isLoading = false;
@@ -63,7 +62,7 @@ class ProfileProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    await _authService.logout();
+    await AuthService.logout();
     
     _isLoading = false;
     notifyListeners();

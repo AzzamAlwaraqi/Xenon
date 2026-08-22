@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:gp/models/auth_service.dart';
+import 'package:gp/models/auth_model.dart';
 
 class ForgotPasswordProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
+
   
   bool _isLoading = false;
   bool _otpSent = false;
@@ -19,6 +19,7 @@ class ForgotPasswordProvider extends ChangeNotifier {
   bool get otpSent => _otpSent;
   
   bool get obscurePassword => _obscurePassword;
+  
   bool get obscureConfirmPassword => _obscureConfirmPassword;
   bool get hasMinLength => _hasMinLength;
   bool get hasCapital => _hasCapital;
@@ -80,7 +81,7 @@ class ForgotPasswordProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final success = await _authService.forgotPassword(emailController.text.trim());
+    final success = await AuthService.forgotPassword(emailController.text.trim());
 
     _isLoading = false;
     
@@ -114,7 +115,7 @@ class ForgotPasswordProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final success = await _authService.resetPassword(
+    final success = await AuthService.resetPassword(
       emailController.text.trim(),
       newPasswordController.text,
       otpController.text.trim(),

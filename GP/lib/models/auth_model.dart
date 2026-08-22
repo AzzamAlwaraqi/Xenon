@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_config.dart';
 
 class AuthService {
-  Future<String?> login(String email, String password) async {
+  static Future<String?> login(String email, String password) async {
     try {
       final response = await http
           .post(
@@ -44,7 +44,7 @@ class AuthService {
     }
   }
 
-  Future<String?> signUp({
+  static Future<String?> signUp({
     required String name, 
     required String email, 
     required String password,
@@ -84,7 +84,7 @@ class AuthService {
     }
   }
 
-  Future<void> logout() async {
+  static Future<void> logout() async {
     try {
       await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/logout'),
@@ -98,7 +98,7 @@ class AuthService {
     }
   }
 
-  Future<bool> verifyOtp(String email, String otp) async {
+  static Future<bool> verifyOtp(String email, String otp) async {
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/verify-otp'),
@@ -117,7 +117,7 @@ class AuthService {
     }
   }
 
-  Future<bool> sendOtp(String email) async {
+  static Future<bool> sendOtp(String email) async {
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/send-otp'),
@@ -134,7 +134,7 @@ class AuthService {
     }
   }
 
-  Future<bool> resetPassword(
+  static Future<bool> resetPassword(
     String email,
     String password,
     String otpCode,
@@ -158,7 +158,7 @@ class AuthService {
     }
   }
 
-  Future<bool> forgotPassword(String email) async {
+  static Future<bool> forgotPassword(String email) async {
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/forgot-password'),

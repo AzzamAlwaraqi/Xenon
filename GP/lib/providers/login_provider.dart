@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:gp/models/auth_service.dart';
+import 'package:gp/models/auth_model.dart';
 import 'package:gp/utils/toast_utils.dart';
 
 class LoginProvider extends ChangeNotifier {
   final TextEditingController emailOrPhoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -22,7 +21,7 @@ class LoginProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     
-    final error = await _authService.login(
+    final error = await AuthService.login(
       emailOrPhoneController.text.trim(),
       passwordController.text,
     );
