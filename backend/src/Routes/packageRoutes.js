@@ -15,10 +15,15 @@ const upload = multer({
     }
 });
 
+// Note: Public
 router.get("/", getAllPackages);
+// Note: Public
 router.get("/package/:id", packageValidation.packageIdParamValidation, getPackage);
+// Note: Accessible by vendor, admin
 router.post("/create-package", protect, upload.single("package_image"), packageValidation.validateCreatePackage, createPackage);
+// Note: Accessible by vendor, admin
 router.put("/package/:id", protect, upload.single("package_image"), packageValidation.packageIdParamValidation, packageValidation.validateUpdatePackage, updatePackage);
+// Note: Accessible by vendor, admin
 router.put("/delete-package/:id", protect, packageValidation.packageIdParamValidation, deletePackage);
 
 // TODO: Remove this temporary route after fixing ownership

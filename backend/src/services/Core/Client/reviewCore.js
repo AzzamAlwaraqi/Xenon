@@ -9,11 +9,15 @@ const { checkRole } = require("../../../utils/checkvalidete");
 // 🛡️ HELPER: Calculate Average Rating
 // ==========================================
 const updatePackageAverageRating = async (packageId, session = null) => {
+    const targetId = typeof packageId === 'string' 
+        ? new mongoose.Types.UUID(packageId) 
+        : packageId;
+
     // نجلب كل التقييمات المقبولة وغير المحذوفة لهذه الباقة
     const stats = await Review.aggregate([
         { 
             $match: { 
-                package_id: new mongoose.Types.ObjectId(packageId), 
+                package_id: targetId, 
                 review_status: 'accepted', 
                 isDeleted: { $ne: true } 
             } 
@@ -175,9 +179,11 @@ exports.deleteReviewCore = async function (user, reviewId) {
         }
 
         // 🌟 Soft Delete
-        review.isDeleted = true;
-        review.deletionRequestedAt = new Date();
-        await review.save({ session });
+        await Review.updateOne(
+            { _id: review._id },
+            { $set: { isDeleted: true, deletionRequestedAt: new Date() } },
+            { session }
+        );
 
         // 🌟 إعادة حساب تقييم الباقة (لأن التقييم تم حذفه)
         if (review.review_status === 'accepted') {
@@ -230,20 +236,23 @@ exports.getMyReviewsCore = async function (user, queryParams = {}) {
 
 exports.getReviewByIdCore = async function (user, reviewId) {
     try {
-        const review = await Review.findOne({ _id: reviewId, isDeleted: { $ne: true } })
-            .populate('user_id', 'name email -_id')
-            .populate('vendor_id', 'vendor_name vendor_email -_id')
-            .populate('package_id', 'package_name package_price -_id');
+        const rawReview = await Review.findOne({ _id: reviewId, isDeleted: { $ne: true } });
 
-        if (!review) throw new AppError("Review not found.", 404);
+        if (!rawReview) throw new AppError("Review not found.", 404);
 
-        const isOwner = review.user_id.toString() === user._id.toString();
+        const isOwner = rawReview.user_id.toString() === user._id.toString();
         const isAdmin = checkRole(user.role, ['admin']);
-        const isTargetVendor = review.vendor_id && review.vendor_id.toString() === user._id.toString();
+        const isTargetVendor = rawReview.vendor_id && rawReview.vendor_id.toString() === user._id.toString();
 
-        if (!isOwner && !isAdmin && !isTargetVendor && review.review_status !== 'accepted') {
+        if (!isOwner && !isAdmin && !isTargetVendor && rawReview.review_status !== 'accepted') {
             throw new AppError("You do not have permission to view this review.", 403);
         }
+
+        const review = await Review.populate(rawReview, [
+            { path: 'user_id', select: 'name email -_id' },
+            { path: 'vendor_id', select: 'vendor_name vendor_email -_id' },
+            { path: 'package_id', select: 'package_name package_price -_id' }
+        ]);
 
         return { status: "success", data: review };
     } catch (error) {

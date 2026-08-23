@@ -106,10 +106,10 @@ exports.logout = async (req, res, next) => {
 
 exports.resetPassword = async (req, res, next) => {
     try {
-        const { email, password, token, otpCode, passwordConfirm } = req.body;
+        const { email, password, token, otpCode, confirm_password } = req.body;
         const resetToken = token || otpCode; 
         
-        const result = await authCore.resetPasswordCore(email, password,passwordConfirm, resetToken);
+        const result = await authCore.resetPasswordCore(email, password, confirm_password, resetToken);
         
         res.status(200).json({
             status: "success",

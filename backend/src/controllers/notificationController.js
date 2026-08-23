@@ -19,8 +19,8 @@ exports.sendUpdateToClient = async (req, res, next) => {
 
 exports.sendNotification = async (req, res, next) => {
     try {
-        const { userId, vendorId, adminId, type, message } = req.body;
-        const result = await notificationCore.sendNotificationCore(userId, vendorId, adminId, type, message);
+        const { vendorId, type, message } = req.body;
+        const result = await notificationCore.sendNotificationBroadcastCore(vendorId, {type, message});
         return res.status(201).json({ status: "success", data: result });
     } catch (error) {
         next(error);
@@ -30,7 +30,7 @@ exports.sendNotification = async (req, res, next) => {
 exports.sendBroadcastNotification = async (req, res, next) => {
     try {
         const { userIds, vendorId, type, message } = req.body;
-        const result = await notificationCore.sendBroadcastNotificationCore(userIds, vendorId, type, message);
+        const result = await notificationCore.sendNotificationBroadcastCore(userIds, vendorId, type, message);
         return res.status(201).json(result);
     } catch (error) {
         next(error);

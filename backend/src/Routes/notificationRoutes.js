@@ -7,17 +7,23 @@ const router = express.Router();
 router.use(authMiddleware.protect);
 
 // Only Vendors
+// Note: Accessible by vendor
 router.post("/send-update", notificationController.sendUpdateToClient);
 
 // Admins / System
-router.post("/send", notificationController.sendNotification);
+// Note: Accessible by admin or vendor but for all users booking it this company 
 router.post("/broadcast", notificationController.sendBroadcastNotification);
 
 // All Authenticated Users (Admin, User, Vendor)
+// Note: Accessible by user, vendor, admin
 router.get("/", notificationController.getMyNotifications);
+// Note: Accessible by user, vendor, admin
 router.patch("/:id/read", notificationController.markAsRead);
+// Note: Accessible by user, vendor, admin
 router.patch("/read-all", notificationController.markAllAsRead);
+// Note: Accessible by user, vendor, admin
 router.patch("/:id", notificationController.deleteNotification);
+// Note: Accessible by user, vendor, admin
 router.patch("/delete-all", notificationController.deleteAllNotifications);
 
 module.exports = router;

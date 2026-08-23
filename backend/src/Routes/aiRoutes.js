@@ -5,6 +5,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const router = express.Router();
 
 router.use(authMiddleware.protect);
+// Note: Accessible by user
 router.post("/chat", aiAdvisorController.getAiAdvice);
 
 module.exports = router;

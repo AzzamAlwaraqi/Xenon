@@ -25,7 +25,22 @@ exports.sendOtpCore = async function ({ email, phone, purpose = "registration", 
     });
 
     if (cleanEmail) {
-        const subject = `Your Xenon Verification Code - ${purpose.toUpperCase()}`;
+        let subject, headerTitle, subtitle, actionText, iconColor;
+
+        if (purpose === 'password_reset') {
+            subject = 'Reset Your Xenon Password';
+            headerTitle = 'Password Reset';
+            subtitle = 'Secure your Xenon account';
+            actionText = 'Enter the code below to reset your password. If you did not request this, please ignore this email.';
+            iconColor = 'linear-gradient(135deg, #ef4444, #b91c1c)'; // Red for reset
+        } else {
+            subject = 'Verify Your Xenon Account';
+            headerTitle = 'Verify your identity';
+            subtitle = 'Smart Tourism & Travel Platform';
+            actionText = 'Enter the code below to complete your registration. This helps us keep your account secure.';
+            iconColor = 'linear-gradient(135deg, #4f46e5, #7c3aed)'; // Purple/Blue for registration
+        }
+
         const text = `Your Xenon OTP code is: ${otp}. It will expire in 5 minutes.`;
 
         const html = `
@@ -36,15 +51,15 @@ exports.sendOtpCore = async function ({ email, phone, purpose = "registration", 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xenon Verification</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #eef1f6; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;">
-    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #eef1f6; padding: 48px 0;">
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f3f4f6; padding: 48px 0;">
         <tr>
             <td align="center">
-                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(17, 24, 39, 0.08), 0 8px 10px -6px rgba(17, 24, 39, 0.05);">
-
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+                    
                     <!-- Top accent bar -->
                     <tr>
-                        <td style="height: 6px; background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%); font-size: 0; line-height: 0;">&nbsp;</td>
+                        <td style="height: 6px; background: ${iconColor}; font-size: 0; line-height: 0;">&nbsp;</td>
                     </tr>
 
                     <!-- Header / Brand -->
@@ -52,44 +67,44 @@ exports.sendOtpCore = async function ({ email, phone, purpose = "registration", 
                         <td style="padding: 40px 40px 8px 40px; text-align: center;">
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto 16px auto;">
                                 <tr>
-                                    <td style="width: 44px; height: 44px; background: linear-gradient(135deg, #4f46e5, #7c3aed); border-radius: 12px; text-align: center; vertical-align: middle;">
-                                        <span style="color: #ffffff; font-size: 20px; font-weight: 800; line-height: 44px;">X</span>
+                                    <td style="width: 48px; height: 48px; background: ${iconColor}; border-radius: 12px; text-align: center; vertical-align: middle;">
+                                        <span style="color: #ffffff; font-size: 24px; font-weight: 800; line-height: 48px;">X</span>
                                     </td>
                                 </tr>
                             </table>
-                            <h1 style="color: #111827; font-size: 22px; margin: 0; font-weight: 800; letter-spacing: -0.3px;">XENON</h1>
-                            <p style="color: #9ca3af; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 4px; margin-bottom: 0;">Smart Tourism &amp; Travel Platform</p>
+                            <h1 style="color: #111827; font-size: 24px; margin: 0; font-weight: 800; letter-spacing: -0.5px;">XENON</h1>
+                            <p style="color: #6b7280; font-size: 14px; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 6px; margin-bottom: 0;">${subtitle}</p>
                         </td>
                     </tr>
 
                     <!-- Body Content -->
                     <tr>
                         <td style="padding: 24px 40px 8px 40px; text-align: center;">
-                            <h2 style="color: #111827; font-size: 20px; font-weight: 700; margin: 0 0 12px 0;">Verify your identity</h2>
-                            <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin: 0 0 28px 0;">
-                                Enter the code below to complete your <strong style="color: #374151; text-transform: capitalize;">${purpose}</strong> process. This helps us keep your account secure.
+                            <h2 style="color: #111827; font-size: 20px; font-weight: 700; margin: 0 0 12px 0;">${headerTitle}</h2>
+                            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
+                                ${actionText}
                             </p>
 
                             <!-- OTP Box -->
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
-                                    <td align="center" style="background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%); border: 1px solid #e0e7ff; border-radius: 14px; padding: 28px 24px;">
-                                        <p style="color: #6366f1; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 12px 0;">Your verification code</p>
-                                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 800; color: #4338ca; letter-spacing: 8px; display: inline-block;">${otp}</span>
+                                    <td align="center" style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 16px; padding: 32px 24px;">
+                                        <p style="color: #64748b; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 12px 0;">Your Verification Code</p>
+                                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 42px; font-weight: 800; color: #0f172a; letter-spacing: 12px; display: inline-block; padding-left: 12px;">${otp}</span>
                                     </td>
                                 </tr>
                             </table>
 
                             <!-- Expiry + copy hint -->
-                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 20px auto 0 auto;">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 24px auto 0 auto;">
                                 <tr>
-                                    <td style="background-color: #fef2f2; border-radius: 20px; padding: 8px 16px;">
-                                        <span style="color: #dc2626; font-size: 13px; font-weight: 600;">⏰ Expires in 5 minutes</span>
+                                    <td style="background-color: #fef2f2; border-radius: 20px; padding: 8px 16px; border: 1px solid #fee2e2;">
+                                        <span style="color: #dc2626; font-size: 13px; font-weight: 600;">⏰ Code expires in 5 minutes</span>
                                     </td>
                                 </tr>
                             </table>
 
-                            <p style="color: #9ca3af; font-size: 13px; line-height: 1.6; margin: 24px 0 0 0;">
+                            <p style="color: #9ca3af; font-size: 13px; line-height: 1.6; margin: 32px 0 0 0;">
                                 For your security, never share this code with anyone — including Xenon staff.
                             </p>
                         </td>
@@ -98,7 +113,7 @@ exports.sendOtpCore = async function ({ email, phone, purpose = "registration", 
                     <!-- Divider -->
                     <tr>
                         <td style="padding: 32px 40px 0 40px;">
-                            <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 0;">
+                            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 0;">
                         </td>
                     </tr>
 
@@ -109,7 +124,7 @@ exports.sendOtpCore = async function ({ email, phone, purpose = "registration", 
                                 Didn't request this code? You can safely ignore this email — no action is needed and your account remains secure.
                             </p>
                             <p style="color: #d1d5db; font-size: 12px; margin: 16px 0 0 0;">
-                                &copy; 2026 Xenon Platform. All rights reserved.
+                                &copy; ${new Date().getFullYear()} Xenon Platform. All rights reserved.
                             </p>
                         </td>
                     </tr>

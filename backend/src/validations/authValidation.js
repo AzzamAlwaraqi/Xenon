@@ -72,13 +72,13 @@ exports.createAccountValidation = function (req, res, next) {
             "any.required": "Confirm password is required"
         }),
         mobileNumber: baseUserSchema.mobileNumber.required(),
-        
+
         gender: joi.string().valid("male", "female").optional(),
         DateOfBirth: joi.any().custom(customDateValidator).optional(),
-        
+
         ...baseVendorSchema
     });
-    
+
     // Support various naming conventions for confirm password
     const cleanData = {
         ...req.body,
@@ -120,7 +120,7 @@ exports.resetPasswordValidation = function (req, res, next) {
     const cleanData = {
         email: req.body.email,
         password: req.body.newPassword || req.body.new_password || req.body.password,
-        confirm_password: req.body.confirmPassword || req.body.confirm_password || req.body.newPassword || req.body.password, 
+        confirm_password: req.body.confirmPassword || req.body.confirm_password || req.body.newPassword || req.body.password,
         token: req.body.token,
         otpCode: req.body.otpCode
     };
@@ -163,7 +163,7 @@ exports.updateProfileValidation = function (req, res, next) {
         schemaObj = { ...schemaObj, ...baseVendorSchema };
     }
 
-    const Schema = joi.object(schemaObj).min(1); 
+    const Schema = joi.object(schemaObj).min(1);
     validateMiddleware(Schema, req.body, req, next);
 };
 

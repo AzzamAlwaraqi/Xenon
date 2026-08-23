@@ -44,77 +44,77 @@ exports.vendorSendUpdateCore = async function (vendorId, userId, type, message, 
     }
 };
 
-exports.sendNotificationCore = async function (userId, vendorId, adminId, type, message, session = null) {
-    try {
-        const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
-        const duplicateNotification = await Notification.findOne({
-            user_id: userId,
-            vendor_id: vendorId,
-            notification_type: type,
-            createdAt: { $gte: oneMinuteAgo }
-        });
+exports.sendNotificationBroadcastCore = async (senderId, senderRole, notificationData) => {
+    const { title, message, type, targetAudience } = notificationData;
+    
+    let targetUserIds = []; // 🌟 مصفوفة فارغة سنملؤها بناءً على رتبة المُرسِل
 
-        if (duplicateNotification) {
-            console.log(`[Anti-Spam] Suppressed duplicate notification for user ${userId}`);
-            return duplicateNotification; 
-        }
+    // ==========================================
+    // 1. تحديد الجمهور المستهدف (Audience Targeting)
+    // ==========================================
+    
+    if (senderRole === 'admin') {
+        // 👑 الإدارة (Admin): يحق له مراسلة كل النظام أو فئة محددة
+        let query = { isActive: true };
+        if (targetAudience === 'users_only') query.role = 'user';
+        if (targetAudience === 'vendors_only') query.role = 'vendor';
 
-        const payload = {
-            user_id: userId,
-            vendor_id: vendorId,
-            notification_type: type,
-            notification_message: message,
-            is_read: false
-        };
+        const users = await User.find(query).select('_id');
+        targetUserIds = users.map(user => user._id);
         
-        if (adminId) payload.admin_id = adminId;
+    } else if (senderRole === 'vendor') {
+        // 🏪 التاجر (Vendor): يحق له مراسلة عملائه فقط (سابقين أو حاليين)
+        targetUserIds = await Booking.distinct("user_id", { 
+            vendor_id: senderId,
+            status: { $in: ["completed", "accepted", "pending"] } 
+        });
+    }
 
-        const newNotification = await Notification.create([payload], { session });
+    // فحص أمان: هل يوجد جمهور فعلاً؟
+    if (!targetUserIds || targetUserIds.length === 0) {
+        throw new AppError("No valid audience found to send this broadcast.", 404);
+    }
 
-        if (global.io) {
-            let roomName = `user_${userId}`;
-            global.io.to(roomName).emit('new_notification', {
-                notification_id: newNotification[0]._id,
-                notification_type: type,
+    // ==========================================
+    // 2. التنفيذ المشترك (Shared Execution) - DRY 
+    // ==========================================
+
+    // تجهيز المصفوفة للإدخال المجمع
+    const notificationsArray = targetUserIds.map(userId => ({
+        user_id: userId,
+        sender_id: senderId,
+        vendor_id: senderRole === 'vendor' ? senderId : null, // إذا كان أدمن لن يكون هناك vendor_id
+        notification_type: type || "broadcast",
+        notification_message: message,
+        title: title,
+        is_read: false,
+        createdAt: new Date()
+    }));
+
+    // الحفظ في قاعدة البيانات بضربة واحدة
+    await Notification.insertMany(notificationsArray);
+
+    // ==========================================
+    // 3. الإشعارات اللحظية (Real-time Socket.io) 
+    // ==========================================
+    
+    if (global.io) {
+        // إرسال الإشعار اللحظي لغرف (Rooms) المستخدمين المستهدفين فقط
+        targetUserIds.forEach(userId => {
+            global.io.to(userId.toString()).emit('new_notification', {
+                title: title,
+                notification_type: type || "broadcast",
                 notification_message: message,
                 createdAt: new Date()
             });
-        }
-
-        return newNotification[0];
-    } catch (error) {
-        console.error("Failed to send notification:", error);
-        return null; 
+        });
     }
-};
 
-exports.sendBroadcastNotificationCore = async function (userIds, vendorId, type, message) {
-    try {
-        if (!userIds || userIds.length === 0) return null;
-
-        const bulkNotifications = userIds.map(id => ({
-            user_id: id,
-            vendor_id: vendorId,
-            notification_type: type,
-            notification_message: message,
-            is_read: false
-        }));
-
-        await Notification.insertMany(bulkNotifications);
-
-        if (global.io) {
-            global.io.to('all_users').emit('new_notification', {
-                notification_type: type,
-                notification_message: message,
-                createdAt: new Date()
-            });
-        }
-
-        return { status: "success", message: `Broadcasted to ${userIds.length} users` };
-    } catch (error) {
-        console.error("Failed to broadcast notification:", error);
-        return null;
-    }
+    return {
+        status: "success",
+        message: `Broadcast successfully sent by ${senderRole} to ${targetUserIds.length} users.`,
+        receiversCount: targetUserIds.length
+    };
 };
 
 exports.getMyNotificationsCore = async function (user) {

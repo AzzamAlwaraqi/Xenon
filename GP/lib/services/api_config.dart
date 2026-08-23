@@ -11,7 +11,7 @@ class ApiConfig {
     // استخدام defaultTargetPlatform بيحمينا من مشاكل الويب وما بيحتاج dart:io
     if (defaultTargetPlatform == TargetPlatform.android) {
       // Because you are running on a PHYSICAL phone, you must use your laptop's Wi-Fi IP address!
-      return 'http://192.168.1.169:3000/api/v1'; 
+      return 'http://192.168.100.10:3000/api/v1'; 
     }
 
     // 3. بيئة iOS Simulator أو Windows Desktop

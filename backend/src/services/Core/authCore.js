@@ -220,7 +220,9 @@ exports.resetPasswordCore = async function (email, password, passwordConfirmatio
             throw new AppError("Passwords do not match", 400);
         }
         const cleanEmail = email.toLowerCase().trim();
-
+        const html =`
+        
+            `
         // 🌟 التحسين: استخدام دالة التحقق من الـ OTP النظيفة التي بنيناها (DRY Principle)
         await verifyOtpCore({
             email: cleanEmail,

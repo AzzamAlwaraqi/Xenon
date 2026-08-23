@@ -48,3 +48,12 @@ exports.protect = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.restrictTo = (...roles) => {
+    return (req, res, next) => {
+        if (!checkRole(req.user.role, roles)) {
+            return next(new AppError("You do not have permission to perform this action", 403));
+        }
+        next();
+    };
+};

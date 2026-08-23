@@ -61,7 +61,7 @@ const OTPSchema = new mongoose.Schema({
 });
 
 // TTL index — removed per request to keep OTPs in database forever
-OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Compound indexes for fast lookup by email or phone + purpose
 OTPSchema.index({ email: 1, purpose: 1 });

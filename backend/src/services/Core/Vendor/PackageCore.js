@@ -118,11 +118,14 @@ exports.createPackageCore = async function (user, packageData, file) {
             .webp({ quality: 80 })
             .toBuffer();
 
+        const safeCompanyName = vendorName.replace(/[^a-zA-Z0-9]/g, '_');
         const safePackageName = packageData.package_name.replace(/[^a-zA-Z0-9]/g, '_');
-        const uploadPath = `xenon/packages/vendor/${vendorName}/${safePackageName}_${Date.now()}`;
+        const today = new Date();
+        const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+        const uploadPath = `xenon/packages/vendor/${safeCompanyName}/${safePackageName}/${safePackageName}_${formattedDate}`;
         const uploadResult = await FileStorageService.uploadImageFromBuffer(optimizedBuffer, uploadPath);
         
-        uploadedImagePublicId = uploadResult.public_id; // حفظ الـ ID للحماية
+        uploadedImagePublicId = uploadResult.public_id; 
 
         // 🌟 2. إنشاء الباقة الأساسية
         const newPackage = await Package.create([{
@@ -225,7 +228,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 
         // 4. Safe Cloud Storage Update
         if (file) {
-            const vendorName = userOrVendor.company_name || userOrVendor.name || 'Vendor';
+            const safeCompanyName = (userOrVendor.company_name || userOrVendor.name || 'Vendor').replace(/[^a-zA-Z0-9]/g, '_');
             const safePackageName = (packageUpdates.package_name || existingPackage.package_name).replace(/[^a-zA-Z0-9]/g, '_');
             
             const optimizedBuffer = await sharp(file.buffer)
@@ -233,7 +236,9 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
                 .webp({ quality: 80 })
                 .toBuffer();
 
-            const uploadPath = `xenon/packages/vendor/${vendorName}/${safePackageName}_${Date.now()}`;
+            const today = new Date();
+            const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+            const uploadPath = `xenon/packages/vendor/${safeCompanyName}/${safePackageName}/${safePackageName}_${formattedDate}`;
             const uploadResult = await FileStorageService.uploadImageFromBuffer(optimizedBuffer, uploadPath);
 
             newUploadedImageId = uploadResult.public_id;
@@ -271,7 +276,6 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
         await session.commitTransaction();
         session.endSession();
 
-        // 🌟 6. تنظيف السحابة من الصورة القديمة (النجاح)
         if (oldImagesToDelete.length > 0) {
             for (const image of oldImagesToDelete) {
                 await FileStorageService.deleteImage(image.public_id).catch(e => console.error("Cloud cleanup failed:", e)); 
@@ -283,7 +287,6 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
         await session.abortTransaction();
         session.endSession();
         
-        // 🌟 تنظيف السحابة من الصورة الجديدة التي رُفعت إن فشل التحديث (الفشل)
         if (newUploadedImageId) {
             await FileStorageService.deleteImage(newUploadedImageId).catch(e => console.error("Cloud cleanup failed:", e));
         }

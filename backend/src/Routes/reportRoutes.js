@@ -1,11 +1,12 @@
 const express = require("express");
 const reportController = require("../controllers/Client/reportController");
-const authMiddleware = require("../middlewares/authMiddleware");
+const { protect, restrictTo } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-router.use(authMiddleware.protect);
+router.use(protect);
 
-router.post("/", reportController.submitReport);
+// Note: Accessible by user
+router.post("/", restrictTo("user"), reportController.submitReport);
 
 module.exports = router;

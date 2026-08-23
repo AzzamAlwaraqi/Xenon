@@ -282,7 +282,7 @@ exports.respondToComplaintCore = async function (user, complaintId, responseData
 
         const { status, admin_response, reply } = responseData;
 
-        if (status && !checkStatus(status, ['pending', 'in_progress', 'resolved', 'cancelled'])) {
+        if (status && !checkStatus(status, ['pending', 'accepted', 'rejected', 'cancelled', 'completed'])) {
             throw new AppError("Invalid complaint status update", 400);
         }
 

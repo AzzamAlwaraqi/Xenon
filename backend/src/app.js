@@ -12,6 +12,7 @@ const reviewRoutes = require("./Routes/reviewRouter");
 const notificationRoutes = require("./Routes/notificationRoutes");
 const reportRoutes = require("./Routes/reportRoutes");
 const analysisRoutes = require("./Routes/analysisRouter");
+const paymentRoutes = require("./Routes/PaymentRouter");
 const adminAuth = require("./adminAuth");
 const { registerAdminValidator } = require("./adminValidation");
 const app = express();
@@ -48,6 +49,7 @@ app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/analytics", analysisRoutes);
+app.use("/api/v1/payments", paymentRoutes);
 app.post("/api/v1/admin/auth/register", registerAdminValidator, adminAuth.registerAdmin);
 
 app.get('/', (req, res) => {
