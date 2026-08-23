@@ -2,10 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_config.dart';
 
+const _storage = FlutterSecureStorage();
+
 class AuthService {
-  Future<String?> login(String email, String password) async {
+  static Future<String?> login(String email, String password) async {
     try {
       final response = await http
           .post(
@@ -16,7 +19,17 @@ class AuthService {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        // You would typically save the token here
+        final data = jsonDecode(response.body);
+        if (data['data'] != null && data['data']['accessToken'] != null) {
+          try {
+            await _storage.write(key: 'accessToken', value: data['data']['accessToken']);
+            if (data['data']['refreshToken'] != null) {
+              await _storage.write(key: 'refreshToken', value: data['data']['refreshToken']);
+            }
+          } catch (spError) {
+            debugPrint('Failed to save token: $spError');
+          }
+        }
         return null; // Success
       }
       
@@ -32,7 +45,7 @@ class AuthService {
     }
   }
 
-  Future<String?> signUp({
+  static Future<String?> signUp({
     required String name, 
     required String email, 
     required String password,
@@ -72,19 +85,20 @@ class AuthService {
     }
   }
 
-  Future<void> logout() async {
+  static Future<void> logout() async {
     try {
       await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/logout'),
         headers: ApiConfig.headers,
       );
-      // Clear local storage/tokens here if necessary
+      await _storage.delete(key: 'accessToken');
+      await _storage.delete(key: 'refreshToken');
     } catch (e) {
       debugPrint('Logout error: $e');
     }
   }
 
-  Future<bool> verifyOtp(String email, String otp) async {
+  static Future<bool> verifyOtp(String email, String otp) async {
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/verify-otp'),
@@ -103,7 +117,7 @@ class AuthService {
     }
   }
 
-  Future<bool> sendOtp(String email) async {
+  static Future<bool> sendOtp(String email) async {
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/auth/send-otp'),
@@ -120,7 +134,7 @@ class AuthService {
     }
   }
 
-  Future<bool> resetPassword(
+  static Future<bool> resetPassword(
     String email,
     String password,
     String otpCode,
@@ -132,6 +146,7 @@ class AuthService {
         body: jsonEncode({
           'email': email,
           'password': password,
+          'confirm_password': password,
           'otpCode': otpCode,
         }),
       ).timeout(const Duration(seconds: 10));
@@ -139,6 +154,23 @@ class AuthService {
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       debugPrint('Reset Password error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> forgotPassword(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth/forgot-password'),
+        headers: ApiConfig.headers,
+        body: jsonEncode({
+          'email': email,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      debugPrint('Forgot Password error: $e');
       return false;
     }
   }

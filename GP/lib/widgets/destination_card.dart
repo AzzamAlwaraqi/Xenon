@@ -53,25 +53,31 @@ class DestinationCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: Image.network(
-                  imageUrl,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      color: isDark ? AppColors.surfaceLight : Colors.grey[200],
-                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 200,
-                    color: isDark ? AppColors.surfaceLight : Colors.grey[200],
-                    child: const Icon(Icons.image_not_supported, size: 50),
-                  ),
-                ),
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 200,
+                            color: isDark ? AppColors.surfaceLight : Colors.grey[200],
+                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 200,
+                          color: isDark ? AppColors.surfaceLight : Colors.grey[200],
+                          child: const Icon(Icons.image_not_supported, size: 50),
+                        ),
+                      )
+                    : Container(
+                        height: 200,
+                        color: isDark ? AppColors.surfaceLight : Colors.grey[200],
+                        child: const Icon(Icons.image_not_supported, size: 50),
+                      ),
               ),
               Positioned(
                 top: 12,
@@ -167,6 +173,7 @@ class DestinationCard extends StatelessWidget {
                                 'price': _formattedPrice,
                                 'rating': rating,
                                 'category': category,
+                                'description': description,
                               },
                             ),
                           ),

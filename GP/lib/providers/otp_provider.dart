@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:gp/services/auth_service.dart';
+import 'package:gp/models/auth_model.dart';
 import 'package:gp/utils/toast_utils.dart';
 import 'dart:async';
 
 class OtpProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
   final String email;
 
-  List<TextEditingController> controllers = List.generate(6, (_) => TextEditingController());
+  List<TextEditingController> controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   List<FocusNode> focusNodes = List.generate(6, (_) => FocusNode());
 
   bool _isLoading = false;
@@ -44,7 +46,10 @@ class OtpProvider extends ChangeNotifier {
     final code = _otpCode;
     if (code.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter all 6 digits'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Please enter all 6 digits'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -52,7 +57,7 @@ class OtpProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final success = await _authService.verifyOtp(email, code);
+    final success = await AuthService.verifyOtp(email, code);
 
     _isLoading = false;
     notifyListeners();
@@ -73,8 +78,8 @@ class OtpProvider extends ChangeNotifier {
     notifyListeners();
 
     // Re-trigger signup API or a specific resend API if it exists.
-    final success = await _authService.sendOtp(email);
-    
+    final success = await AuthService.sendOtp(email);
+
     _isLoading = false;
 
     if (context.mounted) {
@@ -82,7 +87,11 @@ class OtpProvider extends ChangeNotifier {
         _startCountdown();
         showTopToast(context, 'OTP sent to your email.', isError: false);
       } else {
-        showTopToast(context, 'Failed to send OTP. Please try again.', isError: true);
+        showTopToast(
+          context,
+          'Failed to send OTP. Please try again.',
+          isError: true,
+        );
       }
     }
   }

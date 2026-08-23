@@ -75,10 +75,20 @@ class _DestinationDetailsPageContent extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                  ),
+                  if (imageUrl.isNotEmpty)
+                    Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey[800],
+                        child: const Icon(Icons.image_not_supported, color: Colors.white, size: 50),
+                      ),
+                    )
+                  else
+                    Container(
+                      color: Colors.grey[800],
+                      child: const Icon(Icons.image_not_supported, color: Colors.white, size: 50),
+                    ),
                   // Dark gradient overlay
                   Container(
                     decoration: BoxDecoration(
@@ -109,9 +119,9 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                                 color: AppColors.primaryRust,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Text(
-                                'HISTORICAL SITE',
-                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              child: Text(
+                                (destination?['category'] ?? 'PACKAGE').toString().toUpperCase(),
+                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -344,7 +354,7 @@ class _DestinationDetailsPageContent extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           
-          // Day 1
+          // Generic Dynamic Day
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -368,11 +378,6 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Container(
-                    width: 2,
-                    height: 180, // Approximate height to connect to next node
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                  ),
                 ],
               ),
               const SizedBox(width: 16),
@@ -381,7 +386,7 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Day 1: The Siq and The Treasury',
+                      'Arrival & Exploration',
                       style: TextStyle(
                         color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                         fontSize: 16,
@@ -390,37 +395,11 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Begin your journey walking through the 1.2km Siq, culminating in the dramatic reveal of Al-Khazneh.',
+                      destination?['description'] ?? 'Your journey begins! Enjoy a breathtaking experience curated specifically for this package.',
                       style: TextStyle(
                         color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                         fontSize: 14,
                         height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 100,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              'https://images.unsplash.com/photo-1547234935-80c7145ec969?q=80&w=200&auto=format&fit=crop',
-                              width: 140,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              'https://images.unsplash.com/photo-1574017377800-475a89849ee5?q=80&w=200&auto=format&fit=crop',
-                              width: 140,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -430,52 +409,7 @@ class _DestinationDetailsPageContent extends StatelessWidget {
             ],
           ),
           
-          // Day 2
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.blue.withValues(alpha: 0.3), width: 2),
-                      color: Colors.blue.withValues(alpha: 0.1),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Day 2: Royal Tombs & The Monastery',
-                      style: TextStyle(
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Hike up the 800 ancient steps to Ad-Deir (The Monastery) and explore the expansive Royal Tombs overlooking the valley.',
-                      style: TextStyle(
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 40),
+          const SizedBox(height: 20),
           
           // Guide Card
           Container(

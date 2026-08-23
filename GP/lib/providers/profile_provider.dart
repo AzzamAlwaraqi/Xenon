@@ -1,24 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:gp/models/profile_model.dart';
+import 'package:gp/models/auth_model.dart';
 
 class ProfileProvider extends ChangeNotifier {
+  final ProfileService _profileService = ProfileService();
+
+  Map<String, dynamic>? _userData;
+  bool _isLoading = false;
+
+  Map<String, dynamic>? get userData => _userData;
+  bool get isLoading => _isLoading;
+
+  ProfileProvider() {
+    loadProfile();
+  }
+
+  Future<void> loadProfile() async {
+    _isLoading = true;
+    notifyListeners();
+
+    _userData = await _profileService.getProfile();
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<String?> updateProfile(String name, String phone) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final error = await _profileService.updateProfile({
+      'name': name,
+      'mobileNumber': phone,
+    });
+
+    if (error == null) {
+      await loadProfile(); // reload profile
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return error;
+  }
+
+  Future<String?> changePassword(String currentPassword, String newPassword) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final error = await _profileService.changePassword(currentPassword, newPassword);
+
+    _isLoading = false;
+    notifyListeners();
+    return error;
+  }
+
   void navigateToSettings(BuildContext context) {
-    // Usually via bottom nav now, but can push if needed.
-    // However, the new design has Settings as a tab, but the user image shows a Settings icon on the top right of the Profile Page too.
-    // If they click the Settings gear, we can just navigate to the settings page.
     Navigator.pushNamed(context, '/settings');
   }
 
-  void logout(BuildContext context) {
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  Future<void> logout(BuildContext context) async {
+    _isLoading = true;
+    notifyListeners();
+
+    await AuthService.logout();
+    
+    _isLoading = false;
+    notifyListeners();
+
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
   }
 
   void navigateToAllBookings(BuildContext context) {
     // Handle navigation
   }
 
-
-
   void navigateToResetPassword(BuildContext context) {
-    // Handle navigation
+    Navigator.pushNamed(context, '/change-password');
+  }
+
+  void navigateToEditProfile(BuildContext context) {
+    Navigator.pushNamed(context, '/edit-profile');
   }
 }
