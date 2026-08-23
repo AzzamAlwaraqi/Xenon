@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_config.dart';
+
+const _storage = FlutterSecureStorage();
 
 class AuthService {
   static Future<String?> login(String email, String password) async {
@@ -20,13 +22,12 @@ class AuthService {
         final data = jsonDecode(response.body);
         if (data['data'] != null && data['data']['accessToken'] != null) {
           try {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('accessToken', data['data']['accessToken']);
+            await _storage.write(key: 'accessToken', value: data['data']['accessToken']);
             if (data['data']['refreshToken'] != null) {
-              await prefs.setString('refreshToken', data['data']['refreshToken']);
+              await _storage.write(key: 'refreshToken', value: data['data']['refreshToken']);
             }
           } catch (spError) {
-            debugPrint('Failed to save token, missing plugin? $spError');
+            debugPrint('Failed to save token: $spError');
           }
         }
         return null; // Success
@@ -90,9 +91,8 @@ class AuthService {
         Uri.parse('${ApiConfig.baseUrl}/auth/logout'),
         headers: ApiConfig.headers,
       );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('accessToken');
-      await prefs.remove('refreshToken');
+      await _storage.delete(key: 'accessToken');
+      await _storage.delete(key: 'refreshToken');
     } catch (e) {
       debugPrint('Logout error: $e');
     }

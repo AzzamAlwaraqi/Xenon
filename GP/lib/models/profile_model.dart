@@ -1,17 +1,18 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_config.dart';
+
+const _storage = FlutterSecureStorage();
 
 class ProfileService {
   Future<Map<String, String>> _getHeaders() async {
     String? token;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      token = prefs.getString('accessToken');
+      token = await _storage.read(key: 'accessToken');
     } catch (e) {
-      debugPrint('Failed to get SharedPreferences: $e');
+      debugPrint('Failed to get token: $e');
     }
 
     final headers = Map<String, String>.from(ApiConfig.headers);

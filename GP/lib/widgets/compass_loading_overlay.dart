@@ -38,29 +38,28 @@ class CompassLoadingOverlay extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.explore, // Compass icon
-                        size: 60,
-                        color: AppColors.primaryRust,
-                      )
-                      .animate(onPlay: (controller) => controller.repeat())
-                      .scaleXY(begin: 0.8, end: 1.2, duration: 800.ms, curve: Curves.easeInOut)
-                      .then()
-                      .scaleXY(begin: 1.2, end: 0.8, duration: 800.ms, curve: Curves.easeInOut),
-                      
-                      const SizedBox(height: 16),
-                      
+                      const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: CircularProgressIndicator(
+                          color: AppColors.primaryRust,
+                          strokeWidth: 3,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       const Text(
-                        'Please wait...',
+                        'Preparing your journey...',
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 1.1,
+                          color: AppColors.primaryRust,
                         ),
                       )
                       .animate(onPlay: (controller) => controller.repeat())
-                      .fade(begin: 0.5, end: 1.0, duration: 800.ms)
+                      .fade(begin: 0.6, end: 1.0, duration: 1000.ms)
                       .then()
-                      .fade(begin: 1.0, end: 0.5, duration: 800.ms),
+                      .fade(begin: 1.0, end: 0.6, duration: 1000.ms),
                     ],
                   ),
                 ),

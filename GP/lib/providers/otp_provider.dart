@@ -6,7 +6,10 @@ import 'dart:async';
 class OtpProvider extends ChangeNotifier {
   final String email;
 
-  List<TextEditingController> controllers = List.generate(6, (_) => TextEditingController());
+  List<TextEditingController> controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   List<FocusNode> focusNodes = List.generate(6, (_) => FocusNode());
 
   bool _isLoading = false;
@@ -43,7 +46,10 @@ class OtpProvider extends ChangeNotifier {
     final code = _otpCode;
     if (code.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter all 6 digits'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Please enter all 6 digits'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -73,7 +79,7 @@ class OtpProvider extends ChangeNotifier {
 
     // Re-trigger signup API or a specific resend API if it exists.
     final success = await AuthService.sendOtp(email);
-    
+
     _isLoading = false;
 
     if (context.mounted) {
@@ -81,7 +87,11 @@ class OtpProvider extends ChangeNotifier {
         _startCountdown();
         showTopToast(context, 'OTP sent to your email.', isError: false);
       } else {
-        showTopToast(context, 'Failed to send OTP. Please try again.', isError: true);
+        showTopToast(
+          context,
+          'Failed to send OTP. Please try again.',
+          isError: true,
+        );
       }
     }
   }

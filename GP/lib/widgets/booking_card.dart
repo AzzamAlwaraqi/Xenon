@@ -15,6 +15,7 @@ class BookingCard extends StatelessWidget {
   final String? footerText;
   final bool showCheckIn;
   final bool showMore;
+  final VoidCallback? onViewDetails;
 
   const BookingCard({
     super.key,
@@ -30,6 +31,7 @@ class BookingCard extends StatelessWidget {
     this.footerText,
     this.showCheckIn = false,
     this.showMore = false,
+    this.onViewDetails,
   });
 
   String get _formattedPrice {
@@ -174,6 +176,23 @@ class BookingCard extends StatelessWidget {
                   Icon(Icons.more_vert,
                       color: isDark ? AppColors.textSecondaryLight : Colors.grey[400], size: 20),
               ],
+            ),
+          ],
+
+          if (onViewDetails != null) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: onViewDetails,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryRust,
+                  side: const BorderSide(color: AppColors.primaryRust),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('View Details', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
             ),
           ],
         ],

@@ -7,6 +7,7 @@ import 'package:gp/widgets/booking_card.dart';
 import 'package:gp/widgets/empty_state.dart';
 import 'package:gp/widgets/section_header.dart';
 import 'package:gp/widgets/app_nav_bar.dart';
+import 'package:gp/screens/destination_details_page.dart' as gp_dest_details;
 
 class BookingsPage extends StatefulWidget {
   const BookingsPage({super.key});
@@ -73,6 +74,19 @@ class _BookingsPageState extends State<BookingsPage> {
                                 currency: settings.currency,
                                 price: booking.price,
                                 bookingId: booking.bookingId,
+                                onViewDetails: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => gp_dest_details.DestinationDetailsPage(
+                                        destination: {
+                                          'title': booking.title,
+                                          'price': '\$${booking.price}',
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             );
                           },

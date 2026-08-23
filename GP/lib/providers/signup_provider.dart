@@ -8,7 +8,8 @@ class SignupProvider extends ChangeNotifier {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -31,20 +32,20 @@ class SignupProvider extends ChangeNotifier {
   void _validatePassword() {
     final password = passwordController.text;
     final confirm = confirmPasswordController.text;
-    
+
     _hasMinLength = password.length >= 8;
     _hasCapital = password.contains(RegExp(r'[A-Z]'));
     _hasNumber = password.contains(RegExp(r'[0-9]'));
     _hasSpecial = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>\-\_]'));
     _passwordsMatch = password.isNotEmpty && password == confirm;
-    
+
     notifyListeners();
   }
 
   bool get obscurePassword => _obscurePassword;
   bool get obscureConfirmPassword => _obscureConfirmPassword;
   bool get isLoading => _isLoading;
-  
+
   bool get hasMinLength => _hasMinLength;
   bool get hasCapital => _hasCapital;
   bool get hasNumber => _hasNumber;
@@ -64,8 +65,19 @@ class SignupProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get isPasswordValid => _hasMinLength && _hasCapital && _hasNumber && _hasSpecial && _passwordsMatch;
-  bool get isFormValid => isPasswordValid && _gender != null && _dateOfBirth != null && fullNameController.text.isNotEmpty && emailController.text.isNotEmpty && phoneController.text.isNotEmpty;
+  bool get isPasswordValid =>
+      _hasMinLength &&
+      _hasCapital &&
+      _hasNumber &&
+      _hasSpecial &&
+      _passwordsMatch;
+  bool get isFormValid =>
+      isPasswordValid &&
+      _gender != null &&
+      _dateOfBirth != null &&
+      fullNameController.text.isNotEmpty &&
+      emailController.text.isNotEmpty &&
+      phoneController.text.isNotEmpty;
 
   int get passwordStrengthLevel {
     if (passwordController.text.isEmpty) return 0;
@@ -74,7 +86,7 @@ class SignupProvider extends ChangeNotifier {
     if (_hasCapital) metConditions++;
     if (_hasNumber) metConditions++;
     if (_hasSpecial) metConditions++;
-    
+
     if (metConditions <= 1) return 1; // Weak
     if (metConditions <= 3) return 2; // Medium
     return 3; // Strong
@@ -92,13 +104,17 @@ class SignupProvider extends ChangeNotifier {
 
   Future<void> signup(BuildContext context) async {
     if (!isFormValid) {
-      showTopToast(context, 'Please fill in all required fields.', isError: true);
+      showTopToast(
+        context,
+        'Please fill in all required fields.',
+        isError: true,
+      );
       return;
     }
 
     _isLoading = true;
     notifyListeners();
-    
+
     final formattedDate = DateFormat('dd/MM/yyyy').format(_dateOfBirth!);
 
     final error = await AuthService.signUp(
@@ -117,7 +133,7 @@ class SignupProvider extends ChangeNotifier {
     if (context.mounted) {
       if (error == null) {
         Navigator.pushReplacementNamed(
-          context, 
+          context,
           '/otp',
           arguments: {'email': emailController.text.trim()},
         );
@@ -126,7 +142,7 @@ class SignupProvider extends ChangeNotifier {
       }
     }
   }
-  
+
   void continueWithGoogle() {
     // Implement Google login
   }

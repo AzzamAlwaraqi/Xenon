@@ -47,7 +47,7 @@ class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       actions: [
-        if (extraActions != null) ...extraActions!,
+        ...?extraActions,
         if (showNotifications)
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: contentColor),

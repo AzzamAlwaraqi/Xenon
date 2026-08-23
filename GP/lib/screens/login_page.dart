@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/providers/login_provider.dart';
+import 'package:gp/providers/profile_provider.dart';
 import 'package:gp/widgets/compass_loading_overlay.dart';
 
 class LoginPage extends StatelessWidget {
@@ -16,8 +17,47 @@ class LoginPage extends StatelessWidget {
   }
 }
 
-class _LoginPageContent extends StatelessWidget {
+class _LoginPageContent extends StatefulWidget {
   const _LoginPageContent();
+
+  @override
+  State<_LoginPageContent> createState() => _LoginPageContentState();
+}
+
+class _LoginPageContentState extends State<_LoginPageContent> {
+  final TextEditingController _emailOrPhoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailOrPhoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin(BuildContext context, LoginProvider provider) async {
+    final email = _emailOrPhoneController.text;
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields')),
+      );
+      return;
+    }
+
+    final error = await provider.login(email, password);
+    if (context.mounted) {
+      if (error == null) {
+        context.read<ProfileProvider>().loadProfile();
+        Navigator.pushReplacementNamed(context, '/main');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,106 +175,115 @@ class _LoginPageContent extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    TextFormField(
-                      controller: provider.emailOrPhoneController,
-                      style: const TextStyle(color: AppColors.textPrimaryLight),
-                      decoration: InputDecoration(
-                        hintText: 'Enter your email or phone',
-                        prefixIcon: const Icon(
-                          Icons.person_outline,
-                          color: AppColors.primaryRust,
-                        ),
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.borderLight,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.borderLight,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.primaryRust,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Password Field
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Password',
-                          style: TextStyle(
-                            color: AppColors.textPrimaryLight,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/forgot-password');
-                          },
-                          child: const Text(
-                            'Forgot Password?',
-                            style: TextStyle(
-                              color: AppColors.primaryRust,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                    AutofillGroup(
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _emailOrPhoneController,
+                            autofillHints: const [AutofillHints.email],
+                            keyboardType: TextInputType.emailAddress,
+                            style: const TextStyle(color: AppColors.textPrimaryLight),
+                            decoration: InputDecoration(
+                              hintText: 'Enter your email or phone',
+                              prefixIcon: const Icon(
+                                Icons.person_outline,
+                                color: AppColors.primaryRust,
+                              ),
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.borderLight,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.borderLight,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primaryRust,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: provider.passwordController,
-                      obscureText: provider.obscurePassword,
-                      style: const TextStyle(color: AppColors.textPrimaryLight),
-                      decoration: InputDecoration(
-                        hintText: 'Enter your password',
-                        prefixIcon: const Icon(
-                          Icons.lock_outline,
-                          color: AppColors.primaryRust,
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            provider.obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: AppColors.textSecondaryLight,
+                          const SizedBox(height: 20),
+      
+                          // Password Field
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Password',
+                                style: TextStyle(
+                                  color: AppColors.textPrimaryLight,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(context, '/forgot-password');
+                                },
+                                child: const Text(
+                                  'Forgot Password?',
+                                  style: TextStyle(
+                                    color: AppColors.primaryRust,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          onPressed: provider.togglePasswordVisibility,
-                        ),
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.borderLight,
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _passwordController,
+                            autofillHints: const [AutofillHints.password],
+                            obscureText: provider.obscurePassword,
+                            style: const TextStyle(color: AppColors.textPrimaryLight),
+                            decoration: InputDecoration(
+                              hintText: 'Enter your password',
+                              prefixIcon: const Icon(
+                                Icons.lock_outline,
+                                color: AppColors.primaryRust,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  provider.obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: AppColors.textSecondaryLight,
+                                ),
+                                onPressed: provider.togglePasswordVisibility,
+                              ),
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.borderLight,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.borderLight,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primaryRust,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.borderLight,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.primaryRust,
-                          ),
-                        ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -243,7 +292,7 @@ class _LoginPageContent extends StatelessWidget {
                     ElevatedButton(
                       onPressed: provider.isLoading
                           ? null
-                          : () => provider.login(context),
+                          : () => _handleLogin(context, provider),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryRust,
                         foregroundColor: Colors.white,

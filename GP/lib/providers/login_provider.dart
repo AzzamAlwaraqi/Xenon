@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gp/models/auth_model.dart';
-import 'package:gp/utils/toast_utils.dart';
 
 class LoginProvider extends ChangeNotifier {
-  final TextEditingController emailOrPhoneController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -17,25 +13,19 @@ class LoginProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(BuildContext context) async {
+  Future<String?> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
     
     final error = await AuthService.login(
-      emailOrPhoneController.text.trim(),
-      passwordController.text,
+      email.trim(),
+      password,
     );
     
     _isLoading = false;
     notifyListeners();
 
-    if (context.mounted) {
-      if (error == null) {
-        Navigator.pushReplacementNamed(context, '/main');
-      } else {
-        showTopToast(context, error, isError: true);
-      }
-    }
+    return error;
   }
 
   void continueWithGoogle() {
@@ -44,12 +34,5 @@ class LoginProvider extends ChangeNotifier {
 
   void continueWithApple() {
     // Implement Apple login
-  }
-
-  @override
-  void dispose() {
-    emailOrPhoneController.dispose();
-    passwordController.dispose();
-    super.dispose();
   }
 }
