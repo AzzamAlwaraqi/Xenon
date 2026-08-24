@@ -37,16 +37,45 @@ const BookingSchema = new mongoose.Schema({
         enum: ["user", "vendor"],
         required: true
     },
+    // 🌟 [جديد]: توثيق الحجز بالنيابة ومصدر الحجز
+    booked_by: {
+        type: mongoose.Schema.Types.UUID,
+        ref: "User",
+        default: null
+    },
+    booking_source: {
+        type: String,
+        enum: ['CustomerApp', 'VendorDashboard'],
+        default: 'CustomerApp'
+    },
     status: {
         type: String,
         required: true,
-        enum: ["pending", "accepted", "rejected", "completed", "cancelled"],
-        default: "pending"
+        enum: ["pending_payment", "pending", "accepted", "rejected", "completed", "cancelled"], // 🌟 إضافة pending_payment
+        default: "pending_payment"
+    },
+    payment_deadline: {
+        type: Date,
+        default: function() {
+            return new Date(Date.now() + 48 * 60 * 60 * 1000);
+        }
     },
     total_price: {
         type: Number,
         required: true
     },
+    // 🌟 [جديد] توثيق مَن قام بإلغاء الحجز
+    cancelled_by: {
+        type: mongoose.Schema.Types.UUID,
+        ref: "User",
+        default: null
+    },
+    // 🌟 [جديد] سجل التدقيق (Audit Trail)
+    status_history: [{
+        status: { type: String },
+        changed_by: { type: mongoose.Schema.Types.UUID, ref: "User" },
+        changed_at: { type: Date, default: Date.now }
+    }],
     isDeleted: { 
         type: Boolean,
         default: false
@@ -61,7 +90,7 @@ const BookingSchema = new mongoose.Schema({
     toObject: { getters: true, virtuals: true }
 });
 
-
+// Virtuals (تبقى كما هي)
 BookingSchema.virtual('booking_time_formatted').get(function() {
     if (!this.createdAt) return null;
     

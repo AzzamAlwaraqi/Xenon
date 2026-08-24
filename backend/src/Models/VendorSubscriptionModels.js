@@ -14,7 +14,7 @@ const vendorSubscriptionSchema = new mongoose.Schema({
     },
     amount: {
         type: Number,
-        required: true, // قيمة الاشتراك الثابتة
+        required: true, 
     },
     currency: {
         type: String,
@@ -22,17 +22,15 @@ const vendorSubscriptionSchema = new mongoose.Schema({
     },
     payment_method: {
         type: String,
-        // الافتراض أن الاشتراكات تُدفع إلكترونياً أو عبر تحويل، لا كاش.
         enum: ['CliQ', 'ManualBankTransfer', 'OnlineGateway'], 
         required: true,
     },
     payment_status: {
         type: String,
-        enum: ['Pending', 'Verified', 'Rejected', 'Failed'],
+        enum: ['Pending', 'Verified', 'Rejected', 'Failed', 'Cancelled'], 
         default: 'Pending',
         required: true,
     },
-    // إدارة فترة الاشتراك (تتحدث عند الموافقة)
     subscription_start_date: {
         type: Date,
         required: false, 
@@ -47,22 +45,27 @@ const vendorSubscriptionSchema = new mongoose.Schema({
         default: 'PendingPayment',
         required: true,
     },
-    // إجباري للتحويلات اليدوية.
-    receipt_image_url: {
-        type: String,
-        required: function() { 
-            return ['CliQ', 'ManualBankTransfer'].includes(this.payment_method);
+    receipt_image: {
+        url: { 
+            type: String, 
+            required: function() { 
+                return this.payment_method === 'CliQ';
+            }
+        },
+        public_id: { 
+            type: String, 
+            required: function() { 
+                return this.payment_method === 'CliQ';
+            }
         }
     },
-    // إجباري لبوابات الدفع.
     transaction_id: {
         type: String,
         required: function() { return this.payment_method === 'OnlineGateway'; }
     },
-    // تفاصيل التحقق (من قِبل الإدارة)
     verified_by: {
         type: mongoose.Schema.Types.UUID,
-        ref: "Admin", 
+        ref: "User", 
         required: false,
     },
     verified_at: {
@@ -72,6 +75,19 @@ const vendorSubscriptionSchema = new mongoose.Schema({
     rejection_reason: {
         type: String,
         required: function() { return this.payment_status === 'Rejected'; }
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deleted_by: {
+        type: mongoose.Schema.Types.UUID,
+        ref: 'User',
+        default: null
+    },
+    deleted_at: {
+        type: Date,
+        default: null
     },
     payment_metadata: {
         type: Object, 

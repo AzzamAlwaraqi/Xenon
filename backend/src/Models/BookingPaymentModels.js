@@ -1,3 +1,4 @@
+// models/BookingPayment.js
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
 
@@ -36,14 +37,22 @@ const bookingPaymentSchema = new mongoose.Schema({
     },
     payment_status: {
         type: String,
-        enum: ['Pending', 'Verified', 'Rejected', 'Failed'],
+        enum: ['Pending', 'Verified', 'Rejected', 'Failed', 'Cancelled'], 
         default: 'Pending',
         required: true,
     },
-    receipt_image_url: {
-        type: String,
-        required: function() { 
-            return ['CliQ', 'ManualBankTransfer'].includes(this.payment_method);
+    receipt_image: {
+        url: { 
+            type: String, 
+            required: function() { 
+                return this.payment_method === 'CliQ';
+            }
+        },
+        public_id: { 
+            type: String, 
+            required: function() { 
+                return this.payment_method === 'CliQ';
+            }
         }
     },
     transaction_id: {
@@ -66,6 +75,20 @@ const bookingPaymentSchema = new mongoose.Schema({
     rejection_reason: {
         type: String,
         required: function() { return this.payment_status === 'Rejected'; }
+    },
+    // 🌟 حقول الـ Soft Delete
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deleted_by: {
+        type: mongoose.Schema.Types.UUID,
+        ref: 'User',
+        default: null
+    },
+    deleted_at: {
+        type: Date,
+        default: null
     },
     payment_metadata: {
         type: Object,
