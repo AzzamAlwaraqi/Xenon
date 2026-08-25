@@ -23,18 +23,18 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        minlength: [8, 'the password must be 8 characters long'], 
+        minlength: [8, 'the password must be 8 characters long'],
         required: true
     },
     gender: {
         type: String,
-        required: function() { return this.role === 'user'; },
+        required: function () { return this.role === 'user'; },
         enum: ["male", "female"]
     },
     mobileNumber: {
         type: String,
-        minlength: [10,'the phone number must be 10 digits'],
-        maxlength: [10,'the phone number must be 10 digits'],
+        minlength: [10, 'the phone number must be 10 digits'],
+        maxlength: [10, 'the phone number must be 10 digits'],
         required: true,
         unique: true
     },
@@ -75,19 +75,23 @@ const UserSchema = new mongoose.Schema({
         default: "user"
     },
     DateOfBirth: {
-        ...MongooseStandardDate, 
-        required: [function() { return checkRole(this.role, ['user']); }, 'تاريخ الميلاد مطلوب']
+        ...MongooseStandardDate,
+        required: [function () { return checkRole(this.role, ['user']); }, 'تاريخ الميلاد مطلوب']
+    },
+    fcm_token: {
+        type: String,
+        default: null
     },
     isActive: {
         type: Boolean,
         default: true
     }
-}, {
-    timestamps: true, 
-    toJSON: { 
-        getters: true, 
+    },
+    { timestamps: true,
+    toJSON: {
+        getters: true,
         virtuals: true,
-        transform: function(doc, ret) {
+        transform: function (doc, ret) {
             delete ret.isEmailVerified;
             delete ret.password; // It's good practice to ensure password is not sent too
             delete ret.isDelete;
@@ -100,16 +104,16 @@ const UserSchema = new mongoose.Schema({
             delete ret.isActive;
             return ret;
         }
-    }, 
+    },
     toObject: { getters: true, virtuals: true }
 });
 
-UserSchema.pre('save', async function() {
+UserSchema.pre('save', async function () {
     if (!this.isModified('password')) return;
     this.password = await bcrypt.hash(this.password, 12);
 });
 
-UserSchema.methods.getJwtToken = function() {
+UserSchema.methods.getJwtToken = function () {
     const jwt = require("jsonwebtoken");
     return jwt.sign(
         { id: this._id, role: this.role },
