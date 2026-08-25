@@ -75,6 +75,10 @@ exports.createAccountValidation = function (req, res, next) {
 
         gender: joi.string().valid("male", "female").optional(),
         DateOfBirth: joi.any().custom(customDateValidator).optional(),
+        otp: joi.string().trim().required().messages({
+            "any.required": "OTP code is required",
+            "string.empty": "OTP code cannot be empty"
+        }),
 
         ...baseVendorSchema
     });

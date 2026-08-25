@@ -12,22 +12,9 @@ exports.register = async (req, res, next) => {
         const result = await authCore.createAccountCore(req.body, role, deviceInfo);
 
         if (checkRole( role ,["user"])) {
-            let otpResponse;
-            try {
-                otpResponse = await sendOtpCore({
-                    email: result.user.email,
-                    purpose: "registration",
-                    length: 6
-                });
-            } catch (otpErr) {
-                console.error('OTP send failed:', otpErr.message);
-                await UserModel.findByIdAndDelete(result.user._id); 
-                return next(otpErr); 
-            }
-
             return res.status(201).json({
                 status: "success",
-                message: "Account created successfully. A verification OTP has been sent to your email address.",
+                message: "Account created successfully.",
                 data: {
                     user: {
                         id: result.user._id,
@@ -35,10 +22,7 @@ exports.register = async (req, res, next) => {
                         email: result.user.email
                     },
                     accessToken: result.accessToken,
-                    refreshToken: result.refreshToken,
-                    otpInfo: {
-                        expiresAt: otpResponse.expiresAt
-                    }
+                    refreshToken: result.refreshToken
                 }
             });
         } 

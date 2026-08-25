@@ -19,6 +19,12 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         throw new AppError("Passwords do not match", 400);
     }
 
+    await verifyOtpCore({
+        email: cleanEmail,
+        otp: Body.otp,
+        purpose: "registration"
+    });
+
     const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || Body.device_type || "Desktop";
     const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
     const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
@@ -124,7 +130,7 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
         const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
 
         const user = await UserModel.findOne({ email: email.toLowerCase().trim() });
-        if (!user) throw new AppError("Invalid email or password", 401);
+        if (!user) throw new AppError("the account not founded", 401);
 
         if (roleExpected && !checkRole(user.role, [roleExpected])) {
             throw new AppError("You are not authorized to login to this portal", 403);

@@ -48,7 +48,7 @@ const UserSchema = new mongoose.Schema({
     },
     isEmailVerified: {
         type: Boolean,
-        default: true
+        default: false
     },
     recoveryEmail: {
         type: String,
