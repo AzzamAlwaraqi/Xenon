@@ -197,9 +197,9 @@ exports.updateBookingPaymentCore = async function (user, paymentId, updateData) 
 };
 
 // ==========================================
-// 4. DELETE BOOKING PAYMENT
+// 4. CANCEL BOOKING PAYMENT
 // ==========================================
-exports.deleteBookingPaymentCore = async function (user, paymentId) {
+exports.cancelBookingPaymentCore = async function (user, paymentId) {
     if (!checkRole(user.role, ['vendor'])) {
         throw new AppError("Rejected permission to delete payment", 403);
     }
@@ -369,9 +369,9 @@ exports.updateVendorSubscriptionPaymentCore = async function (user, paymentId, u
 };
 
 // ==========================================
-// 8. DELETE VENDOR SUBSCRIPTION
+// 8. CANCEL VENDOR SUBSCRIPTION
 // ==========================================
-exports.deleteVendorSubscriptionPaymentCore = async function (user, paymentId) {
+exports.cancelVendorSubscriptionPaymentCore = async function (user, paymentId) {
     if (!checkRole(user.role, ['admin'])) {
         throw new AppError("Rejected permission to delete subscription", 403);
     }

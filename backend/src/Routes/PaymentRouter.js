@@ -50,7 +50,7 @@ router.put("/booking/:id", protect, restrictTo("vendor"), paramIdValidation, upd
 
 // Note: Accessible by vendor
 // Route Parameters: id (UUID)
-router.delete("/booking/:id", protect, restrictTo("vendor"), paramIdValidation, paymentController.deleteBookingPayment);
+router.patch("/booking/:id/delete", protect, restrictTo("vendor"), paramIdValidation, paymentController.cancelBookingPayment);
 
 // ==========================================
 // 🎫 Vendor Subscriptions
@@ -87,7 +87,7 @@ router.put("/subscription/:id", protect, restrictTo("admin"), paramIdValidation,
 
 // Note: Accessible by admin
 // Route Parameters: id (UUID)
-router.delete("/subscription/:id", protect, restrictTo("admin"), paramIdValidation, paymentController.deleteVendorSubscriptionPayment);
+router.patch("/subscription/:id/delete", protect, restrictTo("admin"), paramIdValidation, paymentController.cancelVendorSubscriptionPayment);
 
 // ==========================================
 // 📊 Financial Statements

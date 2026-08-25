@@ -169,6 +169,7 @@ exports.getMyNotificationsCore = async function (user, page = 1, limit = 20) {
             data: notifications
         };
     } catch (error) {
+        if (error.statusCode) throw error;
         throw new AppError(error.message, 500);
     }
 };
@@ -196,6 +197,7 @@ exports.getSentNotificationsCore = async function (user, page = 1, limit = 20) {
             data: notifications
         };
     } catch (error) {
+        if (error.statusCode) throw error;
         throw new AppError(error.message, 500);
     }
 };
@@ -250,6 +252,7 @@ exports.markAllAsReadCore = async function (user) {
 
         return { status: "success", message: `All notifications marked as read (${result.modifiedCount} updated)` };
     } catch (error) {
+        if (error.statusCode) throw error;
         throw new AppError(error.message, 500);
     }
 };
@@ -291,6 +294,7 @@ exports.deleteAllNotificationsCore = async function (user) {
 
         return { status: "success", message: `All your notifications have been deleted (${result.deletedCount} deleted)` };
     } catch (error) {
+        if (error.statusCode) throw error;
         throw new AppError(error.message, 500);
     }
 };

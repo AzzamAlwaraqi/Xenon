@@ -37,9 +37,9 @@ exports.updateBookingPayment = async (req, res, next) => {
     }
 };
 
-exports.deleteBookingPayment = async (req, res, next) => {
+exports.cancelBookingPayment = async (req, res, next) => {
     try {
-        const result = await paymentCore.deleteBookingPaymentCore(req.user, req.params.id);
+        const result = await paymentCore.cancelBookingPaymentCore(req.user, req.params.id);
         return res.status(200).json({
             status: "success",
             ...result
@@ -86,13 +86,10 @@ exports.updateVendorSubscriptionPayment = async (req, res, next) => {
     }
 };
 
-exports.deleteVendorSubscriptionPayment = async (req, res, next) => {
+exports.cancelVendorSubscriptionPayment = async (req, res, next) => {
     try {
-        const result = await paymentCore.deleteVendorSubscriptionPaymentCore(req.user, req.params.id);
-        return res.status(200).json({
-            status: "success",
-            ...result
-        });
+        const result = await paymentCore.cancelVendorSubscriptionPaymentCore(req.user, req.params.id);
+        return res.status(200).json(result);
     } catch (error) {
         next(error);
     }
