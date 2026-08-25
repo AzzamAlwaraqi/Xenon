@@ -3,6 +3,8 @@ const AppError = require('../../utils/AppError');
 const generateOTP = require('../../utils/generateOTP');
 const emailService = require("../Integration/emailService");
 const bcrypt = require('bcrypt');
+const UserModel = require("../../Models/UserModel");
+
 
 
 exports.sendOtpCore = async function ({ email, phone, purpose = "registration", length = 6 }) {
@@ -10,6 +12,18 @@ exports.sendOtpCore = async function ({ email, phone, purpose = "registration", 
 
     const cleanEmail = email ? String(email).toLowerCase().trim() : undefined;
     const cleanPhone = phone ? String(phone).trim() : undefined;
+
+    // Check if user already exists based on purpose
+    if (purpose === "registration") {
+        if (cleanEmail) {
+            const existingUser = await UserModel.findOne({ email: cleanEmail });
+            if (existingUser) throw new AppError("Account with this email already exists", 409);
+        }
+        if (cleanPhone) {
+            const existingPhone = await UserModel.findOne({ mobileNumber: cleanPhone });
+            if (existingPhone) throw new AppError("Account with this phone number already exists", 409);
+        }
+    }
 
     const otp = generateOTP(length);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
