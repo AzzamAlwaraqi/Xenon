@@ -6,7 +6,7 @@ const UserModel = require("../../Models/UserModel");
 const ReviewModel = require("../../Models/ReviewModel");
 const BookingModel = require("../../Models/BookingModel");
 const NotificationModel = require("../../Models/NotificationModel");
-const SesstionModel = require("../../Models/SesstionModel"); // 🌟 لغايات تدمير الجلسات
+const SessionModel = require("../../Models/SessionModel"); // 🌟 لغايات تدمير الجلسات
 const { checkRole } = require("../../utils/checkvalidete");
 const vendorApprovalCore = require("./Admin/vendorApprovalCore");
 
@@ -118,8 +118,9 @@ exports.updateProfileCore = async function (user, updates) {
             }
 
             // تحديث الفيندور
-            if (updates.company_name) vendor.vendor_name = updates.company_name;
-            else if (updates.name && !vendor.vendor_name) vendor.vendor_name = updates.name;
+            if (updates.vendor_company) vendor.vendor_company = updates.vendor_company;
+            else if (updates.company_name) vendor.vendor_company = updates.company_name;
+            else if (updates.name && !vendor.vendor_company) vendor.vendor_company = updates.name;
 
             if (mobileNum) vendor.vendor_mobile = mobileNum;
             if (cleanEmail) vendor.vendor_email = cleanEmail;
@@ -173,9 +174,9 @@ exports.updatePasswordCore = async function (user, oldPassword, newPassword) {
         }
 
         // 🌟 Security: تدمير جميع الجلسات النشطة ليضطر لتسجيل الدخول من جديد
-        await SesstionModel.updateMany(
-            { user_id: user._id },
-            { is_active: false, sesstion_status: 'terminated' }
+        await SessionModel.updateMany(
+            { user_id: user._id, is_active: true },
+            { is_active: false, session_status: 'terminated' }
         );
 
         return { message: "Password changed successfully. You will be logged out of all devices." };
@@ -188,7 +189,6 @@ exports.updatePasswordCore = async function (user, oldPassword, newPassword) {
 // ==========================================
 // 4. Delete Account (Soft Delete)
 // ==========================================
-// 🌟 استدعاء ملف الموافقات (تأكد من صحة المسار حسب مجلدات مشروعك)
 
 exports.deleteAccountCore = async function (user) {
     // حماية الداتابيز عبر Transaction
@@ -199,11 +199,9 @@ exports.deleteAccountCore = async function (user) {
         if (user.isActive === false) throw new AppError("Account is already deactivated", 400);
 
         if (checkRole(user.role, ["user", "admin"])) {
-            // تعطيل حساب المستخدم أو الآدمن مباشرة
             await UserModel.findByIdAndUpdate(user._id, { isActive: false, updatedAt: new Date() }, { new: true, session });
 
         } else if (checkRole(user.role, ["vendor"])) {
-            // المنطق الخاص بالفيندور
             const vendor = await VendorModel.findOne({ 
                 $or: [{ _id: user._id }, { vendor_owner_id: user._id }] 
             }).session(session);
@@ -214,19 +212,17 @@ exports.deleteAccountCore = async function (user) {
                 throw new AppError("Account is already inactive or pending deletion", 400);
             }
 
-            // 1. تعليق متجر الفيندور (نوقف عمله كمتجر ولكن لا نحذف اليوزر الأساسي)
             await VendorModel.findByIdAndUpdate(
                 vendor._id,
                 {
                     vendor_status: 'pending_deletion',
                     deletionRequestedAt: Date.now(),
-                    vendor_password: null, // تدمير الباسوورد كإجراء أمني
+                    vendor_password: null, 
                     vendor_old_password: null
                 },
                 { new: true, session }
             );
 
-            // 🌟 2. استدعاء دالة الـ Approval وإرسال الطلب للآدمن (مع تمرير الـ session)
             const userId = vendor.vendor_owner_id || user._id;
             await vendorApprovalCore.submitDowngradeRequestCore({
                 vendor_id: vendor._id,
@@ -238,18 +234,15 @@ exports.deleteAccountCore = async function (user) {
             throw new AppError("Invalid role", 403);
         }
 
-        // 🌟 Security: طرد المستخدم من جميع الأجهزة النشطة
-        await SesstionModel.updateMany(
-            { user_id: user._id },
-            { is_active: false, sesstion_status: 'terminated' },
+        await SessionModel.updateMany(
+            { user_id: user._id, is_active: true },
+            { is_active: false, session_status: 'terminated' },
             { session }
         );
 
-        // تأكيد تنفيذ كل التعديلات في الداتابيز
         await session.commitTransaction();
         session.endSession();
 
-        // إرجاع رسالة مناسبة حسب الرتبة
         const successMessage = checkRole(user.role, ["vendor"])
             ? "Your request to close the store has been sent to the admin. You will be logged out."
             : "Your account has been successfully deleted/deactivated.";
@@ -272,7 +265,7 @@ exports.getAllReviewsCore = async function (user) {
     try {
         if (!checkRole(user.role, ["user"])) throw new AppError("Unauthorized", 403);
         const reviews = await ReviewModel.find({ user_id: user._id })
-            .populate("vendor_id", "vendor_name -_id");
+            .populate("vendor_id", "vendor_company -_id");
         return reviews;
     } catch (error) {
         if (error.statusCode) throw error;
@@ -284,7 +277,7 @@ exports.getAllBookingHistoryCore = async function (user) {
     try {
         if (!checkRole(user.role, ["user"])) throw new AppError("Unauthorized", 403);
         const getAllBookingHistory = await BookingModel.find({ user_id: user._id })
-            .populate("vendor_id", "vendor_name -_id")
+            .populate("vendor_id", "vendor_company -_id")
             .populate("package_id", "package_name -_id");
         return getAllBookingHistory;
     } catch (error) {

@@ -51,12 +51,12 @@ const updatePackageAverageRating = async (packageId, session = null) => {
 
 exports.createReviewCore = async function (user, reviewData) {
     try {
-        const { PACKAGE_Name, VENDOR_Name, rating, comment } = reviewData;
+        const { PACKAGE_Name, vendor_id, rating, comment } = reviewData;
 
         // 1. Find Vendor by name
         const Vendor = mongoose.model('Vendor');
-        const vendor = await Vendor.findOne({ vendor_name: VENDOR_Name, isDelete: { $ne: true } });
-        if (!vendor) throw new AppError(`Vendor '${VENDOR_Name}' not found`, 404);
+        const vendor = await Vendor.findOne({ _id: vendor_id, isDelete: { $ne: true } });
+        if (!vendor) throw new AppError(`Vendor not found`, 404);
 
         // 2. Find Package by name
         const PackageModel = mongoose.model('Package');
@@ -65,7 +65,7 @@ exports.createReviewCore = async function (user, reviewData) {
             vendor_id: vendor._id,
             isDeleted: { $ne: true }
         });
-        if (!packageDoc) throw new AppError(`Package '${PACKAGE_Name}' not found for vendor '${VENDOR_Name}'`, 404);
+        if (!packageDoc) throw new AppError(`Package '${PACKAGE_Name}' not found for the specified vendor`, 404);
 
         // 3. Find completed or accepted booking for this user and package
         const booking = await Booking.findOne({
@@ -212,7 +212,7 @@ exports.getMyReviewsCore = async function (user, queryParams = {}) {
 
         const [reviews, total] = await Promise.all([
             Review.find(query)
-                .populate('vendor_id', 'vendor_name vendor_email -_id')
+                .populate('vendor_id', 'vendor_company vendor_email -_id')
                 .populate('package_id', 'package_name package_price -_id')
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -250,7 +250,7 @@ exports.getReviewByIdCore = async function (user, reviewId) {
 
         const review = await Review.populate(rawReview, [
             { path: 'user_id', select: 'name email -_id' },
-            { path: 'vendor_id', select: 'vendor_name vendor_email -_id' },
+            { path: 'vendor_id', select: 'vendor_company vendor_email -_id' },
             { path: 'package_id', select: 'package_name package_price -_id' }
         ]);
 
@@ -319,7 +319,7 @@ exports.getAllReviewsCore = async function (user, queryParams = {}) {
         const [reviews, total] = await Promise.all([
             Review.find(query)
                 .populate('user_id', 'name email -_id')
-                .populate('vendor_id', 'vendor_name vendor_email -_id')
+                .populate('vendor_id', 'vendor_company vendor_email -_id')
                 .populate('package_id', 'package_name -_id')
                 .sort({ createdAt: -1 })
                 .skip(skip)

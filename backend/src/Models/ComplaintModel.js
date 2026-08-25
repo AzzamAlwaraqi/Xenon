@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
 const { MongooseStandardDate } = require("../utils/dateFormatter");
+const softDeletePlugin = require("../utils/softDeletePlugin");
 
 const ComplaintSchema = new mongoose.Schema({
     _id: {
@@ -82,10 +83,6 @@ const ComplaintSchema = new mongoose.Schema({
         maxlength: [1000, "Reply cannot exceed 1000 characters"],
         default: null
     },
-    isDeleted: { 
-        type: Boolean,
-        default: false
-    },
     deletionRequestedAt: {
         ...MongooseStandardDate,
         default: null
@@ -106,6 +103,6 @@ ComplaintSchema.pre('validate', function () {
 
 ComplaintSchema.index({ user_id: 1 });
 ComplaintSchema.index({ complaint_status: 1 });
-ComplaintSchema.index({ complaint_id: 1 });
 
+ComplaintSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("Complaint", ComplaintSchema);

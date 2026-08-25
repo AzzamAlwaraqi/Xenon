@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
+const softDeletePlugin = require("../utils/softDeletePlugin");
 const { MongooseStandardDate } = require("../utils/dateFormatter");
 
 const NotificationSchema = new mongoose.Schema({
@@ -63,13 +64,9 @@ const NotificationSchema = new mongoose.Schema({
         }
     },
     
-    isDeleted: {
-        type: Boolean,
-        default: false 
-    },
     deletedAt: {
         type: Date,
-        default: null 
+        default: null
     }
 }, {
     timestamps: true, 
@@ -86,4 +83,5 @@ NotificationSchema.pre(/^find/, function(next) {
     next();
 });
 
+NotificationSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("Notification", NotificationSchema);

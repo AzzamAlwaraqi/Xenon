@@ -39,7 +39,16 @@ exports.sendBroadcastNotification = async (req, res, next) => {
 
 exports.getMyNotifications = async (req, res, next) => {
     try {
-        const result = await notificationCore.getMyNotificationsCore(req.user);
+        const result = await notificationCore.getMyNotificationsCore(req.user, req.query.page, req.query.limit);
+        return res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.getSentNotifications = async (req, res, next) => {
+    try {
+        const result = await notificationCore.getSentNotificationsCore(req.user, req.query.page, req.query.limit);
         return res.status(200).json(result);
     } catch (error) {
         next(error);

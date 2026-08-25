@@ -1,6 +1,7 @@
 // models/VendorSubscription.js
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
+const softDeletePlugin = require("../utils/softDeletePlugin");
 
 const vendorSubscriptionSchema = new mongoose.Schema({
     _id: {
@@ -76,10 +77,6 @@ const vendorSubscriptionSchema = new mongoose.Schema({
         type: String,
         required: function() { return this.payment_status === 'Rejected'; }
     },
-    isDeleted: {
-        type: Boolean,
-        default: false
-    },
     deleted_by: {
         type: mongoose.Schema.Types.UUID,
         ref: 'User',
@@ -95,4 +92,5 @@ const vendorSubscriptionSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+vendorSubscriptionSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("VendorSubscription", vendorSubscriptionSchema);

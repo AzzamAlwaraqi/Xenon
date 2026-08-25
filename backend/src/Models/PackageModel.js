@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
+const softDeletePlugin = require("../utils/softDeletePlugin");
 
 const PackageSchema = new mongoose.Schema({
     _id: {
@@ -92,10 +93,6 @@ const PackageSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    isDeleted: {
-        type: Boolean,
-        default: false
-    },
     deletionRequestedAt: {
         type: Date,
         default: null
@@ -120,4 +117,5 @@ PackageSchema.pre('save', function () {
     }
 });
 
+PackageSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("Package", PackageSchema);

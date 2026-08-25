@@ -4,7 +4,7 @@ const serviceAccount = require("./serviceAccountKey.json");
 
 try {
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.cert(serviceAccount)
     });
     console.log("[Firebase] Successfully initialized in config.");
 } catch (error) {

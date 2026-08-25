@@ -17,6 +17,8 @@ router.post("/broadcast", notificationController.sendBroadcastNotification);
 // All Authenticated Users (Admin, User, Vendor)
 // Note: Accessible by user, vendor, admin
 router.get("/", notificationController.getMyNotifications);
+// Note: Accessible by admin or vendor to see notifications they sent
+router.get("/sent", authMiddleware.restrictTo("admin", "vendor"), notificationController.getSentNotifications);
 // Note: Accessible by user, vendor, admin
 router.patch("/:id/read", notificationController.markAsRead);
 // Note: Accessible by user, vendor, admin

@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const AppError = require("../../utils/AppError");
 const UserModel = require("../../Models/UserModel");
 const VendorModel = require("../../Models/VendorModel");
-const SesstionModel = require("../../Models/SesstionModel");
+const SessionModel = require("../../Models/SessionModel");
 const OTPModel = require("../../Models/OTPModel");
 const { setStandardDate } = require("../../utils/dateFormatter");
 const { checkRole } = require("../../utils/checkvalidete");
@@ -41,7 +41,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         const existingVendor = await VendorModel.findOne({ vendor_email: cleanEmail });
         if (existingVendor) throw new AppError("Vendor account with this email already exists", 409);
         
-        const existingCompany = await VendorModel.findOne({ vendor_name: Body.company_name || Body.name });
+        const existingCompany = await VendorModel.findOne({ vendor_company: Body.company_name || Body.name });
         if (existingCompany) throw new AppError("A vendor with this company name already exists. Please choose a different name.", 409);
     }
 
@@ -78,7 +78,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     let newVendor = null;
     if (checkRole(role, ["vendor"])) {
         const createdVendor = await VendorModel.create({
-            vendor_name: Body.company_name || Body.name,
+            vendor_company: Body.company_name || Body.name,
             vendor_email: cleanEmail,
             vendor_password: Body.password,
             vendor_mobile: mobileNumber,
@@ -103,21 +103,18 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     const hashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
     const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
 
-    await SesstionModel.create({
+    await SessionModel.create({
         token_id: hashedTokenId,
         accessToken: crypto.createHash("sha256").update(tokens.accessToken).digest("hex"),
         refreshToken: crypto.createHash("sha256").update(tokens.refreshToken).digest("hex"),
         user_id: newUser._id,
         expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
-        ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || Body.ip_address || "127.0.0.1"),
-        user_agent: sesstionHelper.getUserAgent(deviceInfo.userAgent || deviceInfo.user_agent || Body.user_agent || "Unknown"),
-        device_type: resolvedDeviceType, // 🌟 نستخدم القيمة التي فحصناها في البداية
-        os_name: sesstionHelper.getOsName(deviceInfo.osName || deviceInfo.os_name || Body.os_name || "Unknown"),
-        browser_name: sesstionHelper.getBrowserName(deviceInfo.browserName || deviceInfo.browser_name || Body.browser_name || "Unknown"),
-        device_id: sesstionHelper.getDeviceId(deviceId),
+        ip_address: sesstionHelper.getClientIp(deviceInfo.ip_address || Body.ip_address || "127.0.0.1"),
+        device_type: resolvedDeviceType, 
+        device_id: sesstionHelper.getDeviceId(deviceInfo.device_id || deviceId),
         role: sesstionHelper.getRole(role),
         is_active: sesstionHelper.getIsActive(deviceInfo.isActive || deviceInfo.is_active),
-        sesstion_status: sesstionHelper.getSessionStatus(deviceInfo.sessionStatus || deviceInfo.sesstion_status),
+        session_status: sesstionHelper.getSessionStatus(deviceInfo.sessionStatus || deviceInfo.session_status),
         family_id: sesstionHelper.getFamilyId(tokens.familyId)
     });
 
@@ -164,21 +161,18 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
         const hashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
         const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
 
-        await SesstionModel.create({
+        await SessionModel.create({
             token_id: hashedTokenId,
             accessToken: crypto.createHash("sha256").update(tokens.accessToken).digest("hex"),
             refreshToken: crypto.createHash("sha256").update(tokens.refreshToken).digest("hex"),
             user_id: user._id,
             expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
-            ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || "127.0.0.1"),
-            user_agent: sesstionHelper.getUserAgent(deviceInfo.userAgent || "Unknown"),
+            ip_address: sesstionHelper.getClientIp(deviceInfo.ip_address || "127.0.0.1"),
             device_type: resolvedDeviceType,
-            os_name: sesstionHelper.getOsName(deviceInfo.osName || "Unknown"),
-            browser_name: sesstionHelper.getBrowserName(deviceInfo.browserName || "Unknown"),
-            device_id: sesstionHelper.getDeviceId(deviceId),
+            device_id: sesstionHelper.getDeviceId(deviceInfo.device_id || deviceId),
             role: user.role,
             is_active: true,
-            sesstion_status: "active",
+            session_status: "active",
             family_id: tokens.familyId
         });
 
@@ -195,7 +189,7 @@ exports.logoutCore = async function (user, token) {
 
         const hashedInputToken = crypto.createHash("sha256").update(token).digest("hex");
 
-        const session = await SesstionModel.findOneAndUpdate(
+        const session = await SessionModel.findOneAndUpdate(
             { 
                 user_id: user._id, 
                 $or: [{ accessToken: hashedInputToken }, { refreshToken: hashedInputToken }],
@@ -291,7 +285,7 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
 
         const hashedTokenId = crypto.createHash("sha256").update(decoded.tokenId).digest("hex");
 
-        const session = await SesstionModel.findOne({ token_id: hashedTokenId, user_id: decoded.id });
+        const session = await SessionModel.findOne({ token_id: hashedTokenId, user_id: decoded.id });
         if (!session) {
             throw new AppError("Session not found. Please log in again.", 401);
         }
@@ -306,7 +300,7 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
 
         // Deactivate old session (Token Rotation)
         session.is_active = false;
-        session.sesstion_status = "refreshed";
+        session.session_status = "refreshed";
         await session.save();
 
         const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || "Desktop";
@@ -317,21 +311,18 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
         const newHashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
         const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
 
-        await SesstionModel.create({
+        await SessionModel.create({
             token_id: newHashedTokenId,
             accessToken: crypto.createHash("sha256").update(tokens.accessToken).digest("hex"),
             refreshToken: crypto.createHash("sha256").update(tokens.refreshToken).digest("hex"),
             user_id: user._id,
             expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
-            ip_address: sesstionHelper.getClientIp(deviceInfo.ipAddress || deviceInfo.ip_address || session.ip_address),
-            user_agent: sesstionHelper.getUserAgent(deviceInfo.userAgent || session.user_agent),
+            ip_address: sesstionHelper.getClientIp(deviceInfo.ip_address || session.ip_address),
             device_type: resolvedDeviceType,
-            os_name: sesstionHelper.getOsName(deviceInfo.osName || session.os_name),
-            browser_name: sesstionHelper.getBrowserName(deviceInfo.browserName || session.browser_name),
-            device_id: sesstionHelper.getDeviceId(deviceId),
+            device_id: sesstionHelper.getDeviceId(deviceInfo.device_id || deviceId),
             role: user.role,
             is_active: true,
-            sesstion_status: "active",
+            session_status: "active",
             family_id: tokens.familyId
         });
 

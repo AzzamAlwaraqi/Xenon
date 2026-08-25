@@ -5,8 +5,9 @@ const createReviewSchema = Joi.object({
     PACKAGE_Name: Joi.string().required().messages({
         'any.required': 'Package name is required'
     }),
-    VENDOR_Name: Joi.string().required().messages({
-        'any.required': 'Vendor name is required'
+    vendor_id: Joi.string().uuid().required().messages({
+        'any.required': 'Vendor ID is required',
+        'string.guid': 'Vendor ID must be a valid UUID'
     }),
     rating: Joi.number().min(1).max(5).required().messages({
         'number.base': 'Rating must be a number',

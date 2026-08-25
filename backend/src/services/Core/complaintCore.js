@@ -52,7 +52,7 @@ exports.createComplaintCore = async function (user, complaintData, files) {
         }
 
         if (files && files.length > 0) {
-            const usernameFolder = user.company_name || user.vendor_name || user.name || 'User';
+            const usernameFolder = user.vendor_company || user.name || 'User';
             const uploadPromises = files.map(async (file, index) => {
                 const optimizedBuffer = await sharp(file.buffer)
                     .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
@@ -130,7 +130,7 @@ exports.getMyComplaintsCore = async function (user, queryParams = {}) {
 
         const [complaints, totalComplaints] = await Promise.all([
             ComplaintModel.find(query)
-                .populate('vendor_id', 'vendor_name company_name vendor_email -_id')
+                .populate('vendor_id', 'vendor_company vendor_email -_id')
                 .populate('booking_id', 'package_name startDate total_price -_id')
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -173,7 +173,7 @@ exports.getComplaintByIdCore = async function (user, complaintId) {
 
         const complaint = await ComplaintModel.findById(complaintId)
             .populate('user_id', 'name email mobileNumber -_id')
-            .populate('vendor_id', 'vendor_name vendor_email vendor_mobile -_id')
+            .populate('vendor_id', 'vendor_company vendor_email vendor_mobile -_id')
             .populate('booking_id', 'package_name startDate endDate total_price -_id');
 
         return { status: "success", data: complaint };
@@ -248,7 +248,7 @@ exports.getAllComplaintsCore = async function (user, queryParams = {}) {
         const [complaints, totalComplaints] = await Promise.all([
             ComplaintModel.find(query)
                 .populate('user_id', 'name email -_id')
-                .populate('vendor_id', 'vendor_name vendor_email -_id')
+                .populate('vendor_id', 'vendor_company vendor_email -_id')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -391,7 +391,7 @@ exports.vendorReplyToComplaintCore = async function (user, complaintId, replyTex
         if (global.io) {
             global.io.to(`user_${complaint.user_id}`).emit('vendor_reply_received', {
                 complaint_id: complaint._id,
-                vendor_name: user.company_name || user.vendor_name || user.name,
+                vendor_company: user.vendor_company || user.name,
                 message: "The vendor has replied to your complaint.",
                 reply: replyText
             });

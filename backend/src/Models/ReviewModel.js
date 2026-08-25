@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
+const softDeletePlugin = require("../utils/softDeletePlugin");
 
 const ReviewSchema = new mongoose.Schema({
     _id: {
@@ -52,10 +53,6 @@ const ReviewSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-    isDeleted: {
-        type: Boolean,
-        default: false
-    },
     deletionRequestedAt: {
         type: Date,
         default: null
@@ -83,4 +80,5 @@ ReviewSchema.virtual('review_date_formatted').get(function() {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 });
 
+ReviewSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("Review", ReviewSchema);

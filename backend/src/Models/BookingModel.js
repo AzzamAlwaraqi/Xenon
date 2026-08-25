@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
 const { MongooseStandardDate } = require("../utils/dateFormatter");
+const softDeletePlugin = require("../utils/softDeletePlugin");
 
 const BookingSchema = new mongoose.Schema({
     _id: {
@@ -76,10 +77,6 @@ const BookingSchema = new mongoose.Schema({
         changed_by: { type: mongoose.Schema.Types.UUID, ref: "User" },
         changed_at: { type: Date, default: Date.now }
     }],
-    isDeleted: { 
-        type: Boolean,
-        default: false
-    },
     deletionRequestedAt: {
         ...MongooseStandardDate,
         default: null
@@ -112,4 +109,5 @@ BookingSchema.virtual('booking_date_formatted').get(function() {
     return `${year}-${month}-${day}`;
 });
 
+BookingSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("Booking", BookingSchema);

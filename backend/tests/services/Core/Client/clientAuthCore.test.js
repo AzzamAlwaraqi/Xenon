@@ -1,13 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { createClientCore } = require('../../../../src/services/Core/Client/clientAuthCore');
+const { createAccountCore } = require('../../../../src/services/Core/authCore');
 const User = require('../../../../src/Models/UserModel');
 const SessionModel = require('../../../../src/Models/SessionModel');
 const AppError = require('../../../../src/utils/AppError');
-// Mock generateToken using node's module system is tricky, so we'll just test the core behavior 
-// by mocking the mongoose models which is the most critical part.
 
-test('createClientCore test suite', async (t) => {
+test('createAccountCore test suite', async (t) => {
 
     t.afterEach(() => {
         // Restore all mocks after each test
@@ -33,22 +31,45 @@ test('createClientCore test suite', async (t) => {
         const pastDate = new Date();
         pastDate.setFullYear(pastDate.getFullYear() - 25); // 25 years old
 
-        const result = await createClientCore(
-            'John Doe',
-            'john@example.com',
-            'Password123!',
-            'male',
-            '1234567890',
-            pastDate,
-            '127.0.0.1',
-            'PostmanRuntime'
+        const result = await createAccountCore(
+            {
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'Password123!',
+                passwordConfirm: 'Password123!',
+                gender: 'male',
+                phone_no: '1234567890',
+                DateOfBirth: pastDate
+            },
+            'user',
+            {
+                ipAddress: '127.0.0.1',
+                userAgent: 'PostmanRuntime'
+            }
         );
 
-        assert.strictEqual(result.name, 'John Doe');
-        assert.strictEqual(result.email, 'john@example.com');
-        assert.strictEqual(result._id, 'fakeUserId123');
+        assert.strictEqual(result.user.name, 'John Doe');
+        assert.strictEqual(result.user.email, 'john@example.com');
+        assert.strictEqual(result.user._id, 'fakeUserId123');
         assert.strictEqual(User.create.mock.calls.length, 1);
         assert.strictEqual(SessionModel.create.mock.calls.length, 1);
+    });
+
+    await t.test('should throw AppError if passwords do not match', async () => {
+        try {
+            await createAccountCore({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'Password123!',
+                passwordConfirm: 'DifferentPassword!',
+                phone_no: '1234567890'
+            });
+            assert.fail('Should have thrown an error');
+        } catch (error) {
+            assert.ok(error instanceof AppError);
+            assert.strictEqual(error.message, 'Passwords do not match');
+            assert.strictEqual(error.statusCode, 400);
+        }
     });
 
     await t.test('should throw AppError if user already exists', async () => {
@@ -59,20 +80,22 @@ test('createClientCore test suite', async (t) => {
         pastDate.setFullYear(pastDate.getFullYear() - 25);
 
         try {
-            await createClientCore(
-                'John Doe',
-                'john@example.com',
-                'Password123!',
-                'male',
-                '1234567890',
-                pastDate,
-                '127.0.0.1',
-                'PostmanRuntime'
+            await createAccountCore(
+                {
+                    name: 'John Doe',
+                    email: 'john@example.com',
+                    password: 'Password123!',
+                    passwordConfirm: 'Password123!',
+                    gender: 'male',
+                    phone_no: '1234567890',
+                    DateOfBirth: pastDate
+                },
+                'user'
             );
             assert.fail('Should have thrown an error');
         } catch (error) {
             assert.ok(error instanceof AppError);
-            assert.strictEqual(error.message, 'User already exists');
+            assert.strictEqual(error.message, 'Account with this email already exists');
             assert.strictEqual(error.statusCode, 409);
         }
     });
@@ -84,21 +107,23 @@ test('createClientCore test suite', async (t) => {
         futureDate.setFullYear(futureDate.getFullYear() + 5);
 
         try {
-            await createClientCore(
-                'John Doe',
-                'john@example.com',
-                'Password123!',
-                'male',
-                '1234567890',
-                futureDate,
-                '127.0.0.1',
-                'PostmanRuntime'
+            await createAccountCore(
+                {
+                    name: 'John Doe',
+                    email: 'john@example.com',
+                    password: 'Password123!',
+                    passwordConfirm: 'Password123!',
+                    gender: 'male',
+                    phone_no: '1234567890',
+                    DateOfBirth: futureDate
+                },
+                'user'
             );
             assert.fail('Should have thrown an error');
         } catch (error) {
             assert.ok(error instanceof AppError);
             assert.strictEqual(error.message, 'Date of birth cannot be in the future');
-            assert.strictEqual(error.statusCode, 409);
+            assert.strictEqual(error.statusCode, 400);
         }
     });
 });

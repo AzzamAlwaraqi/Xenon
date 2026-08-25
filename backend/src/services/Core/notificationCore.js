@@ -149,10 +149,7 @@ exports.sendNotificationBroadcastCore = async (senderId, senderRole, notificatio
 // ==========================================
 exports.getMyNotificationsCore = async function (user, page = 1, limit = 20) {
     try {
-        let query = {};
-        if (checkRole(user.role, ["vendor"])) query.vendor_id = user._id;
-        else if (checkRole(user.role, ["admin"])) query.admin_id = user._id;
-        else query.user_id = user._id;
+        let query = { user_id: user._id };
 
         const skip = (page - 1) * limit;
 
@@ -166,6 +163,33 @@ exports.getMyNotificationsCore = async function (user, page = 1, limit = 20) {
             status: "success",
             unread_count: unreadCount,
             total_notifications: totalCount,
+            current_page: page * 1,
+            total_pages: Math.ceil(totalCount / limit),
+            results: notifications.length,
+            data: notifications
+        };
+    } catch (error) {
+        throw new AppError(error.message, 500);
+    }
+};
+
+exports.getSentNotificationsCore = async function (user, page = 1, limit = 20) {
+    try {
+        let query = {};
+        if (checkRole(user.role, ["vendor"])) query.vendor_id = user._id;
+        else if (checkRole(user.role, ["admin"])) query.admin_id = user._id;
+        else throw new AppError("Only vendors and admins can view sent notifications", 403);
+
+        const skip = (page - 1) * limit;
+
+        const [notifications, totalCount] = await Promise.all([
+            Notification.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit * 1),
+            Notification.countDocuments(query) 
+        ]);
+
+        return {
+            status: "success",
+            total_sent_notifications: totalCount,
             current_page: page * 1,
             total_pages: Math.ceil(totalCount / limit),
             results: notifications.length,

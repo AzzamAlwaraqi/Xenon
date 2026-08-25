@@ -33,19 +33,7 @@ const SessionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    user_agent: {
-        type: String,
-        required: true
-    },
     device_type: {
-        type: String,
-        required: true
-    },
-    os_name: {
-        type: String,
-        required: true
-    },
-    browser_name: {
         type: String,
         required: true
     },
@@ -57,7 +45,7 @@ const SessionSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-    sesstion_status: {
+    session_status: {
         type: String,
         default: "active"
     },
@@ -76,8 +64,8 @@ const SessionSchema = new mongoose.Schema({
     toObject: { getters: true, virtuals: true }
 });
 
-SessionSchema.virtual('sesstion_id').get(function() {
+SessionSchema.virtual('session_id').get(function() {
     return this._id;
 });
 
-module.exports = mongoose.model("Sesstion", SessionSchema);
+module.exports = mongoose.model("Session", SessionSchema);

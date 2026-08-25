@@ -8,7 +8,8 @@ exports.register = async (req, res, next) => {
     try {
         const role = req.body.role; 
         
-        const result = await authCore.createAccountCore(req.body, role, req.deviceInfo || {});
+        const deviceInfo = sessionHelper.extractAndValidateSessionData(req, role);
+        const result = await authCore.createAccountCore(req.body, role, deviceInfo);
 
         if (checkRole( role ,["user"])) {
             let otpResponse;
@@ -187,7 +188,8 @@ exports.refreshToken = async (req, res, next) => {
     try {
         const { refreshToken } = req.body;
         
-        const result = await authCore.refreshTokenCore(refreshToken, req.deviceInfo || {});
+        const deviceInfo = sessionHelper.extractAndValidateSessionData(req);
+        const result = await authCore.refreshTokenCore(refreshToken, deviceInfo);
 
         res.status(200).json({
             status: "success",

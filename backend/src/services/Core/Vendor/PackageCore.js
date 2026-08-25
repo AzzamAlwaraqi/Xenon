@@ -35,10 +35,27 @@ const checkPackageOwnership = (userOrVendor, packageDoc) => {
 // ==========================================
 exports.getAllPackagesCore = async function (queryString) {
     try {
-        const baseQuery = Package.find({ 
-            isDeleted: { $ne: true },
-            startDate: { $gt: new Date() } // 🌟 Filter to only show upcoming packages
-        }).populate('vendor_id', 'vendor_name vendor_email -_id');
+        const baseFilter = { startDate: { $gt: new Date() } };
+
+        // 1. Prepare filter for countDocuments (to include package_type and other filters)
+        const queryObj = { ...queryString };
+        const excludedFields = ['page', 'sort', 'limit', 'fields', 'keyword', 'search'];
+        excludedFields.forEach(el => delete queryObj[el]);
+        let queryStr = JSON.stringify(queryObj);
+        queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
+        const finalFilter = { ...baseFilter, ...JSON.parse(queryStr) };
+
+        // 🔍 Add Search Functionality by Package Name
+        if (queryString.keyword || queryString.search) {
+            const searchTerm = queryString.keyword || queryString.search;
+            finalFilter.package_name = { $regex: searchTerm, $options: 'i' };
+        }
+
+        // 2. Count total documents matching the filters (before pagination)
+        const totalDocuments = await Package.countDocuments(finalFilter);
+
+        // 3. Apply features (filter, sort, select, paginate)
+        const baseQuery = Package.find(baseFilter).populate('vendor_id', 'vendor_company vendor_email -_id');
         
         const features = new APIFeatures(baseQuery, queryString)
             .filter()
@@ -47,7 +64,26 @@ exports.getAllPackagesCore = async function (queryString) {
             .paginate();
             
         const packages = await features.query;
-        return { count: packages.length, data: packages };
+
+        // 4. Calculate pagination metadata
+        const page = parseInt(queryString.page, 10) || 1;
+        const limit = parseInt(queryString.limit, 10) || 15;
+        const totalPages = Math.ceil(totalDocuments / limit);
+
+        return { 
+            count: packages.length, 
+            pagination: {
+                currentPage: page,
+                limit: limit,
+                totalPages: totalPages,
+                totalDocuments: totalDocuments,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+                nextPage: page < totalPages ? page + 1 : null,
+                prevPage: page > 1 ? page - 1 : null
+            },
+            data: packages 
+        };
     } catch (error) {
         if (error.statusCode) throw error;
         throw new AppError(error.message, 500);
@@ -59,8 +95,8 @@ exports.getAllPackagesCore = async function (queryString) {
 // ==========================================
 exports.getPackageCore = async function (packageId, queryString = {}) {
     try {
-        let query = Package.findOne({ _id: packageId, isDeleted: { $ne: true } })
-                           .populate('vendor_id', 'vendor_name vendor_email vendor_mobile -_id')
+        let query = Package.findOne({ _id: packageId })
+                           .populate('vendor_id', 'vendor_company vendor_email vendor_mobile -_id')
                            .populate('details'); // 🌟 السحر هنا: جلب كل التفاصيل من الجدول الآخر
 
         if (queryString.fields) {
@@ -97,7 +133,7 @@ exports.createPackageCore = async function (user, packageData, file) {
         }
 
         const secureVendorId = user._id;
-        const vendorName = user.company_name || user.vendor_name || user.name || 'Vendor';
+        const vendorName = user.vendor_company || user.name || 'Vendor';
 
         if (!file) throw new AppError("Package image is required", 400);
 
@@ -185,7 +221,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 
     try {
         const existingPackage = await Package.findById(packageId).session(session);
-        if (!existingPackage || existingPackage.isDeleted) {
+        if (!existingPackage) {
             throw new AppError('This package is not found', 404);
         }
 
@@ -303,20 +339,26 @@ exports.deletePackageCore = async function (userOrVendor, packageId) {
     try {
         const packageDoc = await Package.findById(packageId);
         
-        if (!packageDoc || packageDoc.isDeleted) {
+        if (!packageDoc) {
             throw new AppError('The package is not found', 404);
         }
 
         checkPackageOwnership(userOrVendor, packageDoc);
 
+        // 🌟 تطبيق طلب العميل: إذا كانت active، نجعلها inactive فقط.
+        if (packageDoc.package_status === 'active') {
+            packageDoc.package_status = 'inactive';
+            await packageDoc.save();
+            await PackageDetails.updateOne({ package_id: packageId }, { $set: { package_status: 'inactive' } });
+            return { message: "The package was active, so it has been deactivated instead of permanently deleted." };
+        }
+
+        // إذا كانت inactive بالفعل، يتم الحذف الوهمي (Soft Delete)
         packageDoc.isDeleted = true;
         packageDoc.deletionRequestedAt = new Date();
-        packageDoc.package_status = 'inactive'; 
         
         await packageDoc.save();
-        
-        await PackageDetails.updateOne({ package_id: packageId }, { $set: { package_status: 'inactive' } });
-        return { message: "Package deleted and deactivated successfully" };
+        return { message: "Package deleted successfully" };
     } catch (error) {
         if (error.statusCode) throw error;
         throw new AppError(error.message, 500);

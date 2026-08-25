@@ -69,6 +69,5 @@ const PackageDetailsSchema = new mongoose.Schema({
 });
 
 
-PackageDetailsSchema.index({ package_id: 1 });
 
 module.exports = mongoose.model("PackageDetails", PackageDetailsSchema);

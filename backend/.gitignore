@@ -5,3 +5,4 @@ node_modules
 ./src/config/serviceAccountKey.json
 /tests
 test_packages.js
+Xenon_Postman_Collection.json

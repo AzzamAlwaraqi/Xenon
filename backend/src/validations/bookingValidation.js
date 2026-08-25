@@ -11,8 +11,9 @@ exports.createBookingValidation = function (req, res, next) {
         package_Name: joi.string().required().messages({
             "any.required": "Package name is required"
         }),
-        VENDOR_Name: joi.string().required().messages({
-            "any.required": "Vendor name is required"
+        vendor_id: joi.string().uuid().required().messages({
+            "any.required": "Vendor ID is required",
+            "string.guid": "Vendor ID must be a valid UUID"
         }),
         date: joi.date().min('now').required().messages({
             "any.required": "Booking date is required",

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const softDeletePlugin = require("../utils/softDeletePlugin");
 const { v7: uuidv7 } = require("uuid");
 
 const OTPSchema = new mongoose.Schema({
@@ -38,10 +39,6 @@ const OTPSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-    isDeleted: {
-        type: Boolean,
-        default: false
-    },
     isActive: {
         type: Boolean,
         default: true
@@ -74,4 +71,5 @@ OTPSchema.pre("validate", function () {
     }
 });
 
+OTPSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("OTP", OTPSchema);

@@ -1,6 +1,7 @@
 // models/BookingPayment.js
 const mongoose = require("mongoose");
 const { v7: uuidv7 } = require("uuid");
+const softDeletePlugin = require("../utils/softDeletePlugin");
 
 const bookingPaymentSchema = new mongoose.Schema({
     _id: {
@@ -77,13 +78,9 @@ const bookingPaymentSchema = new mongoose.Schema({
         required: function() { return this.payment_status === 'Rejected'; }
     },
     // 🌟 حقول الـ Soft Delete
-    isDeleted: {
-        type: Boolean,
-        default: false
-    },
     deleted_by: {
         type: mongoose.Schema.Types.UUID,
-        ref: 'User',
+        ref: "User",
         default: null
     },
     deleted_at: {
@@ -96,4 +93,5 @@ const bookingPaymentSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+bookingPaymentSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("BookingPayment", bookingPaymentSchema);

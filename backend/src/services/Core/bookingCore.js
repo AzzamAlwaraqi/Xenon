@@ -59,8 +59,8 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
     session.startTransaction();
 
     try {
-        const vendor = await VendorModel.findOne({ vendor_name: bookingData.VENDOR_Name }).session(session);
-        if (!vendor) throw new AppError(`Vendor not found with the name: ${bookingData.VENDOR_Name}`, 404);
+        const vendor = await VendorModel.findById(bookingData.vendor_id).session(session);
+        if (!vendor) throw new AppError(`Vendor not found with ID: ${bookingData.vendor_id}`, 404);
 
         const requestedSeats = parseInt(bookingData.guests, 10) || 1;
 
@@ -128,7 +128,7 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
 
     try {
         const booking = await BookingModel.findById(bookingId).session(session);
-        if (!booking || booking.isDeleted) throw new AppError("Booking not found", 404);
+        if (!booking) throw new AppError("Booking not found", 404);
         
         checkAuthorization(userOrVendor, booking);
 
@@ -148,7 +148,7 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
             const targetSeats = parseInt(updateData.number_of_people, 10) || booking.number_of_people;
 
             const targetPackage = await PackageModel.findById(targetPackageId).session(session);
-            if (!targetPackage || targetPackage.isDeleted || targetPackage.package_status !== 'active') {
+            if (!targetPackage || targetPackage.package_status !== 'active') {
                 throw new AppError("The requested package is not available.", 404);
             }
 
@@ -193,7 +193,7 @@ exports.deleteBookingCore = async function (userOrVendor, bookingId) {
 
     try {
         const booking = await BookingModel.findById(bookingId).session(session);
-        if (!booking || booking.isDeleted) throw new AppError("Booking not found", 404);
+        if (!booking) throw new AppError("Booking not found", 404);
         
         checkAuthorization(userOrVendor, booking);
 
@@ -242,10 +242,10 @@ exports.getBookingCore = async function (userOrVendor, bookingId) {
     try {
         const booking = await BookingModel.findById(bookingId)
             .populate('package_id', 'package_name package_price package_type -_id')
-            .populate('vendor_id', 'vendor_name vendor_email -_id')
+            .populate('vendor_id', 'vendor_company vendor_email -_id')
             .populate('user_id', 'name email mobileNumber -_id');
 
-        if (!booking || booking.isDeleted) throw new AppError("Booking not found", 404);
+        if (!booking) throw new AppError("Booking not found", 404);
 
         checkAuthorization(userOrVendor, booking);
 
@@ -262,7 +262,7 @@ exports.getBookingCore = async function (userOrVendor, bookingId) {
 // ==========================================
 exports.getAllBookingCore = async function (userOrVendor) {
     try {
-        let query = { isDeleted: false }; 
+        let query = {}; 
         
         if (checkRole(userOrVendor.role, ["user"])) {
             query.user_id = userOrVendor._id;
@@ -274,7 +274,7 @@ exports.getAllBookingCore = async function (userOrVendor) {
 
         const bookings = await BookingModel.find(query)
             .populate('package_id', 'package_name package_price package_type -_id')
-            .populate('vendor_id', 'vendor_name vendor_email -_id')
+            .populate('vendor_id', 'vendor_company vendor_email -_id')
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
 
@@ -320,7 +320,6 @@ exports.getAllRequestsCore = async function (userOrVendor, packageId) {
 exports.getAllMyBookingsCore = async function (userOrVendor) {
     try {
         let query = { 
-            isDeleted: false,
             status: { $in: ['pending_payment', 'pending', 'accepted'] } 
         }; 
         
@@ -334,7 +333,7 @@ exports.getAllMyBookingsCore = async function (userOrVendor) {
 
         const activeBookings = await BookingModel.find(query)
             .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
-            .populate('vendor_id', 'vendor_name vendor_email -_id')
+            .populate('vendor_id', 'vendor_company vendor_email -_id')
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 }); 
 
@@ -374,7 +373,7 @@ exports.getBookingHistoryCore = async function (userOrVendor) {
 
         const bookingHistory = await BookingModel.find(historyQuery)
             .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
-            .populate('vendor_id', 'vendor_name vendor_email -_id')
+            .populate('vendor_id', 'vendor_company vendor_email -_id')
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
 
@@ -537,7 +536,7 @@ exports.getUserPendingRequestsCore = async function (userOrVendor) {
             isDeleted: false
         })
         .populate('package_id', 'package_name package_price -_id')
-        .populate('vendor_id', 'vendor_name vendor_email -_id')
+        .populate('vendor_id', 'vendor_company vendor_email -_id')
         .sort({ createdAt: -1 });
 
         return { status: "success", count: requests.length, data: requests };

@@ -36,7 +36,7 @@ exports.addBookingPaymentCore = async function (user, paymentData, file) {
         }
 
         const booking = await Booking.findById(paymentData.booking_id).session(session);
-        if (!booking || booking.isDeleted) throw new AppError("Booking not found", 404);
+        if (!booking) throw new AppError("Booking not found", 404);
 
         if (booking.user_id.toString() !== customer._id.toString()) {
             throw new AppError("This booking does not belong to the mentioned customer", 400);
@@ -81,7 +81,7 @@ exports.addBookingPaymentCore = async function (user, paymentData, file) {
                 .webp({ quality: 80 })
                 .toBuffer();
 
-            const vendorName = user.company_name || user.vendor_name || user.name || 'Vendor';
+            const vendorName = user.vendor_company || user.name || 'Vendor';
             const safeVendorName = vendorName.replace(/[^a-zA-Z0-9]/g, '_');
             const safeUserName = (user.name || 'Emp').replace(/[^a-zA-Z0-9]/g, '_');
             const today = new Date();
@@ -137,9 +137,7 @@ exports.addBookingPaymentCore = async function (user, paymentData, file) {
 exports.getBookingPaymentsCore = async function (user, query) {
     let filter = { ...query };
 
-    if (filter.isDeleted === undefined) {
-        filter.isDeleted = false;
-    }
+
 
     if (checkRole(user.role, ['user'])) {
         filter.user_id = user._id;
@@ -321,9 +319,7 @@ exports.addVendorSubscriptionPaymentCore = async function (user, paymentData, fi
 exports.getVendorSubscriptionPaymentsCore = async function (user, query) {
     let filter = { ...query };
 
-    if (filter.isDeleted === undefined) {
-        filter.isDeleted = false;
-    }
+
 
     if (checkRole(user.role, ['vendor'])) {
         filter.vendor_id = getVendorId(user);
@@ -332,7 +328,7 @@ exports.getVendorSubscriptionPaymentsCore = async function (user, query) {
     }
 
     const subscriptions = await VendorSubscription.find(filter)
-        .populate('vendor_id', 'vendor_name vendor_email')
+        .populate('vendor_id', 'vendor_company vendor_email')
         .populate('verified_by', 'name');
 
     return subscriptions;
@@ -413,8 +409,7 @@ exports.getCustomerFinancialStatementCore = async function (user, customerPhone)
 
     const paymentsHistory = await BookingPayment.find({
         user_id: customerId,
-        vendor_id: vendorId,
-        isDeleted: false
+        vendor_id: vendorId
     }).sort({ createdAt: -1 });
 
     const bookingsHistory = await Booking.find({
