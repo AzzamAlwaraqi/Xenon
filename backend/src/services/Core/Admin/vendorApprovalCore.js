@@ -51,11 +51,19 @@ exports.updateApprovalStatusCore = async function (vendorId, status, rejectionRe
             throw new AppError("No vendor found with that ID", 404);
         }
         
-        if (vendor.approval_status === status) {
+        const isApprovingDeletion = (vendor.approval_status === 'pending_deletion' && status === 'approved');
+
+        if (vendor.approval_status === status && !isApprovingDeletion) {
             throw new AppError(`Vendor is already ${status}`, 400);
         }
         
-        vendor.approval_status = status;
+        if (isApprovingDeletion) {
+            vendor.approval_status = 'deleted';
+            vendor.vendor_status = 'inactive';
+        } else {
+            vendor.approval_status = status;
+        }
+
         vendor.action_by_admin = user._id;
 
         if (checkvendorStatus(status, ['rejected']) && rejectionReason) {
@@ -68,12 +76,20 @@ exports.updateApprovalStatusCore = async function (vendorId, status, rejectionRe
 
         // 🌟 الإصلاح: تغيير الرتبة إلى 'user' بدلاً من 'client' لضمان توافق الداتابيز
         // (استخدمنا vendor.vendor_user_id لأنه الحقل المرجعي لليوزر حسب مشروعنا)
-        const targetUserId = vendor.vendor_user_id || vendor.user_id;
+        const targetUserId = vendor.vendor_owner_id || vendor.vendor_user_id || vendor.user_id;
 
-        if (status === 'approved') {
+        if (status === 'approved' && !isApprovingDeletion) {
             await User.findByIdAndUpdate(targetUserId, { role: 'vendor' }, { session });
-        } else if (checkvendorStatus(status, ['rejected', 'suspended', 'downgraded'])) {
+        } else if (checkvendorStatus(status, ['rejected', 'suspended', 'downgraded']) || isApprovingDeletion) {
             await User.findByIdAndUpdate(targetUserId, { role: 'user' }, { session });
+            
+            // تسجيل خروج اليوزر ومنعه من الدخول للويب 
+            const SessionModel = require("../../../Models/SessionModel");
+            await SessionModel.updateMany(
+                { user_id: targetUserId, is_active: true },
+                { is_active: false, session_status: 'terminated' },
+                { session }
+            );
         }
 
         await session.commitTransaction();

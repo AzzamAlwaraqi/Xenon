@@ -1,7 +1,7 @@
 // ==========================================
 // 📊 Constants & Allowed Arrays (الثوابت)
 // ==========================================
-const DEFAULT_VENDOR_STATUSES = ["pending", "accepted", "rejected", "suspended"];
+const DEFAULT_VENDOR_STATUSES = ["pending", "accepted", "rejected", "suspended", "pending_deletion", "deleted", "downgraded"];
 const DEFAULT_REPORT_STATUSES = ["pending", "resolved", "dismissed", "escalated", "rejected", "closed", "assigned", "reopened"];
 const DEFAULT_BOOKING_STATUSES = ["pending", "accepted", "rejected", "completed", "cancelled"];
 const TERMINAL_REPORT_STATUSES = ["resolved", "dismissed", "closed", "rejected"];

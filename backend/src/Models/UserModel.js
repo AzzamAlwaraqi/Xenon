@@ -76,7 +76,7 @@ const UserSchema = new mongoose.Schema({
     },
     DateOfBirth: {
         ...MongooseStandardDate,
-        required: [function () { return checkRole(this.role, ['user']); }, 'تاريخ الميلاد مطلوب']
+        required: [function () { return checkRole(this.role, ['user']); }, 'Date of Birth is required']
     },
     fcm_token: {
         type: String,

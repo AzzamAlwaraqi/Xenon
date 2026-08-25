@@ -6,7 +6,9 @@ const UserModel = require("../../Models/UserModel");
 const ReviewModel = require("../../Models/ReviewModel");
 const BookingModel = require("../../Models/BookingModel");
 const NotificationModel = require("../../Models/NotificationModel");
-const SessionModel = require("../../Models/SessionModel"); // 🌟 لغايات تدمير الجلسات
+const SessionModel = require("../../Models/SessionModel"); 
+const PackageModel = require("../../Models/PackageModel");
+const EmployeeModel = require("../../Models/EmployeeModels");
 const { checkRole } = require("../../utils/checkvalidete");
 const vendorApprovalCore = require("./Admin/vendorApprovalCore");
 
@@ -191,7 +193,6 @@ exports.updatePasswordCore = async function (user, oldPassword, newPassword) {
 // ==========================================
 
 exports.deleteAccountCore = async function (user) {
-    // حماية الداتابيز عبر Transaction
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -210,6 +211,29 @@ exports.deleteAccountCore = async function (user) {
 
             if (vendor.vendor_status !== 'active' || vendor.deletionRequestedAt) {
                 throw new AppError("Account is already inactive or pending deletion", 400);
+            }
+
+            const activeEmployees = await EmployeeModel.countDocuments({ vendor_id: vendor._id, job_active: true }).session(session);
+            if (activeEmployees > 0) {
+                throw new AppError("Cannot delete account: You have active employees. Please terminate their contracts first.", 400);
+            }
+
+            const today = new Date();
+            const activePackages = await PackageModel.countDocuments({ 
+                vendor_id: vendor._id, 
+                endDate: { $gte: today },
+                package_status: 'active'
+            }).session(session);
+            if (activePackages > 0) {
+                throw new AppError("Cannot delete account: You have active or future packages. Please deactivate or complete them first.", 400);
+            }
+
+            const activeBookings = await BookingModel.countDocuments({
+                vendor_id: vendor._id,
+                status: { $in: ["pending_payment", "pending", "accepted"] }
+            }).session(session);
+            if (activeBookings > 0) {
+                throw new AppError("Cannot delete account: You have active bookings. Please complete or cancel them first.", 400);
             }
 
             await VendorModel.findByIdAndUpdate(

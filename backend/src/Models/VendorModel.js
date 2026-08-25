@@ -8,19 +8,6 @@ const VendorSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
     },
-    vendor_email: {
-        type: String,
-        required: true,
-        unique: true 
-    },
-    vendor_password: {
-        type: String,
-        required: true
-    },
-    vendor_mobile: {
-        type: String,
-        required: true,
-    },
     vendor_address: {
         type: String,
         required: true
@@ -44,7 +31,7 @@ const VendorSchema = new mongoose.Schema({
     vendor_status: {
         type: String,
         required: true,
-        enum: ["active", "inactive"],
+        enum: ["active", "inactive", "pending_deletion"],
         default: "active"
     },
     vendor_type: {
@@ -66,6 +53,7 @@ const VendorSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true, 
+    strict: false,
     toJSON: { getters: true, virtuals: true }, 
     toObject: { getters: true, virtuals: true }
 });
