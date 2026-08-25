@@ -212,7 +212,11 @@ exports.getMyReviewsCore = async function (user, queryParams = {}) {
 
         const [reviews, total] = await Promise.all([
             Review.find(query)
-                .populate('vendor_id', 'vendor_company vendor_email -_id')
+                .populate({
+                    path: 'vendor_id',
+                    select: 'vendor_company vendor_owner_id -_id',
+                    populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                })
                 .populate('package_id', 'package_name package_price -_id')
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -250,7 +254,7 @@ exports.getReviewByIdCore = async function (user, reviewId) {
 
         const review = await Review.populate(rawReview, [
             { path: 'user_id', select: 'name email -_id' },
-            { path: 'vendor_id', select: 'vendor_company vendor_email -_id' },
+            { path: 'vendor_id', select: 'vendor_company vendor_owner_id -_id', populate: { path: 'vendor_owner_id', select: 'email -_id' } },
             { path: 'package_id', select: 'package_name package_price -_id' }
         ]);
 
@@ -319,7 +323,11 @@ exports.getAllReviewsCore = async function (user, queryParams = {}) {
         const [reviews, total] = await Promise.all([
             Review.find(query)
                 .populate('user_id', 'name email -_id')
-                .populate('vendor_id', 'vendor_company vendor_email -_id')
+                .populate({
+                    path: 'vendor_id',
+                    select: 'vendor_company vendor_owner_id -_id',
+                    populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                })
                 .populate('package_id', 'package_name -_id')
                 .sort({ createdAt: -1 })
                 .skip(skip)

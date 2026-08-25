@@ -38,9 +38,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     if (existingUserByMobile) throw new AppError("Account with this mobile number already exists", 409);
 
     if (checkRole(role, ["vendor"])) {
-        const existingVendor = await VendorModel.findOne({ vendor_email: cleanEmail });
-        if (existingVendor) throw new AppError("Vendor account with this email already exists", 409);
-        
+
         const existingCompany = await VendorModel.findOne({ vendor_company: Body.company_name || Body.name });
         if (existingCompany) throw new AppError("A vendor with this company name already exists. Please choose a different name.", 409);
     }
@@ -79,9 +77,6 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     if (checkRole(role, ["vendor"])) {
         const createdVendor = await VendorModel.create({
             vendor_company: Body.company_name || Body.name,
-            vendor_email: cleanEmail,
-            vendor_password: Body.password,
-            vendor_mobile: mobileNumber,
             vendor_address: Body.address,
             vendor_city: Body.city,
             vendor_state: Body.state,
@@ -227,14 +222,6 @@ exports.resetPasswordCore = async function (email, password, passwordConfirmatio
 
         user.password = password;
         await user.save();
-
-        if (checkRole(user.role, ["vendor"])) {
-            const vendor = await VendorModel.findOne({ vendor_email: cleanEmail });
-            if (vendor) {
-                vendor.vendor_password = password;
-                await vendor.save();
-            }
-        }
 
         return { message: "Password reset successfully" };
     } catch (error) {

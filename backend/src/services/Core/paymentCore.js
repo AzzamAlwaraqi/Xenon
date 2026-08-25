@@ -328,7 +328,11 @@ exports.getVendorSubscriptionPaymentsCore = async function (user, query) {
     }
 
     const subscriptions = await VendorSubscription.find(filter)
-        .populate('vendor_id', 'vendor_company vendor_email')
+        .populate({
+            path: 'vendor_id',
+            select: 'vendor_company vendor_owner_id',
+            populate: { path: 'vendor_owner_id', select: 'email -_id' }
+        })
         .populate('verified_by', 'name');
 
     return subscriptions;

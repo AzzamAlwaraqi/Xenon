@@ -58,10 +58,6 @@ const VendorSchema = new mongoose.Schema({
     toObject: { getters: true, virtuals: true }
 });
 
-    
-VendorSchema.pre('save', async function() {
-    if (!this.isModified('vendor_password')) return;
-    this.vendor_password = await bcrypt.hash(this.vendor_password, 12);
-});
+
 
 module.exports = mongoose.model("Vendor", VendorSchema);

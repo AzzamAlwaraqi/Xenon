@@ -130,7 +130,11 @@ exports.getMyComplaintsCore = async function (user, queryParams = {}) {
 
         const [complaints, totalComplaints] = await Promise.all([
             ComplaintModel.find(query)
-                .populate('vendor_id', 'vendor_company vendor_email -_id')
+                .populate({
+                    path: 'vendor_id',
+                    select: 'vendor_company vendor_owner_id -_id',
+                    populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                })
                 .populate('booking_id', 'package_name startDate total_price -_id')
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -173,7 +177,11 @@ exports.getComplaintByIdCore = async function (user, complaintId) {
 
         const complaint = await ComplaintModel.findById(complaintId)
             .populate('user_id', 'name email mobileNumber -_id')
-            .populate('vendor_id', 'vendor_company vendor_email vendor_mobile -_id')
+            .populate({
+                path: 'vendor_id',
+                select: 'vendor_company vendor_owner_id -_id',
+                populate: { path: 'vendor_owner_id', select: 'email mobileNumber -_id' }
+            })
             .populate('booking_id', 'package_name startDate endDate total_price -_id');
 
         return { status: "success", data: complaint };
@@ -248,7 +256,11 @@ exports.getAllComplaintsCore = async function (user, queryParams = {}) {
         const [complaints, totalComplaints] = await Promise.all([
             ComplaintModel.find(query)
                 .populate('user_id', 'name email -_id')
-                .populate('vendor_id', 'vendor_company vendor_email -_id')
+                .populate({
+                    path: 'vendor_id',
+                    select: 'vendor_company vendor_owner_id -_id',
+                    populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                })
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),

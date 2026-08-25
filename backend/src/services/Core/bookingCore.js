@@ -242,7 +242,11 @@ exports.getBookingCore = async function (userOrVendor, bookingId) {
     try {
         const booking = await BookingModel.findById(bookingId)
             .populate('package_id', 'package_name package_price package_type -_id')
-            .populate('vendor_id', 'vendor_company vendor_email -_id')
+            .populate({
+                path: 'vendor_id',
+                select: 'vendor_company vendor_owner_id -_id',
+                populate: { path: 'vendor_owner_id', select: 'email -_id' }
+            })
             .populate('user_id', 'name email mobileNumber -_id');
 
         if (!booking) throw new AppError("Booking not found", 404);
@@ -274,7 +278,11 @@ exports.getAllBookingCore = async function (userOrVendor) {
 
         const bookings = await BookingModel.find(query)
             .populate('package_id', 'package_name package_price package_type -_id')
-            .populate('vendor_id', 'vendor_company vendor_email -_id')
+            .populate({
+                path: 'vendor_id',
+                select: 'vendor_company vendor_owner_id -_id',
+                populate: { path: 'vendor_owner_id', select: 'email -_id' }
+            })
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
 
@@ -333,7 +341,11 @@ exports.getAllMyBookingsCore = async function (userOrVendor) {
 
         const activeBookings = await BookingModel.find(query)
             .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
-            .populate('vendor_id', 'vendor_company vendor_email -_id')
+            .populate({
+                path: 'vendor_id',
+                select: 'vendor_company vendor_owner_id -_id',
+                populate: { path: 'vendor_owner_id', select: 'email -_id' }
+            })
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 }); 
 
@@ -373,7 +385,11 @@ exports.getBookingHistoryCore = async function (userOrVendor) {
 
         const bookingHistory = await BookingModel.find(historyQuery)
             .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
-            .populate('vendor_id', 'vendor_company vendor_email -_id')
+            .populate({
+                path: 'vendor_id',
+                select: 'vendor_company vendor_owner_id -_id',
+                populate: { path: 'vendor_owner_id', select: 'email -_id' }
+            })
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
 
@@ -536,7 +552,11 @@ exports.getUserPendingRequestsCore = async function (userOrVendor) {
             isDeleted: false
         })
         .populate('package_id', 'package_name package_price -_id')
-        .populate('vendor_id', 'vendor_company vendor_email -_id')
+        .populate({
+            path: 'vendor_id',
+            select: 'vendor_company vendor_owner_id -_id',
+            populate: { path: 'vendor_owner_id', select: 'email -_id' }
+        })
         .sort({ createdAt: -1 });
 
         return { status: "success", count: requests.length, data: requests };

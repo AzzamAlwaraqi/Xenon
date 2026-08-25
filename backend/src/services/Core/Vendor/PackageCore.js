@@ -55,7 +55,11 @@ exports.getAllPackagesCore = async function (queryString) {
         const totalDocuments = await Package.countDocuments(finalFilter);
 
         // 3. Apply features (filter, sort, select, paginate)
-        const baseQuery = Package.find(baseFilter).populate('vendor_id', 'vendor_company vendor_email -_id');
+        const baseQuery = Package.find(baseFilter).populate({
+            path: 'vendor_id',
+            select: 'vendor_company vendor_owner_id -_id',
+            populate: { path: 'vendor_owner_id', select: 'email mobileNumber -_id' }
+        });
         
         const features = new APIFeatures(baseQuery, queryString)
             .filter()
@@ -96,7 +100,11 @@ exports.getAllPackagesCore = async function (queryString) {
 exports.getPackageCore = async function (packageId, queryString = {}) {
     try {
         let query = Package.findOne({ _id: packageId })
-                           .populate('vendor_id', 'vendor_company vendor_email vendor_mobile -_id')
+                           .populate({
+                               path: 'vendor_id',
+                               select: 'vendor_company vendor_owner_id -_id',
+                               populate: { path: 'vendor_owner_id', select: 'email mobileNumber -_id' }
+                           })
                            .populate('details'); // 🌟 السحر هنا: جلب كل التفاصيل من الجدول الآخر
 
         if (queryString.fields) {

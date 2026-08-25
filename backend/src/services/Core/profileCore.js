@@ -122,10 +122,7 @@ exports.updateProfileCore = async function (user, updates) {
             // تحديث الفيندور
             if (updates.vendor_company) vendor.vendor_company = updates.vendor_company;
             else if (updates.company_name) vendor.vendor_company = updates.company_name;
-            else if (updates.name && !vendor.vendor_company) vendor.vendor_company = updates.name;
-
-            if (mobileNum) vendor.vendor_mobile = mobileNum;
-            if (cleanEmail) vendor.vendor_email = cleanEmail;
+            if (updates.name && !vendor.vendor_company) vendor.vendor_company = updates.name;
 
             if (updates.address) vendor.vendor_address = updates.address;
             if (updates.city) vendor.vendor_city = updates.city;
@@ -162,18 +159,6 @@ exports.updatePasswordCore = async function (user, oldPassword, newPassword) {
         // 🌟 نعتمد على pre('save') hook في الموديل لتشفير الباسوورد بدلاً من التشفير اليدوي لتجنب الـ Double Hashing
         userDoc.password = newPassword;
         await userDoc.save();
-
-        if (checkRole(user.role, ["vendor"])) {
-            const vendor = await VendorModel.findOne({
-                $or: [{ vendor_owner_id: user._id }, { vendor_user_id: user._id }]
-            });
-
-            if (vendor) {
-                vendor.vendor_old_password = vendor.vendor_password;
-                vendor.vendor_password = newPassword; // الـ Hook سيشفره
-                await vendor.save();
-            }
-        }
 
         // 🌟 Security: تدمير جميع الجلسات النشطة ليضطر لتسجيل الدخول من جديد
         await SessionModel.updateMany(
@@ -240,9 +225,7 @@ exports.deleteAccountCore = async function (user) {
                 vendor._id,
                 {
                     vendor_status: 'pending_deletion',
-                    deletionRequestedAt: Date.now(),
-                    vendor_password: null, 
-                    vendor_old_password: null
+                    deletionRequestedAt: Date.now()
                 },
                 { new: true, session }
             );
