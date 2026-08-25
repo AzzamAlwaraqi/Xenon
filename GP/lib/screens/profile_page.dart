@@ -89,7 +89,7 @@ class _ProfilePageContent extends StatelessWidget {
 
                 // User Info
                 Text(
-                  provider.userData?['name'] ?? 'User Name',
+                  provider.profile?.name ?? 'User Name',
                   style: TextStyle(
                     color: isDark
                         ? AppColors.textPrimaryDark
@@ -100,7 +100,7 @@ class _ProfilePageContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  provider.userData?['email'] ?? 'user@email.com',
+                  provider.profile?.email ?? 'user@email.com',
                   style: TextStyle(
                     color: isDark
                         ? AppColors.textSecondaryDark

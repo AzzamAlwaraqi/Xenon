@@ -33,7 +33,7 @@ class _HomePageState extends State<HomePage> {
     final profileProvider = context.watch<ProfileProvider>();
     final isDark = settings.themeMode == ThemeMode.dark;
     final isArabic = settings.locale.languageCode == 'ar';
-    final userName = profileProvider.userData?['name']?.split(' ').first ?? 'Voyager';
+    final userName = profileProvider.profile?.name.split(' ').first ?? 'Voyager';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

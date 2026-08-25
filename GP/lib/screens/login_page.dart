@@ -49,7 +49,7 @@ class _LoginPageContentState extends State<_LoginPageContent> {
     final error = await provider.login(email, password);
     if (context.mounted) {
       if (error == null) {
-        context.read<ProfileProvider>().loadProfile();
+        context.read<ProfileProvider>().loadProfile(context);
         Navigator.pushReplacementNamed(context, '/main');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

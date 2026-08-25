@@ -13,6 +13,12 @@ import 'package:gp/providers/settings_provider.dart';
 import 'package:gp/providers/booking_provider.dart';
 import 'package:gp/providers/destination_provider.dart';
 import 'package:gp/providers/profile_provider.dart';
+import 'package:gp/providers/auth_provider.dart';
+import 'package:gp/providers/package_provider.dart';
+import 'package:gp/providers/review_provider.dart';
+import 'package:gp/providers/complaint_provider.dart';
+import 'package:gp/providers/notification_provider.dart';
+import 'package:gp/providers/payment_provider.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -25,6 +31,12 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BookingProvider()),
         ChangeNotifierProvider(create: (_) => DestinationProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => PackageProvider()),
+        ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (_) => ComplaintProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => PaymentProvider()),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {

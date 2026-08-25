@@ -16,6 +16,7 @@ class BookingCard extends StatelessWidget {
   final bool showCheckIn;
   final bool showMore;
   final VoidCallback? onViewDetails;
+  final VoidCallback? onReview;
 
   const BookingCard({
     super.key,
@@ -32,6 +33,7 @@ class BookingCard extends StatelessWidget {
     this.showCheckIn = false,
     this.showMore = false,
     this.onViewDetails,
+    this.onReview,
   });
 
   String get _formattedPrice {
@@ -179,20 +181,47 @@ class BookingCard extends StatelessWidget {
             ),
           ],
 
-          if (onViewDetails != null) ...[
+          if (onViewDetails != null || onReview != null) ...[
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: onViewDetails,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primaryRust,
-                  side: const BorderSide(color: AppColors.primaryRust),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('View Details', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
+            Row(
+              children: [
+                if (onViewDetails != null)
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onViewDetails,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primaryRust,
+                        side: const BorderSide(color: AppColors.primaryRust),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('View Details', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                if (onViewDetails != null && onReview != null)
+                  const SizedBox(width: 12),
+                if (onReview != null)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: onReview,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.star, size: 16),
+                          SizedBox(width: 4),
+                          Text('Review', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ],

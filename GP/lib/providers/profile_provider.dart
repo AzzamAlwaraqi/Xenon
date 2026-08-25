@@ -1,80 +1,111 @@
 import 'package:flutter/material.dart';
-import 'package:gp/models/profile_model.dart';
-import 'package:gp/models/auth_model.dart';
+import '../models/user_model.dart';
+import '../models/profile_model.dart';
+import '../models/auth_model.dart';
+import '../models/api_client.dart';
 
-class ProfileProvider extends ChangeNotifier {
-  final ProfileService _profileService = ProfileService();
-
-  Map<String, dynamic>? _userData;
+class ProfileProvider with ChangeNotifier {
+  UserModel? _profile;
   bool _isLoading = false;
+  String? _errorMessage;
 
-  Map<String, dynamic>? get userData => _userData;
+  UserModel? get profile => _profile;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
-  ProfileProvider() {
-    loadProfile();
-  }
-
-  Future<void> loadProfile() async {
-    _isLoading = true;
-    notifyListeners();
-
-    _userData = await _profileService.getProfile();
-
-    _isLoading = false;
+  void _setLoading(bool value) {
+    _isLoading = value;
     notifyListeners();
   }
 
-  Future<String?> updateProfile(String name, String phone) async {
-    _isLoading = true;
-    notifyListeners();
-
-    final error = await _profileService.updateProfile({
-      'name': name,
-      'mobileNumber': phone,
-    });
-
-    if (error == null) {
-      await loadProfile(); // reload profile
+  Future<void> loadProfile(BuildContext context) async {
+    _setLoading(true);
+    _errorMessage = null;
+    try {
+      final response = await ProfileService.getProfile();
+      if (response['data'] != null) {
+        _profile = UserModel.fromJson(response['data']);
+      }
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      if (context.mounted) _showErrorSnackBar(context, e.message);
+    } catch (e) {
+      _errorMessage = 'Failed to load profile';
+      if (context.mounted) _showErrorSnackBar(context, _errorMessage!);
     }
-
-    _isLoading = false;
-    notifyListeners();
-    return error;
+    _setLoading(false);
   }
 
-  Future<String?> changePassword(String currentPassword, String newPassword) async {
-    _isLoading = true;
-    notifyListeners();
-
-    final error = await _profileService.changePassword(currentPassword, newPassword);
-
-    _isLoading = false;
-    notifyListeners();
-    return error;
+  Future<bool> updateProfile(Map<String, dynamic> data, BuildContext context) async {
+    _setLoading(true);
+    try {
+      final response = await ProfileService.updateProfile(data);
+      if (response['data'] != null) {
+        _profile = UserModel.fromJson(response['data']);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully'), backgroundColor: Colors.green),
+          );
+        }
+        _setLoading(false);
+        return true;
+      }
+    } on ApiException catch (e) {
+      if (context.mounted) _showErrorSnackBar(context, e.message);
+    } catch (e) {
+      if (context.mounted) _showErrorSnackBar(context, 'Update failed');
+    }
+    _setLoading(false);
+    return false;
   }
 
+  Future<bool> changePassword(String currentPassword, String newPassword, BuildContext context) async {
+    _setLoading(true);
+    try {
+      await ProfileService.changePassword(currentPassword, newPassword);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password changed successfully'), backgroundColor: Colors.green),
+        );
+      }
+      _setLoading(false);
+      return true;
+    } on ApiException catch (e) {
+      if (context.mounted) _showErrorSnackBar(context, e.message);
+    } catch (e) {
+      if (context.mounted) _showErrorSnackBar(context, 'Failed to change password');
+    }
+    _setLoading(false);
+    return false;
+  }
+
+  void _showErrorSnackBar(BuildContext context, String message) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  // Legacy Navigation Methods Preserved
   void navigateToSettings(BuildContext context) {
     Navigator.pushNamed(context, '/settings');
   }
 
   Future<void> logout(BuildContext context) async {
-    _isLoading = true;
-    notifyListeners();
-
-    await AuthService.logout();
-    
-    _isLoading = false;
-    notifyListeners();
-
+    _setLoading(true);
+    try {
+      await AuthService.logout();
+    } catch (e) {
+      // Ignore errors
+    }
+    _setLoading(false);
     if (context.mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
   }
 
-  void navigateToAllBookings(BuildContext context) {
-    // Handle navigation
-  }
+  void navigateToAllBookings(BuildContext context) {}
 
   void navigateToResetPassword(BuildContext context) {
     Navigator.pushNamed(context, '/change-password');
