@@ -8,6 +8,11 @@ const VendorSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
     },
+    vendor_company:{
+        type:String,
+        unique:true,
+        required:true
+    },
     vendor_address: {
         type: String,
         required: true

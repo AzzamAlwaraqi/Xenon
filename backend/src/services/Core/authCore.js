@@ -45,7 +45,8 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
 
     if (checkRole(role, ["vendor"])) {
 
-        const existingCompany = await VendorModel.findOne({ vendor_company: Body.company_name || Body.name });
+        const companyNameToCheck = Body.company_name || Body.name;
+        const existingCompany = await VendorModel.findOne({ vendor_company: { $regex: new RegExp(`^${companyNameToCheck}$`, 'i') } });
         if (existingCompany) throw new AppError("A vendor with this company name already exists. Please choose a different name.", 409);
     }
 

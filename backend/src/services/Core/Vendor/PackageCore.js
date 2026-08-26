@@ -58,7 +58,11 @@ exports.getAllPackagesCore = async function (queryString) {
         const baseQuery = Package.find(baseFilter).populate({
             path: 'vendor_id',
             select: 'vendor_company vendor_owner_id -_id',
-            populate: { path: 'vendor_owner_id', select: 'email mobileNumber -_id' }
+            populate: { 
+                path: 'vendor_owner_id', 
+                match: { role: 'vendor' }, 
+                select: 'name email mobileNumber role -_id' 
+            }
         });
         
         const features = new APIFeatures(baseQuery, queryString)
@@ -103,7 +107,11 @@ exports.getPackageCore = async function (packageId, queryString = {}) {
                            .populate({
                                path: 'vendor_id',
                                select: 'vendor_company vendor_owner_id -_id',
-                               populate: { path: 'vendor_owner_id', select: 'email mobileNumber -_id' }
+                               populate: { 
+                                   path: 'vendor_owner_id', 
+                                   match: { role: 'vendor' }, 
+                                   select: 'name email mobileNumber role -_id' 
+                               }
                            })
                            .populate('details'); // 🌟 السحر هنا: جلب كل التفاصيل من الجدول الآخر
 
@@ -272,7 +280,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 
         // 4. Safe Cloud Storage Update
         if (file) {
-            const safeCompanyName = (userOrVendor.company_name || userOrVendor.name || 'Vendor').replace(/[^a-zA-Z0-9]/g, '_');
+            const safeCompanyName = (userOrVendor.vendor_company || userOrVendor.company_name || userOrVendor.name || 'Vendor').replace(/[^a-zA-Z0-9]/g, '_');
             const safePackageName = (packageUpdates.package_name || existingPackage.package_name).replace(/[^a-zA-Z0-9]/g, '_');
             
             const optimizedBuffer = await sharp(file.buffer)

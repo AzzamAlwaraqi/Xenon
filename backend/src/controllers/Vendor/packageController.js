@@ -16,12 +16,12 @@ exports.createPackage = async (req, res, next) => {
 
 exports.getAllPackages = async (req, res, next) => {
     try {
-        const packages = await PackageCore.getAllPackagesCore(req.query);
+        const result = await PackageCore.getAllPackagesCore(req.query);
         res.status(200).json({
             status: "success",
-            data: {
-                packages,
-            }
+            count: result.count,
+            pagination: result.pagination,
+            data: result.data
         });
     } catch (error) {
         next(error);

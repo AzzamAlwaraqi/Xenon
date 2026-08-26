@@ -119,10 +119,15 @@ exports.updateProfileCore = async function (user, updates) {
                 await userDoc.save();
             }
 
-            // تحديث الفيندور
-            if (updates.vendor_company) vendor.vendor_company = updates.vendor_company;
-            else if (updates.company_name) vendor.vendor_company = updates.company_name;
-            if (updates.name && !vendor.vendor_company) vendor.vendor_company = updates.name;
+            // تحديث اسم الشركة مع التحقق من عدم تكراره
+            let newCompanyName = updates.vendor_company || updates.company_name;
+            if (newCompanyName && newCompanyName !== vendor.vendor_company) {
+                const existingCompany = await VendorModel.findOne({ vendor_company: { $regex: new RegExp(`^${newCompanyName}$`, 'i') } });
+                if (existingCompany) {
+                    throw new AppError("A vendor with this company name already exists. Please choose a different name.", 409);
+                }
+                vendor.vendor_company = newCompanyName;
+            }
 
             if (updates.address) vendor.vendor_address = updates.address;
             if (updates.city) vendor.vendor_city = updates.city;
