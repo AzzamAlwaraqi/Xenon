@@ -6,22 +6,39 @@ import 'package:gp/providers/destination_details_provider.dart';
 
 class DestinationDetailsPage extends StatelessWidget {
   final Map<String, dynamic>? destination;
+  final bool isAlreadyBooked;
+  final String? bookingStatus;
 
-  const DestinationDetailsPage({super.key, this.destination});
+  const DestinationDetailsPage({
+    super.key, 
+    this.destination, 
+    this.isAlreadyBooked = false,
+    this.bookingStatus,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => DestinationDetailsProvider(),
-      child: _DestinationDetailsPageContent(destination: destination),
+      child: _DestinationDetailsPageContent(
+        destination: destination,
+        isAlreadyBooked: isAlreadyBooked,
+        bookingStatus: bookingStatus,
+      ),
     );
   }
 }
 
 class _DestinationDetailsPageContent extends StatelessWidget {
   final Map<String, dynamic>? destination;
+  final bool isAlreadyBooked;
+  final String? bookingStatus;
   
-  const _DestinationDetailsPageContent({this.destination});
+  const _DestinationDetailsPageContent({
+    this.destination,
+    this.isAlreadyBooked = false,
+    this.bookingStatus,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -251,23 +268,32 @@ class _DestinationDetailsPageContent extends StatelessWidget {
             Expanded(
               flex: 2,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CheckoutPage(destination: destination ?? {}),
-                    ),
-                  );
-                },
+                onPressed: isAlreadyBooked 
+                    ? null 
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CheckoutPage(destination: destination ?? {}),
+                          ),
+                        );
+                      },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentBlue,
+                  backgroundColor: isAlreadyBooked ? Colors.grey : AppColors.accentBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  disabledBackgroundColor: Colors.grey[400],
+                  disabledForegroundColor: Colors.white,
                 ),
-                child: const Text('Proceed to Booking', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: Text(
+                  isAlreadyBooked 
+                      ? (bookingStatus?.toUpperCase() ?? 'BOOKED')
+                      : 'Proceed to Booking', 
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
             ),
           ],

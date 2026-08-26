@@ -113,12 +113,6 @@ class _ProfilePageContent extends StatelessWidget {
 
                 // Menu Options
                 _buildMenuTile(
-                  icon: Icons.cases_outlined,
-                  title: 'All Bookings',
-                  onTap: () => provider.navigateToAllBookings(context),
-                  isDark: isDark,
-                ),
-                _buildMenuTile(
                   icon: Icons.payments_outlined,
                   title: 'Payment Method: Cash',
                   onTap: () {

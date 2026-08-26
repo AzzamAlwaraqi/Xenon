@@ -23,12 +23,13 @@ class _SignUpPageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SignupProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final size = MediaQuery.of(context).size;
 
     return CompassLoadingOverlay(
       isLoading: provider.isLoading,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
         body: SingleChildScrollView(
           child: Column(
             children: [
@@ -54,8 +55,8 @@ class _SignUpPageContent extends StatelessWidget {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.white.withValues(alpha: 0.8),
-                              Colors.white,
+                              (isDark ? AppColors.backgroundDark : Colors.white).withValues(alpha: 0.8),
+                              isDark ? AppColors.backgroundDark : Colors.white,
                             ],
                             stops: const [0.5, 0.9, 1.0],
                           ),
@@ -69,9 +70,9 @@ class _SignUpPageContent extends StatelessWidget {
               // White Card Section
               Container(
                 transform: Matrix4.translationValues(0, -30, 0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.backgroundDark : Colors.white,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(32),
                     topRight: Radius.circular(32),
                   ),
@@ -81,21 +82,21 @@ class _SignUpPageContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 32),
-                    const Text(
+                    Text(
                       'Begin Your Journey',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppColors.textPrimaryLight,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Create an account to unlock luxurious\ndiscovery.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppColors.textSecondaryLight,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                         fontSize: 14,
                       ),
                     ),
@@ -138,28 +139,32 @@ class _SignUpPageContent extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
+                        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight, width: 0.5),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: provider.gender,
-                          hint: const Text(
+                          dropdownColor: isDark ? AppColors.surfaceDark : Colors.white,
+                          hint: Text(
                             'Select Gender',
                             style: TextStyle(
-                              color: AppColors.textSecondaryLight,
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                               fontSize: 14,
                             ),
                           ),
                           isExpanded: true,
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.arrow_drop_down,
-                            color: AppColors.textSecondaryLight,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                           ),
                           items: ['male', 'female'].map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
-                              child: Text(value == 'male' ? 'Male' : 'Female'),
+                              child: Text(value == 'male' ? 'Male' : 'Female',
+                                style: TextStyle(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                              ),
                             );
                           }).toList(),
                           onChanged: provider.setGender,
@@ -200,14 +205,15 @@ class _SignUpPageContent extends StatelessWidget {
                           vertical: 16,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceLight,
+                          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight, width: 0.5),
                         ),
                         child: Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.calendar_today_outlined,
-                              color: AppColors.textSecondaryLight,
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                               size: 20,
                             ),
                             const SizedBox(width: 12),
@@ -217,8 +223,8 @@ class _SignUpPageContent extends StatelessWidget {
                                   : 'Select Date of Birth',
                               style: TextStyle(
                                 color: provider.dateOfBirth != null
-                                    ? AppColors.textPrimaryLight
-                                    : AppColors.textSecondaryLight,
+                                    ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
+                                    : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                                 fontSize: 14,
                               ),
                             ),

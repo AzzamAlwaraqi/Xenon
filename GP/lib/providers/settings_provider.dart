@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.dark;
@@ -9,18 +10,41 @@ class SettingsProvider extends ChangeNotifier {
   Locale get locale => _locale;
   String get currency => _currency;
 
-  void toggleTheme() {
+  SettingsProvider() {
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isDark = prefs.getBool('isDark') ?? true;
+    _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+    
+    final lang = prefs.getString('languageCode') ?? 'en';
+    _locale = Locale(lang);
+    
+    _currency = prefs.getString('currency') ?? 'USD';
+    
+    notifyListeners();
+  }
+
+  Future<void> toggleTheme() async {
     _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isDark', _themeMode == ThemeMode.dark);
   }
 
-  void setLocale(String languageCode) {
+  Future<void> setLocale(String languageCode) async {
     _locale = Locale(languageCode);
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('languageCode', languageCode);
   }
 
-  void setCurrency(String currency) {
-    _currency = currency;
+  Future<void> setCurrency(String newCurrency) async {
+    _currency = newCurrency;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('currency', newCurrency);
   }
 }

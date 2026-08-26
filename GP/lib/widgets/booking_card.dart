@@ -17,6 +17,7 @@ class BookingCard extends StatelessWidget {
   final bool showMore;
   final VoidCallback? onViewDetails;
   final VoidCallback? onReview;
+  final VoidCallback? onCancel;
 
   const BookingCard({
     super.key,
@@ -34,6 +35,7 @@ class BookingCard extends StatelessWidget {
     this.showMore = false,
     this.onViewDetails,
     this.onReview,
+    this.onCancel,
   });
 
   String get _formattedPrice {
@@ -41,6 +43,15 @@ class BookingCard extends StatelessWidget {
     if (currency == 'JOD') return '${(price * 0.71).toStringAsFixed(0)} JOD';
     if (currency == 'EUR') return '€${(price * 0.92).toStringAsFixed(0)}';
     return '\$${price.toStringAsFixed(0)}';
+  }
+
+  String get _formattedDate {
+    try {
+      final DateTime parsed = DateTime.parse(date);
+      return '${parsed.year}-${parsed.month.toString().padLeft(2, '0')}-${parsed.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return date.length > 10 ? date.substring(0, 10) : date;
+    }
   }
 
   @override
@@ -111,7 +122,7 @@ class BookingCard extends StatelessWidget {
                             Icon(Icons.calendar_today,
                                 color: isDark ? AppColors.textSecondaryLight : Colors.grey[600], size: 12),
                             const SizedBox(width: 4),
-                            Text(date,
+                            Text(_formattedDate,
                                 style: TextStyle(
                                     color: isDark ? AppColors.textSecondaryLight : Colors.grey[600], fontSize: 12)),
                           ],
@@ -181,10 +192,24 @@ class BookingCard extends StatelessWidget {
             ),
           ],
 
-          if (onViewDetails != null || onReview != null) ...[
+          if (onViewDetails != null || onReview != null || onCancel != null) ...[
             const SizedBox(height: 16),
             Row(
               children: [
+                if (onCancel != null)
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onCancel,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                if (onCancel != null && onViewDetails != null) const SizedBox(width: 8),
                 if (onViewDetails != null)
                   Expanded(
                     child: OutlinedButton(
@@ -195,11 +220,11 @@ class BookingCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: const Text('View Details', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text('Details', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
-                if (onViewDetails != null && onReview != null)
-                  const SizedBox(width: 12),
+                if ((onViewDetails != null || onCancel != null) && onReview != null)
+                  const SizedBox(width: 8),
                 if (onReview != null)
                   Expanded(
                     child: ElevatedButton(

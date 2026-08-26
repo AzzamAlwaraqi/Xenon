@@ -13,5 +13,7 @@ router.put("/change-password", protect, validation.changePasswordValidation, pro
 // Note: Accessible by user, vendor, admin
 router.put("/delete", protect, validation.deleteAccountValidation, profileController.deleteProfile);
 //router.get("/my-reviews", protect, profileController.getMyReviews);
+// Note: Accessible by user, vendor, admin
+router.put("/fcm-token", protect, profileController.updateFCMToken);
 
 module.exports = router;

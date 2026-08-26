@@ -13,10 +13,10 @@ const { checkRole } = require("../../../utils/checkvalidete");
 const checkPackageOwnership = (userOrVendor, packageDoc) => {
     if (checkRole(userOrVendor.role, ["admin"])) return true;
     if (checkRole(userOrVendor.role, ["vendor"])) {
-        const vendorId = packageDoc.vendor_id && packageDoc.vendor_id._id 
-            ? packageDoc.vendor_id._id.toString() 
+        const vendorId = packageDoc.vendor_id && packageDoc.vendor_id._id
+            ? packageDoc.vendor_id._id.toString()
             : (packageDoc.vendor_id ? packageDoc.vendor_id.toString() : null);
-            
+
         // Allow if it matches Vendor ID, OR if it matches the Vendor's Owner (User) ID
         if (vendorId !== userOrVendor._id.toString() && vendorId !== userOrVendor.vendor_owner_id?.toString()) {
             console.log("OWNERSHIP FAILED!");
@@ -58,19 +58,19 @@ exports.getAllPackagesCore = async function (queryString) {
         const baseQuery = Package.find(baseFilter).populate({
             path: 'vendor_id',
             select: 'vendor_company vendor_owner_id -_id',
-            populate: { 
-                path: 'vendor_owner_id', 
-                match: { role: 'vendor' }, 
-                select: 'name email mobileNumber role -_id' 
+            populate: {
+                path: 'vendor_owner_id',
+                match: { role: 'vendor' },
+                select: 'name email mobileNumber role -_id'
             }
         });
-        
+
         const features = new APIFeatures(baseQuery, queryString)
             .filter()
             .sort()
             .limitFields()
             .paginate();
-            
+
         const packages = await features.query;
 
         // 4. Calculate pagination metadata
@@ -78,8 +78,8 @@ exports.getAllPackagesCore = async function (queryString) {
         const limit = parseInt(queryString.limit, 10) || 15;
         const totalPages = Math.ceil(totalDocuments / limit);
 
-        return { 
-            count: packages.length, 
+        return {
+            count: packages.length,
             pagination: {
                 currentPage: page,
                 limit: limit,
@@ -90,7 +90,7 @@ exports.getAllPackagesCore = async function (queryString) {
                 nextPage: page < totalPages ? page + 1 : null,
                 prevPage: page > 1 ? page - 1 : null
             },
-            data: packages 
+            data: packages
         };
     } catch (error) {
         if (error.statusCode) throw error;
@@ -104,16 +104,16 @@ exports.getAllPackagesCore = async function (queryString) {
 exports.getPackageCore = async function (packageId, queryString = {}) {
     try {
         let query = Package.findOne({ _id: packageId })
-                           .populate({
-                               path: 'vendor_id',
-                               select: 'vendor_company vendor_owner_id -_id',
-                               populate: { 
-                                   path: 'vendor_owner_id', 
-                                   match: { role: 'vendor' }, 
-                                   select: 'name email mobileNumber role -_id' 
-                               }
-                           })
-                           .populate('details'); // 🌟 السحر هنا: جلب كل التفاصيل من الجدول الآخر
+            .populate({
+                path: 'vendor_id',
+                select: 'vendor_company vendor_owner_id -_id',
+                populate: {
+                    path: 'vendor_owner_id',
+                    match: { role: 'vendor' },
+                    select: 'name email mobileNumber role -_id'
+                }
+            })
+            .populate('details'); // 🌟 السحر هنا: جلب كل التفاصيل من الجدول الآخر
 
         if (queryString.fields) {
             const fields = queryString.fields.split(',').join(' ');
@@ -153,13 +153,13 @@ exports.createPackageCore = async function (user, packageData, file) {
 
         if (!file) throw new AppError("Package image is required", 400);
 
-        const activePackageExists = await Package.findOne({ 
+        const activePackageExists = await Package.findOne({
             package_name: packageData.package_name,
             vendor_id: secureVendorId,
-            package_status: 'active', 
+            package_status: 'active',
             isDeleted: { $ne: true }
         }).session(session);
-        
+
         if (activePackageExists) {
             throw new AppError(`You cannot create this package. You already have an ACTIVE package named "${packageData.package_name}".`, 409);
         }
@@ -176,8 +176,8 @@ exports.createPackageCore = async function (user, packageData, file) {
         const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
         const uploadPath = `xenon/packages/vendor/${safeCompanyName}/${safePackageName}/${safePackageName}_${formattedDate}`;
         const uploadResult = await FileStorageService.uploadImageFromBuffer(optimizedBuffer, uploadPath);
-        
-        uploadedImagePublicId = uploadResult.public_id; 
+
+        uploadedImagePublicId = uploadResult.public_id;
 
         // 🌟 2. إنشاء الباقة الأساسية
         const newPackage = await Package.create([{
@@ -187,7 +187,7 @@ exports.createPackageCore = async function (user, packageData, file) {
             package_description: packageData.package_description,
             startDate: packageData.startDate,
             endDate: packageData.endDate,
-            max_people: packageData.max_people, 
+            max_people: packageData.max_people,
             images: [{
                 url: uploadResult.secure_url,
                 public_id: uploadResult.public_id
@@ -215,7 +215,7 @@ exports.createPackageCore = async function (user, packageData, file) {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        
+
         // 🌟🌟 هندسة الطوارئ (Emergency Cleanup)
         if (uploadedImagePublicId) {
             await FileStorageService.deleteImage(uploadedImagePublicId).catch(e => console.error("Cloud cleanup failed:", e));
@@ -231,7 +231,7 @@ exports.createPackageCore = async function (user, packageData, file) {
 // ==========================================
 exports.updatePackageCore = async function (userOrVendor, packageId, updateData, file) {
     let newUploadedImageId = null;
-    let oldImagesToDelete = []; 
+    let oldImagesToDelete = [];
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -245,14 +245,14 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 
         const packageUpdates = {};
         const detailsUpdates = {};
-        
+
         // 1. Date Logic Validation
         const finalStartDate = updateData.startDate || existingPackage.startDate;
         const finalEndDate = updateData.endDate || existingPackage.endDate;
         if (finalStartDate && finalEndDate && new Date(finalStartDate) >= new Date(finalEndDate)) {
             throw new AppError("The end date cannot be before or equal to the start date", 400);
         }
-        
+
         // 2. فصل البيانات: Package vs PackageDetails
         const packageFields = ['startDate', 'endDate', 'package_name', 'package_price', 'package_description', 'package_type', 'package_status'];
         const detailsFields = ['itinerary', 'included_services', 'excluded_services', 'meeting_point', 'location_coordinates', 'cancellation_policy', 'important_notes'];
@@ -270,7 +270,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
             const newMax = parseInt(updateData.max_people, 10);
             const capacityDifference = newMax - existingPackage.max_people;
             const newAvailableSeats = existingPackage.available_seats + capacityDifference;
-            
+
             if (newAvailableSeats < 0) {
                 throw new AppError(`Cannot reduce max_people to ${newMax}. Existing bookings exceed this limit.`, 400);
             }
@@ -282,7 +282,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
         if (file) {
             const safeCompanyName = (userOrVendor.vendor_company || userOrVendor.company_name || userOrVendor.name || 'Vendor').replace(/[^a-zA-Z0-9]/g, '_');
             const safePackageName = (packageUpdates.package_name || existingPackage.package_name).replace(/[^a-zA-Z0-9]/g, '_');
-            
+
             const optimizedBuffer = await sharp(file.buffer)
                 .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
                 .webp({ quality: 80 })
@@ -299,7 +299,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
                 url: uploadResult.secure_url,
                 public_id: uploadResult.public_id
             }];
-            
+
             if (existingPackage.images && existingPackage.images.length > 0) {
                 oldImagesToDelete = existingPackage.images;
             }
@@ -311,7 +311,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 
         // 🌟 5. تحديث الداتابيز (الجدولين)
         let updatedPackage = existingPackage;
-        
+
         if (Object.keys(packageUpdates).length > 0) {
             updatedPackage = await Package.findByIdAndUpdate(packageId, { $set: packageUpdates }, { new: true, runValidators: true, session });
         }
@@ -319,8 +319,8 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
         if (Object.keys(detailsUpdates).length > 0) {
             // تحديث التفاصيل إن وجدت
             await PackageDetails.findOneAndUpdate(
-                { package_id: packageId }, 
-                { $set: detailsUpdates }, 
+                { package_id: packageId },
+                { $set: detailsUpdates },
                 { new: true, runValidators: true, session }
             );
         }
@@ -330,7 +330,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 
         if (oldImagesToDelete.length > 0) {
             for (const image of oldImagesToDelete) {
-                await FileStorageService.deleteImage(image.public_id).catch(e => console.error("Cloud cleanup failed:", e)); 
+                await FileStorageService.deleteImage(image.public_id).catch(e => console.error("Cloud cleanup failed:", e));
             }
         }
 
@@ -338,7 +338,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        
+
         if (newUploadedImageId) {
             await FileStorageService.deleteImage(newUploadedImageId).catch(e => console.error("Cloud cleanup failed:", e));
         }
@@ -354,7 +354,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 exports.deletePackageCore = async function (userOrVendor, packageId) {
     try {
         const packageDoc = await Package.findById(packageId);
-        
+
         if (!packageDoc) {
             throw new AppError('The package is not found', 404);
         }
@@ -372,7 +372,7 @@ exports.deletePackageCore = async function (userOrVendor, packageId) {
         // إذا كانت inactive بالفعل، يتم الحذف الوهمي (Soft Delete)
         packageDoc.isDeleted = true;
         packageDoc.deletionRequestedAt = new Date();
-        
+
         await packageDoc.save();
         return { message: "Package deleted successfully" };
     } catch (error) {

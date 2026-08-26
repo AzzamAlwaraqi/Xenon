@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/providers/login_provider.dart';
@@ -64,10 +65,12 @@ class _LoginPageContentState extends State<_LoginPageContent> {
     final provider = context.watch<LoginProvider>();
     final size = MediaQuery.of(context).size;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return CompassLoadingOverlay(
       isLoading: provider.isLoading,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
         body: SingleChildScrollView(
           child: Column(
             children: [
@@ -93,8 +96,8 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.white.withValues(alpha: 0.8),
-                              Colors.white,
+                              (isDark ? AppColors.backgroundDark : Colors.white).withValues(alpha: 0.8),
+                              isDark ? AppColors.backgroundDark : Colors.white,
                             ],
                             stops: const [0.5, 0.9, 1.0],
                           ),
@@ -133,9 +136,9 @@ class _LoginPageContentState extends State<_LoginPageContent> {
               // White Card Section
               Container(
                 transform: Matrix4.translationValues(0, -30, 0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.backgroundDark : Colors.white,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(32),
                     topRight: Radius.circular(32),
                   ),
@@ -145,31 +148,31 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 32),
-                    const Text(
+                    Text(
                       'Welcome Back',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppColors.textPrimaryLight,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Sign in to continue your journey.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppColors.textSecondaryLight,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                         fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 32),
 
                     // Email Field
-                    const Text(
+                    Text(
                       'Email or Phone',
                       style: TextStyle(
-                        color: AppColors.textPrimaryLight,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
@@ -182,25 +185,26 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                             controller: _emailOrPhoneController,
                             autofillHints: const [AutofillHints.email],
                             keyboardType: TextInputType.emailAddress,
-                            style: const TextStyle(color: AppColors.textPrimaryLight),
+                            style: TextStyle(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                             decoration: InputDecoration(
                               hintText: 'Enter your email or phone',
+                              hintStyle: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                               prefixIcon: const Icon(
                                 Icons.person_outline,
                                 color: AppColors.primaryRust,
                               ),
                               filled: true,
-                              fillColor: Colors.transparent,
+                              fillColor: isDark ? AppColors.surfaceDark : Colors.transparent,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.borderLight,
+                                borderSide: BorderSide(
+                                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.borderLight,
+                                borderSide: BorderSide(
+                                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
@@ -217,10 +221,10 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Password',
                                 style: TextStyle(
-                                  color: AppColors.textPrimaryLight,
+                                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
                                 ),
@@ -245,9 +249,10 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                             controller: _passwordController,
                             autofillHints: const [AutofillHints.password],
                             obscureText: provider.obscurePassword,
-                            style: const TextStyle(color: AppColors.textPrimaryLight),
+                            style: TextStyle(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                             decoration: InputDecoration(
                               hintText: 'Enter your password',
+                              hintStyle: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                               prefixIcon: const Icon(
                                 Icons.lock_outline,
                                 color: AppColors.primaryRust,
@@ -257,22 +262,22 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                                   provider.obscurePassword
                                       ? Icons.visibility_off_outlined
                                       : Icons.visibility_outlined,
-                                  color: AppColors.textSecondaryLight,
+                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                                 ),
                                 onPressed: provider.togglePasswordVisibility,
                               ),
                               filled: true,
-                              fillColor: Colors.transparent,
+                              fillColor: isDark ? AppColors.surfaceDark : Colors.transparent,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.borderLight,
+                                borderSide: BorderSide(
+                                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.borderLight,
+                                borderSide: BorderSide(
+                                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
@@ -317,9 +322,9 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           "Don't have an account? ",
-                          style: TextStyle(color: AppColors.textSecondaryLight),
+                          style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                         ),
                         GestureDetector(
                           onTap: () => Navigator.pushReplacementNamed(
@@ -339,7 +344,7 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                     const SizedBox(height: 40),
                   ],
                 ),
-              ),
+              ).animate().fade(duration: 600.ms).slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
             ],
           ),
         ),

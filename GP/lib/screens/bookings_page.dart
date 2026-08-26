@@ -93,10 +93,34 @@ class _BookingsPageState extends State<BookingsPage> {
                                     'title': booking.title,
                                     'price': '\$${booking.price}',
                                   },
+                                  isAlreadyBooked: true,
+                                  bookingStatus: booking.status,
                                 ),
                               ),
                             );
                           },
+                          onCancel: (booking.status == 'pending' && isUpcoming) ? () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text(isArabic ? 'إلغاء الحجز' : 'Cancel Booking'),
+                                content: Text(isArabic ? 'هل أنت متأكد أنك تريد إلغاء هذا الحجز؟' : 'Are you sure you want to cancel this booking?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: Text(isArabic ? 'تراجع' : 'No'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: Text(isArabic ? 'نعم' : 'Yes', style: const TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true && context.mounted) {
+                              await bookingProvider.cancelBooking(booking.id, context);
+                            }
+                          } : null,
                           onReview: (booking.status == 'completed' && !isUpcoming) ? () async {
                             final packageId = booking.package?['_id'] ?? '';
                             final vendorId = booking.vendor?['_id'] ?? booking.package?['vendor'] ?? '';

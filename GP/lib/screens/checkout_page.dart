@@ -153,8 +153,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        onPressed: _guests < 10 ? () => setState(() => _guests++) : null,
-                        icon: Icon(Icons.add_circle_outline, color: _guests < 10 ? AppColors.primaryRust : Colors.grey),
+                        onPressed: _guests < 5 ? () => setState(() => _guests++) : null,
+                        icon: Icon(Icons.add_circle_outline, color: _guests < 5 ? AppColors.primaryRust : Colors.grey),
                       ),
                     ],
                   ),
@@ -238,9 +238,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
               child: ElevatedButton(
                 onPressed: () async {
                   final success = await context.read<BookingProvider>().createBooking({
-                    'package': widget.destination['id'] ?? 'dummy_id',
+                    'package_Name': widget.destination['package_name'] ?? widget.destination['title'],
+                    'vendor_id': widget.destination['vendor_id'],
+                    'date': DateTime.now().add(const Duration(days: 1)).toIso8601String(),
                     'guests': _guests,
-                    'price': totalPrice,
                   }, context);
 
                   if (success && context.mounted) {

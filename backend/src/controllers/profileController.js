@@ -75,3 +75,16 @@ exports.getMyReviews = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.updateFCMToken = async (req, res, next) => {
+    try {
+        const { fcm_token } = req.body;
+        await profileCore.updateFCMTokenCore(req.user, fcm_token);
+        res.status(200).json({
+            status: "success",
+            message: "FCM token updated successfully"
+        });
+    } catch (error) {
+        next(error);
+    }
+};

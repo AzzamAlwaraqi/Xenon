@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/providers/settings_provider.dart';
@@ -55,7 +56,7 @@ class ExplorePage extends StatelessWidget {
                     value: '03',
                     color: isDark ? AppColors.cardBgDark : Colors.white,
                     isDark: isDark,
-                  ),
+                  ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.2, end: 0, curve: Curves.easeOut),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -66,7 +67,7 @@ class ExplorePage extends StatelessWidget {
                     color: isDark ? AppColors.cardBgDark : Colors.white,
                     valueColor: AppColors.primaryRust,
                     isDark: isDark,
-                  ),
+                  ).animate().fade(duration: 400.ms, delay: 200.ms).slideY(begin: 0.2, end: 0, curve: Curves.easeOut),
                 ),
               ],
             ),
@@ -150,7 +151,7 @@ class ExplorePage extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
+            ).animate().fade(duration: 500.ms, delay: 300.ms).scale(begin: const Offset(0.95, 0.95), curve: Curves.easeOut),
             const SizedBox(height: 24),
 
             Row(
@@ -188,7 +189,7 @@ class ExplorePage extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
+            ).animate().fade(duration: 400.ms, delay: 400.ms).slideX(begin: 0.1, end: 0, curve: Curves.easeOut),
           ],
         ),
       ),

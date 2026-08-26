@@ -22,5 +22,9 @@ class ProfileService {
   static Future<Map<String, dynamic>> deleteProfile() async {
     return await ApiClient.put('$_baseEndpoint/delete'); // Soft delete or delete? Postman collection said PUT delete profile
   }
+
+  static Future<Map<String, dynamic>> updateFCMToken(String token) async {
+    return await ApiClient.put('$_baseEndpoint/fcm-token', body: {'fcm_token': token});
+  }
 }
 

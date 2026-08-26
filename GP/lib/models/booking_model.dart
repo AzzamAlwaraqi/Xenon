@@ -51,19 +51,21 @@ class BookingModel {
         break;
     }
 
-    final pkg = json['package'] is Map ? json['package'] : null;
+    final pkg = json['package'] is Map 
+        ? json['package'] 
+        : (json['package_id'] is Map ? json['package_id'] : null);
 
     return BookingModel(
       id: json['_id'] ?? json['id'] ?? '',
-      title: pkg?['title'] ?? json['title'] ?? 'Unknown Package',
-      date: json['date'] ?? json['createdAt'] ?? '',
+      title: pkg?['title'] ?? pkg?['package_name'] ?? json['title'] ?? 'Unknown Package',
+      date: json['booking_date'] ?? json['date'] ?? json['createdAt'] ?? '',
       status: json['status'] ?? 'pending',
       statusColor: statusColor,
       icon: icon,
-      price: double.tryParse(pkg?['price']?.toString() ?? json['price']?.toString() ?? '0') ?? 0.0,
+      price: double.tryParse(pkg?['price']?.toString() ?? pkg?['package_price']?.toString() ?? json['total_price']?.toString() ?? json['price']?.toString() ?? '0') ?? 0.0,
       package: pkg,
-      user: json['user'] is Map ? json['user'] : null,
-      vendor: json['vendor'] is Map ? json['vendor'] : null,
+      user: json['user_id'] is Map ? json['user_id'] : (json['user'] is Map ? json['user'] : null),
+      vendor: json['vendor_id'] is Map ? json['vendor_id'] : (json['vendor'] is Map ? json['vendor'] : null),
     );
   }
 }

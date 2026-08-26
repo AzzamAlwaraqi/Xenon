@@ -3,6 +3,7 @@ import '../models/user_model.dart';
 import '../models/profile_model.dart';
 import '../models/auth_model.dart';
 import '../models/api_client.dart';
+import '../utils/secure_storage_helper.dart';
 
 class ProfileProvider with ChangeNotifier {
   UserModel? _profile;
@@ -18,22 +19,23 @@ class ProfileProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadProfile(BuildContext context) async {
-    _setLoading(true);
+  Future<void> loadProfile(BuildContext context, {bool silent = false}) async {
+    if (!silent) _setLoading(true);
     _errorMessage = null;
     try {
       final response = await ProfileService.getProfile();
       if (response['data'] != null) {
         _profile = UserModel.fromJson(response['data']);
+        notifyListeners();
       }
     } on ApiException catch (e) {
       _errorMessage = e.message;
-      if (context.mounted) _showErrorSnackBar(context, e.message);
+      if (context.mounted && !silent) _showErrorSnackBar(context, e.message);
     } catch (e) {
       _errorMessage = 'Failed to load profile';
-      if (context.mounted) _showErrorSnackBar(context, _errorMessage!);
+      if (context.mounted && !silent) _showErrorSnackBar(context, _errorMessage!);
     }
-    _setLoading(false);
+    if (!silent) _setLoading(false);
   }
 
   Future<bool> updateProfile(Map<String, dynamic> data, BuildContext context) async {
@@ -99,6 +101,8 @@ class ProfileProvider with ChangeNotifier {
     } catch (e) {
       // Ignore errors
     }
+    await SecureStorageHelper.clearAll(); // <--- Added this to fix auto-login bug
+    _profile = null;
     _setLoading(false);
     if (context.mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);

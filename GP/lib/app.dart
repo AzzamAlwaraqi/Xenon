@@ -20,6 +20,8 @@ import 'package:gp/providers/complaint_provider.dart';
 import 'package:gp/providers/notification_provider.dart';
 import 'package:gp/providers/payment_provider.dart';
 
+import 'package:gp/screens/splash_page.dart';
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -53,8 +55,9 @@ class MyApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: const [Locale('en'), Locale('ar')],
-            initialRoute: '/login',
+            initialRoute: '/',
             routes: {
+              '/': (context) => const SplashPage(),
               '/login': (context) => const LoginPage(),
               '/signup': (context) => const SignUpPage(),
               '/main': (context) => const MainLayout(),

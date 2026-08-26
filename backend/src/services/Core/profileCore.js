@@ -6,7 +6,7 @@ const UserModel = require("../../Models/UserModel");
 const ReviewModel = require("../../Models/ReviewModel");
 const BookingModel = require("../../Models/BookingModel");
 const NotificationModel = require("../../Models/NotificationModel");
-const SessionModel = require("../../Models/SessionModel"); 
+const SessionModel = require("../../Models/SessionModel");
 const PackageModel = require("../../Models/PackageModel");
 const EmployeeModel = require("../../Models/EmployeeModels");
 const { checkRole } = require("../../utils/checkvalidete");
@@ -193,8 +193,8 @@ exports.deleteAccountCore = async function (user) {
             await UserModel.findByIdAndUpdate(user._id, { isActive: false, updatedAt: new Date() }, { new: true, session });
 
         } else if (checkRole(user.role, ["vendor"])) {
-            const vendor = await VendorModel.findOne({ 
-                $or: [{ _id: user._id }, { vendor_owner_id: user._id }] 
+            const vendor = await VendorModel.findOne({
+                $or: [{ _id: user._id }, { vendor_owner_id: user._id }]
             }).session(session);
 
             if (!vendor) throw new AppError("Only the store owner can request to delete this vendor account", 403);
@@ -209,8 +209,8 @@ exports.deleteAccountCore = async function (user) {
             }
 
             const today = new Date();
-            const activePackages = await PackageModel.countDocuments({ 
-                vendor_id: vendor._id, 
+            const activePackages = await PackageModel.countDocuments({
+                vendor_id: vendor._id,
                 endDate: { $gte: today },
                 package_status: 'active'
             }).session(session);
@@ -304,6 +304,15 @@ exports.getAllNotificationsCore = async function (user) {
         const getAllNotifications = await NotificationModel.find({ user_id: user._id })
             .sort({ createdAt: -1 });
         return getAllNotifications;
+    } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
+    }
+};
+
+exports.updateFCMTokenCore = async function (user, fcm_token) {
+    try {
+        await UserModel.findByIdAndUpdate(user._id, { fcm_token });
     } catch (error) {
         if (error.statusCode) throw error;
         throw new AppError(error.message, 500);
