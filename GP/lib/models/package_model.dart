@@ -65,8 +65,15 @@ class PackageModel {
 class PackageService {
   static const String _baseEndpoint = '/packages';
 
-  static Future<Map<String, dynamic>> getAllPackages({int page = 1, int limit = 10}) async {
-    final response = await ApiClient.get('$_baseEndpoint?page=$page&limit=$limit', requireAuth: false);
+  static Future<Map<String, dynamic>> getAllPackages({int page = 1, int limit = 10, String? search, String? category}) async {
+    String url = '$_baseEndpoint?page=$page&limit=$limit';
+    if (search != null && search.isNotEmpty) {
+      url += '&search=${Uri.encodeComponent(search)}';
+    }
+    if (category != null && category.isNotEmpty) {
+      url += '&package_type=${Uri.encodeComponent(category)}';
+    }
+    final response = await ApiClient.get(url, requireAuth: false);
     
     List<PackageModel> pkgs = [];
     bool hasNext = false;

@@ -8,6 +8,8 @@ class PackageProvider with ChangeNotifier {
   bool _isFetchingMore = false;
   bool _hasNextPage = true;
   int _currentPage = 1;
+  String _searchQuery = '';
+  String _selectedCategory = 'All';
 
   List<PackageModel> get packages => _packages;
   bool get isLoading => _isLoading;
@@ -24,12 +26,29 @@ class PackageProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void setSearchQuery(String query, BuildContext context) {
+    _searchQuery = query;
+    _packages.clear();
+    fetchPackages(context);
+  }
+
+  void setCategory(String category, BuildContext context) {
+    _selectedCategory = category;
+    _packages.clear();
+    fetchPackages(context);
+  }
+
   Future<void> fetchPackages(BuildContext context) async {
     _currentPage = 1;
     _hasNextPage = true;
     _setLoading(true);
     try {
-      final result = await PackageService.getAllPackages(page: _currentPage, limit: 10);
+      final result = await PackageService.getAllPackages(
+        page: _currentPage, 
+        limit: 10, 
+        search: _searchQuery,
+        category: _selectedCategory == 'All' ? null : _selectedCategory,
+      );
       _packages = result['packages'] as List<PackageModel>;
       _hasNextPage = result['hasNextPage'] as bool;
     } on ApiException catch (e) {
@@ -46,7 +65,12 @@ class PackageProvider with ChangeNotifier {
     _setFetchingMore(true);
     try {
       _currentPage++;
-      final result = await PackageService.getAllPackages(page: _currentPage, limit: 10);
+      final result = await PackageService.getAllPackages(
+        page: _currentPage, 
+        limit: 10, 
+        search: _searchQuery,
+        category: _selectedCategory == 'All' ? null : _selectedCategory,
+      );
       final newPackages = result['packages'] as List<PackageModel>;
       _packages.addAll(newPackages);
       _hasNextPage = result['hasNextPage'] as bool;

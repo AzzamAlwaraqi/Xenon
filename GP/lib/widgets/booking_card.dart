@@ -151,10 +151,13 @@ class BookingCard extends StatelessWidget {
             Row(
               children: [
                 if (bookingId != null)
-                  Text(
-                    'Booking ID: $bookingId',
-                    style: TextStyle(
-                        color: isDark ? AppColors.textSecondaryLight : Colors.grey[600], fontSize: 12),
+                  Expanded(
+                    child: Text(
+                      'Booking ID: $bookingId',
+                      style: TextStyle(
+                          color: isDark ? AppColors.textSecondaryLight : Colors.grey[600], fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   )
                 else if (showCheckIn)
                   const Row(

@@ -57,7 +57,7 @@ exports.getAllPackagesCore = async function (queryString) {
         // 3. Apply features (filter, sort, select, paginate)
         const baseQuery = Package.find(baseFilter).populate({
             path: 'vendor_id',
-            select: 'vendor_company vendor_owner_id -_id',
+            select: 'vendor_company vendor_owner_id',
             populate: {
                 path: 'vendor_owner_id',
                 match: { role: 'vendor' },
@@ -106,7 +106,7 @@ exports.getPackageCore = async function (packageId, queryString = {}) {
         let query = Package.findOne({ _id: packageId })
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company vendor_owner_id -_id',
+                select: 'vendor_company vendor_owner_id',
                 populate: {
                     path: 'vendor_owner_id',
                     match: { role: 'vendor' },
