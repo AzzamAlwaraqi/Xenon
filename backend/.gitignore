@@ -4,3 +4,6 @@ node_modules
 test_packages.js
 Xenon_Postman_Collection.json
 Xenon V1.postman_collection.json
+component-diagram.mmd
+diagram.md
+xenon-architecture-diagram.png
