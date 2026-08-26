@@ -1,28 +1,32 @@
-import 'dart:convert';
+import 'api_client.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'api_config.dart';
 
-class Booking {
+class BookingModel {
+  final String id;
   final String title;
   final String date;
   final String status;
   final Color statusColor;
   final IconData icon;
   final double price;
-  final String? bookingId;
+  final Map<String, dynamic>? package;
+  final Map<String, dynamic>? user;
+  final Map<String, dynamic>? vendor;
 
-  const Booking({
+  const BookingModel({
+    required this.id,
     required this.title,
     required this.date,
     required this.status,
     required this.statusColor,
     required this.icon,
     required this.price,
-    this.bookingId,
+    this.package,
+    this.user,
+    this.vendor,
   });
 
-  factory Booking.fromJson(Map<String, dynamic> json) {
+  factory BookingModel.fromJson(Map<String, dynamic> json) {
     final statusString = json['status']?.toString().toLowerCase() ?? 'pending';
     
     Color statusColor;
@@ -31,10 +35,12 @@ class Booking {
     switch (statusString) {
       case 'confirmed':
       case 'completed':
+      case 'accepted':
         statusColor = Colors.green;
         icon = Icons.check_circle;
         break;
       case 'cancelled':
+      case 'rejected':
         statusColor = Colors.red;
         icon = Icons.cancel;
         break;
@@ -45,35 +51,74 @@ class Booking {
         break;
     }
 
-    return Booking(
-      bookingId: json['id']?.toString() ?? json['bookingId']?.toString(),
-      title: json['title'] ?? 'Unknown Booking',
-      date: json['date'] ?? '',
-      status: json['status'] ?? 'Pending',
+    final pkg = json['package'] is Map ? json['package'] : null;
+
+    return BookingModel(
+      id: json['_id'] ?? json['id'] ?? '',
+      title: pkg?['title'] ?? json['title'] ?? 'Unknown Package',
+      date: json['date'] ?? json['createdAt'] ?? '',
+      status: json['status'] ?? 'pending',
       statusColor: statusColor,
       icon: icon,
-      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      price: double.tryParse(pkg?['price']?.toString() ?? json['price']?.toString() ?? '0') ?? 0.0,
+      package: pkg,
+      user: json['user'] is Map ? json['user'] : null,
+      vendor: json['vendor'] is Map ? json['vendor'] : null,
     );
   }
+}
 
-  static Future<List<Booking>> getBookings() async {
-    try {
-      final response = await http
-          .get(
-            Uri.parse('${ApiConfig.baseUrl}/bookings'), // مسار API الخاص بالحجوزات (تأكد منه)
-            headers: ApiConfig.headers,
-          )
-          .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        // تأكد من شكل استجابة الـ API. إذا كانت البيانات داخل 'data' استخدم: jsonDecode(response.body)['data']
-        final List<dynamic> data = jsonDecode(response.body); 
-        return data.map((json) => Booking.fromJson(json)).toList();
-      } else {
-        throw Exception('Failed to load bookings: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Network error: $e');
+class BookingService {
+  static const String _baseEndpoint = '/bookings';
+
+  static Future<List<BookingModel>> getAllBookings() async {
+    final response = await ApiClient.get('$_baseEndpoint/all-bookings');
+    if (response['data'] != null && response['data'] is List) {
+      return (response['data'] as List).map((e) => BookingModel.fromJson(e)).toList();
     }
+    return [];
+  }
+
+  static Future<List<BookingModel>> getMyBookings() async {
+    final response = await ApiClient.get('$_baseEndpoint/my-bookings');
+    if (response['data'] != null && response['data'] is List) {
+      return (response['data'] as List).map((e) => BookingModel.fromJson(e)).toList();
+    }
+    return [];
+  }
+
+  static Future<List<BookingModel>> getMyHistory() async {
+    final response = await ApiClient.get('$_baseEndpoint/my-history');
+    if (response['data'] != null && response['data'] is List) {
+      return (response['data'] as List).map((e) => BookingModel.fromJson(e)).toList();
+    }
+    return [];
+  }
+
+  static Future<BookingModel?> getBookingById(String id) async {
+    final response = await ApiClient.get('$_baseEndpoint/get-booking/$id');
+    if (response['data'] != null) {
+      return BookingModel.fromJson(response['data']);
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>> createBooking(Map<String, dynamic> data) async {
+    return await ApiClient.post('$_baseEndpoint/create-booking', body: data);
+  }
+
+  static Future<Map<String, dynamic>> updateBooking(String id, Map<String, dynamic> data) async {
+    return await ApiClient.put('$_baseEndpoint/update-booking/$id', body: data);
+  }
+
+  static Future<Map<String, dynamic>> deleteBooking(String id) async {
+    return await ApiClient.put('$_baseEndpoint/delete-booking/$id');
+  }
+
+  static Future<List<dynamic>> getUserPendingRequests() async {
+    final response = await ApiClient.get('$_baseEndpoint/user/pending-requests');
+    return response['data'] ?? [];
   }
 }
+

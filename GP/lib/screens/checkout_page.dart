@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/providers/settings_provider.dart';
-import 'package:gp/models/booking_model.dart';
 import 'package:gp/providers/booking_provider.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -237,26 +236,23 @@ class _CheckoutPageState extends State<CheckoutPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  final newBooking = Booking(
-                    title: title,
-                    date: 'Upcoming Trip ($_guests guests)',
-                    status: 'CONFIRMED',
-                    statusColor: const Color(0xFF4ADE80),
-                    icon: Icons.airplanemode_active,
-                    price: totalPrice,
-                    bookingId: '#BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(9)}',
-                  );
-                  context.read<BookingProvider>().addBooking(newBooking);
+                onPressed: () async {
+                  final success = await context.read<BookingProvider>().createBooking({
+                    'package': widget.destination['id'] ?? 'dummy_id',
+                    'guests': _guests,
+                    'price': totalPrice,
+                  }, context);
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(isArabic ? 'تم الحجز بنجاح!' : 'Booking confirmed!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  Navigator.pop(context); // Go back to details
-                  Navigator.pop(context); // Go back to home/explore
+                  if (success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isArabic ? 'تم الحجز بنجاح!' : 'Booking confirmed!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    Navigator.pop(context); // Go back to details
+                    Navigator.pop(context); // Go back to home/explore
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentBlue,

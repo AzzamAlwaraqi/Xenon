@@ -19,9 +19,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    final profile = context.read<ProfileProvider>().userData;
-    _nameController = TextEditingController(text: profile?['name'] ?? '');
-    _phoneController = TextEditingController(text: profile?['mobileNumber'] ?? '');
+    final profile = context.read<ProfileProvider>().profile;
+    _nameController = TextEditingController(text: profile?.name ?? '');
+    _phoneController = TextEditingController(text: profile?.phone ?? '');
   }
 
   @override
@@ -72,22 +72,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () async {
-                  final error = await provider.updateProfile(
-                    _nameController.text.trim(),
-                    _phoneController.text.trim(),
+                  final success = await provider.updateProfile(
+                    {
+                      'name': _nameController.text.trim(),
+                      'mobileNumber': _phoneController.text.trim(),
+                    },
+                    context,
                   );
-                  if (error == null) {
+                  if (success) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Profile updated successfully!')),
-                      );
                       Navigator.pop(context);
-                    }
-                  } else {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(error)),
-                      );
                     }
                   }
                 },

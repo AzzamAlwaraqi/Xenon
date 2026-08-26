@@ -89,22 +89,14 @@ class _ChangePasswordPageContentState extends State<_ChangePasswordPageContent> 
                     );
                     return;
                   }
-                  final error = await provider.changePassword(
+                  final success = await provider.changePassword(
                     _currentPasswordController.text,
                     _newPasswordController.text,
+                    context,
                   );
-                  if (error == null) {
+                  if (success) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Password changed successfully!')),
-                      );
                       Navigator.pop(context);
-                    }
-                  } else {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(error)),
-                      );
                     }
                   }
                 },

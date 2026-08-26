@@ -109,6 +109,7 @@ class _OtpPageContent extends StatelessWidget {
                         filled: true,
                         fillColor: isDark ? AppColors.surfaceDark : Colors.white,
                         counterText: '',
+                        contentPadding: EdgeInsets.zero,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),

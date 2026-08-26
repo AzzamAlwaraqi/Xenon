@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gp/models/auth_model.dart';
+import 'package:gp/models/api_client.dart';
 import 'package:gp/utils/toast_utils.dart';
+import 'package:gp/utils/secure_storage_helper.dart';
 import 'dart:async';
 
 class OtpProvider extends ChangeNotifier {
@@ -57,7 +59,31 @@ class OtpProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final success = await AuthService.verifyOtp(email, code);
+    bool success = false;
+    String errorMessage = 'Invalid OTP. Please try again.';
+    try {
+      final response = await AuthService.verifyOtp(email, code);
+      final data = response['data'] ?? {};
+      final token = data['token'] ?? data['accessToken'];
+      if (token != null) {
+        await SecureStorageHelper.saveToken(token);
+      }
+      
+      final userData = response['data']?['user'];
+      if (userData != null) {
+        await SecureStorageHelper.saveUserData(
+          userData['_id']?.toString() ?? '',
+          userData['role']?.toString() ?? '',
+        );
+      }
+      success = true;
+    } on ApiException catch (e) {
+      success = false;
+      errorMessage = e.message;
+    } catch (e) {
+      success = false;
+      errorMessage = e.toString();
+    }
 
     _isLoading = false;
     notifyListeners();
@@ -66,7 +92,7 @@ class OtpProvider extends ChangeNotifier {
       if (success) {
         Navigator.pushReplacementNamed(context, '/main');
       } else {
-        showTopToast(context, 'Invalid OTP. Please try again.', isError: true);
+        showTopToast(context, errorMessage, isError: true);
       }
     }
   }
@@ -77,8 +103,13 @@ class OtpProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    // Re-trigger signup API or a specific resend API if it exists.
-    final success = await AuthService.sendOtp(email);
+    bool success = false;
+    try {
+      await AuthService.sendOtp(email);
+      success = true;
+    } catch (e) {
+      success = false;
+    }
 
     _isLoading = false;
 

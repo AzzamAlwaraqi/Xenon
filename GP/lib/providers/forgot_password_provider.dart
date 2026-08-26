@@ -66,13 +66,16 @@ class ForgotPasswordProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final success = await AuthService.forgotPassword(email.trim());
+    bool success = false;
+    try {
+      await AuthService.forgotPassword(email.trim());
+      success = true;
+      _otpSent = true;
+    } catch (e) {
+      success = false;
+    }
 
     _isLoading = false;
-    
-    if (success) {
-      _otpSent = true;
-    }
     notifyListeners();
     
     return success;
@@ -94,11 +97,17 @@ class ForgotPasswordProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final success = await AuthService.resetPassword(
-      email.trim(),
-      newPassword,
-      otp.trim(),
-    );
+    bool success = false;
+    try {
+      await AuthService.resetPassword(
+        email.trim(),
+        newPassword,
+        otp.trim(),
+      );
+      success = true;
+    } catch (e) {
+      success = false;
+    }
 
     _isLoading = false;
     notifyListeners();

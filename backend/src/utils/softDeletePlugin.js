@@ -13,14 +13,13 @@ module.exports = function softDeletePlugin(schema) {
     });
 
     // 2. Pre-hook for query operations
-    const excludeDeleted = function(next) {
+    const excludeDeleted = function () {
         const query = this.getQuery();
-        
+
         // If the query doesn't explicitly filter by isDeleted, default to finding only non-deleted documents
         if (query && query.isDeleted === undefined) {
             this.where({ isDeleted: { $ne: true } });
         }
-        next();
     };
 
     // Apply to standard Mongoose queries
@@ -31,7 +30,7 @@ module.exports = function softDeletePlugin(schema) {
     schema.pre('updateMany', excludeDeleted);
 
     // 3. Pre-hook for aggregations
-    schema.pre('aggregate', function(next) {
+    schema.pre('aggregate', function () {
         const pipeline = this.pipeline();
         // If the first stage isn't a $match on isDeleted, inject it
         if (pipeline.length > 0) {
@@ -44,6 +43,5 @@ module.exports = function softDeletePlugin(schema) {
         } else {
             pipeline.unshift({ $match: { isDeleted: { $ne: true } } });
         }
-        next();
     });
 };
