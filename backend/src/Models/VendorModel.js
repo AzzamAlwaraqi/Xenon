@@ -11,7 +11,10 @@ const VendorSchema = new mongoose.Schema({
     vendor_company:{
         type:String,
         unique:true,
-        required:true
+        required:true,
+        trim: true,
+        minlength: [2, "Company name is too short"],
+        maxlength: [150, "Company name is too long"]
     },
     vendor_address: {
         type: String,
@@ -27,7 +30,9 @@ const VendorSchema = new mongoose.Schema({
     },
     vendor_pincode: {
         type: String,
-        required: true
+        required: true,
+        trim: true,
+        match: [/^[0-9]+$/, "Pincode must contain only numbers"]
     },
     vendor_country: {
         type: String,
