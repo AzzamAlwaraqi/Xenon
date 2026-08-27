@@ -25,13 +25,14 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         purpose: "registration"
     });
 
+    const actualRole = "user"; // Force all new registrations to be 'user'
+
     const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || Body.device_type || "Desktop";
     const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
     const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
 
      if (checkRole(role, ["user"]) && !isMobile) {
         throw new AppError("Access Denied: Clients can only register via the Xenon Mobile App.", 403);
-
      }
     if (checkRole(role, ["vendor"]) && isMobile) {
         throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
@@ -42,13 +43,6 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
 
     const existingUserByMobile = await UserModel.findOne({ mobileNumber: mobileNumber });
     if (existingUserByMobile) throw new AppError("Account with this mobile number already exists", 409);
-
-    if (checkRole(role, ["vendor"])) {
-
-        const companyNameToCheck = Body.company_name || Body.name;
-        const existingCompany = await VendorModel.findOne({ vendor_company: { $regex: new RegExp(`^${companyNameToCheck}$`, 'i') } });
-        if (existingCompany) throw new AppError("A vendor with this company name already exists. Please choose a different name.", 409);
-    }
 
     if (Body.DateOfBirth) {
         const dob = new Date(Body.DateOfBirth);
@@ -74,32 +68,11 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         name: Body.name,
         email: cleanEmail,
         password: Body.password,
-        role: role,
+        role: actualRole,
         mobileNumber: mobileNumber,
         gender: Body.gender,
         DateOfBirth: Body.DateOfBirth ? (checkRole(role, ["vendor"]) ? setStandardDate(Body.DateOfBirth) : Body.DateOfBirth) : undefined
     });
-
-    let newVendor = null;
-    if (checkRole(role, ["vendor"])) {
-        const createdVendor = await VendorModel.create({
-            vendor_company: Body.company_name || Body.name,
-            vendor_address: Body.address,
-            vendor_city: Body.city,
-            vendor_state: Body.state,
-            vendor_pincode: Body.pincode,
-            vendor_country: Body.country,
-            vendor_type: Body.vendor_type,
-            vendor_owner_id: newUser._id,
-            vendor_user_id: newUser._id
-        });
-
-        newVendor = await VendorModel.populate(createdVendor, [
-            { path: "vendor_owner_id", select: "name" },
-            { path: "vendor_user_id", select: "name" },
-            { path: "_id", select: "company_name" }
-        ]);
-    }
 
     const tokens = generateAuthTokens(newUser._id, role, deviceInfo.familyId || deviceInfo.family_id);
     const hashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
@@ -137,9 +110,7 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
             throw new AppError("You are not authorized to login to this portal", 403);
         }
 
-        if (checkRole(user.role, ["user"]) && !isMobile) {
-            throw new AppError("Access Denied: Clients can only login via the Xenon Mobile App.", 403);
-        }
+        // Allow users to login on Web (they might be accessing the vendor onboarding form)
         if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
             throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
         }

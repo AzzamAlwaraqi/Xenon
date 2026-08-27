@@ -8,14 +8,6 @@ const VendorSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
     },
-    vendor_company:{
-        type:String,
-        unique:true,
-        required:true,
-        trim: true,
-        minlength: [2, "Company name is too short"],
-        maxlength: [150, "Company name is too long"]
-    },
     vendor_address: {
         type: String,
         required: true
@@ -30,9 +22,7 @@ const VendorSchema = new mongoose.Schema({
     },
     vendor_pincode: {
         type: String,
-        required: true,
-        trim: true,
-        match: [/^[0-9]+$/, "Pincode must contain only numbers"]
+        required: true
     },
     vendor_country: {
         type: String,
@@ -41,8 +31,8 @@ const VendorSchema = new mongoose.Schema({
     vendor_status: {
         type: String,
         required: true,
-        enum: ["active", "inactive", "pending_deletion"],
-        default: "active"
+        enum: ["active", "inactive", "pending_deletion", "pending_approval", "rejected"],
+        default: "pending_approval"
     },
     vendor_type: {
         type: String,
@@ -63,8 +53,7 @@ const VendorSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true, 
-    versionKey: false, 
-    strict: 'throw',
+    strict: false,
     toJSON: { getters: true, virtuals: true }, 
     toObject: { getters: true, virtuals: true }
 });

@@ -47,8 +47,6 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
     if (checkRole(creatorRole, ['user'])) {
         finalUserId = creatorId;
     } else if (checkRole(creatorRole, ['vendor'])) {
-        if (!bookingData.user_id) throw new AppError('You must specify the client (user_id) when creating a booking as a vendor/admin', 400);
-        finalUserId = bookingData.user_id;
         bookedByEmployee = creatorId; 
         bookingSource = checkRole(creatorRole, ['vendor']) ? 'VendorDashboard' : 'AdminPanel';
     } else {
@@ -59,6 +57,33 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
     session.startTransaction();
 
     try {
+        if (checkRole(creatorRole, ['vendor'])) {
+            if (bookingData.user_id) {
+                finalUserId = bookingData.user_id;
+            } else if (bookingData.customer_phone && bookingData.customer_name) {
+                const UserModel = require("../../Models/UserModel");
+                let existingUser = await UserModel.findOne({ mobileNumber: bookingData.customer_phone }).session(session);
+                if (existingUser) {
+                    finalUserId = existingUser._id;
+                } else {
+                    const crypto = require('crypto');
+                    const randomPassword = crypto.randomBytes(8).toString('hex');
+                    const newUser = new UserModel({
+                        name: bookingData.customer_name,
+                        mobileNumber: bookingData.customer_phone,
+                        role: 'user',
+                        password: randomPassword,
+                        passwordConfirm: randomPassword,
+                        isVerified: false
+                    });
+                    await newUser.save({ session });
+                    finalUserId = newUser._id;
+                }
+            } else {
+                throw new AppError('You must specify the client (user_id) OR provide customer_phone and customer_name for walk-in customers', 400);
+            }
+        }
+
         const vendor = await VendorModel.findById(bookingData.vendor_id).session(session);
         if (!vendor) throw new AppError(`Vendor not found with ID: ${bookingData.vendor_id}`, 404);
 
@@ -106,6 +131,9 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
         };
 
         const newBooking = await BookingModel.create([finalBookingPayload], { session });
+
+        packageDoc.available_seats -= requestedSeats;
+        await packageDoc.save({ session });
 
         await session.commitTransaction();
         session.endSession();
@@ -159,6 +187,24 @@ exports.updateBookingCore = async function (userOrVendor, bookingId, updateData)
             allowedUpdates.package_id = targetPackage._id;
             allowedUpdates.number_of_people = targetSeats;
             allowedUpdates.total_price = targetPackage.package_price * targetSeats;
+
+            // Handle seat adjustment logic
+            if (updateData.package_id && updateData.package_id !== booking.package_id.toString()) {
+                // Restore seats to old package
+                const oldPackage = await PackageModel.findById(booking.package_id).session(session);
+                if (oldPackage) {
+                    oldPackage.available_seats += booking.number_of_people;
+                    await oldPackage.save({ session });
+                }
+                // Deduct seats from new package
+                targetPackage.available_seats -= targetSeats;
+                await targetPackage.save({ session });
+            } else if (updateData.number_of_people) {
+                // Same package, adjust seats based on difference
+                const seatDifference = targetSeats - booking.number_of_people;
+                targetPackage.available_seats -= seatDifference;
+                await targetPackage.save({ session });
+            }
         }
 
         if (Object.keys(allowedUpdates).length === 0) {
@@ -201,7 +247,21 @@ exports.deleteBookingCore = async function (userOrVendor, bookingId) {
             throw new AppError("This booking is already cancelled.", 400);
         }
 
-        const shouldRestoreSeats = ['accepted', 'completed'].includes(booking.status);
+        const packageDoc = await PackageModel.findById(booking.package_id).session(session);
+        if (!packageDoc) throw new AppError("Package not found", 404);
+
+        const shouldRestoreSeats = ['accepted', 'completed', 'pending_payment', 'pending'].includes(booking.status);
+
+        let refundNote = "Cancelled successfully";
+        if (['pending', 'accepted'].includes(booking.status)) {
+            const timeDiff = new Date(packageDoc.startDate).getTime() - Date.now();
+            const daysBeforeTrip = timeDiff / (1000 * 3600 * 24);
+            if (daysBeforeTrip >= 7) {
+                refundNote = "Cancelled - 50% refund applied (cancelled 7 or more days before trip)";
+            } else {
+                refundNote = "Cancelled - 0% refund (cancelled less than 7 days before trip)";
+            }
+        }
 
         booking.status = "cancelled";
         booking.cancelled_by = userOrVendor._id;
@@ -209,7 +269,8 @@ exports.deleteBookingCore = async function (userOrVendor, bookingId) {
         booking.status_history.push({
             status: "cancelled",
             changed_by: userOrVendor._id,
-            changed_at: Date.now()
+            changed_at: Date.now(),
+            note: refundNote
         });
         
         await booking.save({ session });
@@ -419,7 +480,15 @@ exports.acceptBookingCore = async function (vendorOrAdmin, bookingId) {
         checkVendorAdminAuth(vendorOrAdmin, booking);
 
         if (booking.status === 'accepted') throw new AppError("Booking is already accepted.", 400);
+/**
+ *  const packageDoc = await PackageModel.findById(booking.package_id).session(session);
+        if (packageDoc.available_seats < booking.number_of_people) {
+            throw new AppError("Cannot accept! Seats have been taken by others.", 400);
+        }
 
+        packageDoc.available_seats -= booking.number_of_people;
+        await packageDoc.save({ session });
+ */
         // 🌟 هنا يتم خصم المقاعد لأول مرة عند التأكيد
         const packageDoc = await PackageModel.findById(booking.package_id).session(session);
         if (packageDoc.available_seats < booking.number_of_people) {
@@ -463,7 +532,7 @@ exports.rejectBookingCore = async function (vendorOrAdmin, bookingId) {
             throw new AppError("Booking is already rejected or cancelled.", 400);
         }
 
-        const shouldRestoreSeats = ['accepted', 'completed'].includes(booking.status);
+        const shouldRestoreSeats = ['accepted', 'completed', 'pending_payment', 'pending'].includes(booking.status);
 
         booking.status = 'rejected';
         booking.status_history.push({

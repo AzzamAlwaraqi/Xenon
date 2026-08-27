@@ -2,19 +2,16 @@ const mongoose = require("mongoose");
 const Vendor = require("../../../Models/VendorModel");
 const User = require("../../../Models/UserModel");
 const AppError = require("../../../utils/AppError");
-const APIFeatures = require("../../../utils/apiFeatures"); // تأكد من حالة الأحرف
+const APIFeatures = require("../../../utils/apiFeatures"); 
 const { checkRole, checkVendorStatus: checkvendorStatus } = require("../../../utils/checkvalidete");
 
-// ==========================================
-// 1. Get All Vendors (Admin Only)
-// ==========================================
 exports.getAllVendorsCore = async function (queryString, user) {
     try {
-        // 🌟 الإصلاح: استخدام user.role
+
         if (!checkRole(user.role, ["admin"])) throw new AppError("Unauthorized", 403); 
 
         const features = new APIFeatures(
-            Vendor.find().populate('user_id', 'name email mobileNumber -_id'), // 🌟 إخفاء _id
+            Vendor.find().populate('vendor_owner_id', 'name email mobileNumber -_id'), 
             queryString
         )
             .filter()
@@ -35,11 +32,8 @@ exports.getAllVendorsCore = async function (queryString, user) {
     }
 };
 
-// ==========================================
-// 2. Update Approval Status
-// ==========================================
 exports.updateApprovalStatusCore = async function (vendorId, status, rejectionReason = null, user) {
-    // 🌟 الإصلاح: استخدام user.role
+
     if (!checkRole(user.role, ["admin"])) throw new AppError("Unauthorized", 403); 
     
     const session = await mongoose.startSession();
@@ -51,22 +45,23 @@ exports.updateApprovalStatusCore = async function (vendorId, status, rejectionRe
             throw new AppError("No vendor found with that ID", 404);
         }
         
-        const isApprovingDeletion = (vendor.approval_status === 'pending_deletion' && status === 'approved');
+        const dbStatus = status === 'approved' ? 'active' : status;
 
-        if (vendor.approval_status === status && !isApprovingDeletion) {
-            throw new AppError(`Vendor is already ${status}`, 400);
+        const isApprovingDeletion = (vendor.vendor_status === 'pending_deletion' && dbStatus === 'active');
+
+        if (vendor.vendor_status === dbStatus && !isApprovingDeletion) {
+            throw new AppError(`Vendor is already ${dbStatus}`, 400);
         }
         
         if (isApprovingDeletion) {
-            vendor.approval_status = 'deleted';
             vendor.vendor_status = 'inactive';
         } else {
-            vendor.approval_status = status;
+            vendor.vendor_status = dbStatus;
         }
 
         vendor.action_by_admin = user._id;
 
-        if (checkvendorStatus(status, ['rejected']) && rejectionReason) {
+        if (checkvendorStatus(dbStatus, ['rejected']) && rejectionReason) {
             vendor.rejection_reason = rejectionReason;
         } else {
             vendor.rejection_reason = undefined;
@@ -74,16 +69,13 @@ exports.updateApprovalStatusCore = async function (vendorId, status, rejectionRe
         
         await vendor.save({ session });
 
-        // 🌟 الإصلاح: تغيير الرتبة إلى 'user' بدلاً من 'client' لضمان توافق الداتابيز
-        // (استخدمنا vendor.vendor_user_id لأنه الحقل المرجعي لليوزر حسب مشروعنا)
-        const targetUserId = vendor.vendor_owner_id || vendor.vendor_user_id || vendor.user_id;
+        const targetUserId = vendor.vendor_owner_id || vendor.vendor_user_id;
 
-        if (status === 'approved' && !isApprovingDeletion) {
+        if (dbStatus === 'active' && !isApprovingDeletion) {
             await User.findByIdAndUpdate(targetUserId, { role: 'vendor' }, { session });
-        } else if (checkvendorStatus(status, ['rejected', 'suspended', 'downgraded']) || isApprovingDeletion) {
+        } else if (checkvendorStatus(dbStatus, ['rejected', 'inactive']) || isApprovingDeletion) {
             await User.findByIdAndUpdate(targetUserId, { role: 'user' }, { session });
             
-            // تسجيل خروج اليوزر ومنعه من الدخول للويب 
             const SessionModel = require("../../../Models/SessionModel");
             await SessionModel.updateMany(
                 { user_id: targetUserId, is_active: true },
@@ -104,15 +96,12 @@ exports.updateApprovalStatusCore = async function (vendorId, status, rejectionRe
     }
 };
 
-// ==========================================
-// 3. Get Vendor Details
-// ==========================================
 exports.getVendorDetailsCore = async function (vendorId, user) {
     try {
         if (!checkRole(user.role, ["admin"])) throw new AppError("Unauthorized", 403); 
         
         const vendor = await Vendor.findById(vendorId)
-            .populate('user_id', 'name email mobileNumber -_id'); // 🌟 تنظيف الـ Response
+            .populate('vendor_owner_id', 'name email mobileNumber -_id'); 
             
         if (!vendor) {
             throw new AppError("Vendor not found", 404);
@@ -125,17 +114,13 @@ exports.getVendorDetailsCore = async function (vendorId, user) {
     }
 };
 
-// ==========================================
-// 4. Submit Downgrade Request (Internal Core)
-// ==========================================
-// 🌟 هذه هي الدالة التي طلبناها في ملف الـ Profile لحذف الفيندور والعودة كمستخدم
 exports.submitDowngradeRequestCore = async function (data, session) {
-    // تحديث حالة الموافقة لتصبح "قيد الإغلاق" لتظهر للآدمن في لوحة التحكم (Dashboard)
+
     await Vendor.findByIdAndUpdate(
         data.vendor_id, 
         { 
             approval_status: 'pending_deletion',
-            rejection_reason: data.reason // استغلال حقل السبب لتوضيح نية الفيندور
+            rejection_reason: data.reason 
         }, 
         { session }
     );

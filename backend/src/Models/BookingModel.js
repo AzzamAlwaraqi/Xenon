@@ -57,7 +57,7 @@ const BookingSchema = new mongoose.Schema({
     payment_deadline: {
         type: Date,
         default: function() {
-            return new Date(Date.now() + 48 * 60 * 60 * 1000);
+            return new Date(Date.now() + 1 * 60 * 60 * 1000); // المهلة أصبحت ساعة واحدة
         }
     },
     total_price: {

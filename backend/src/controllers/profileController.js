@@ -88,3 +88,17 @@ exports.updateFCMToken = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.requestVendorOnboarding = async (req, res, next) => {
+    try {
+        const result = await profileCore.requestVendorOnboardingCore(req.user, req.body, req.files);
+        
+        res.status(201).json({
+            status: "success",
+            message: "Vendor application submitted successfully",
+            data: result.data
+        });
+    } catch (error) {
+        next(error);
+    }
+};

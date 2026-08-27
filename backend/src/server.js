@@ -7,6 +7,7 @@ dotenv.config({ path: path.join(__dirname, 'config.env') });
 const app = require("./app");
 const connectDB = require("./config/dbConfig");
 const { verifyConnection: verifySmtp } = require("./services/Integration/emailService");
+const data = require("./cron/bookingCron"); // 🕒 Start cron jobs
 
 const PORT = process.env.PORT || 3000;
 
