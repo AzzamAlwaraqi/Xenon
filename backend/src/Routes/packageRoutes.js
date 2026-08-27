@@ -3,6 +3,7 @@ const multer = require("multer");
 const { protect } = require("../middlewares/authMiddleware");
 const packageValidation = require("../validations/packageValidation");
 const {  getAllPackages, getPackage, createPackage, updatePackage, deletePackage } = require("../controllers/Vendor/packageController");
+const { cacheMiddleware } = require("../middlewares/cacheMiddleware");
 
 const router = express.Router();
 
@@ -16,9 +17,9 @@ const upload = multer({
 });
 
 // Note: Public
-router.get("/", getAllPackages);
+router.get("/", cacheMiddleware(300), getAllPackages);
 // Note: Public
-router.get("/package/:id", packageValidation.packageIdParamValidation, getPackage);
+router.get("/package/:id", cacheMiddleware(300), packageValidation.packageIdParamValidation, getPackage);
 // Note: Accessible by vendor, admin
 router.post("/create-package", protect, upload.single("package_image"), packageValidation.validateCreatePackage, createPackage);
 // Note: Accessible by vendor, admin
