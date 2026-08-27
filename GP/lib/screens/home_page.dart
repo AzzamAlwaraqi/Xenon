@@ -11,6 +11,7 @@ import 'package:gp/widgets/app_nav_bar.dart';
 import 'package:gp/providers/profile_provider.dart';
 import 'package:gp/providers/package_provider.dart';
 import 'package:gp/widgets/package_card.dart';
+import 'package:gp/utils/translation_helper.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -44,7 +45,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       context.read<PackageProvider>().loadMorePackages(context);
     }
   }
@@ -58,12 +60,14 @@ class _HomePageState extends State<HomePage> {
     final isDark = settings.themeMode == ThemeMode.dark;
     final isArabic = settings.locale.languageCode == 'ar';
     final String rawName = profileProvider.profile?.name ?? '';
-    final userName = rawName.isNotEmpty ? rawName.split(' ').first : 'Voyager';
+    final userName = rawName.isNotEmpty ? rawName.split(' ').first : '';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppNavBar(
-        title: isArabic ? 'أهلاً بك، $userName' : 'Hello, $userName',
+        title: isArabic 
+            ? (userName.isNotEmpty ? 'أهلاً بك، $userName' : 'أهلاً بك') 
+            : (userName.isNotEmpty ? 'Hello, $userName' : 'Hello'),
         isDark: isDark,
       ),
       body: RefreshIndicator(
@@ -85,10 +89,14 @@ class _HomePageState extends State<HomePage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.surfaceLight : Colors.grey[200],
+                        color: isDark
+                            ? AppColors.surfaceDark
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isDark ? AppColors.borderLight : Colors.grey[300]!,
+                          color: isDark
+                              ? AppColors.borderDark
+                              : Colors.grey[300]!,
                           width: 0.5,
                         ),
                       ),
@@ -96,13 +104,21 @@ class _HomePageState extends State<HomePage> {
                         onChanged: (value) {
                           destinationProvider.setSearchQuery(value);
                           if (_debounce?.isActive ?? false) _debounce!.cancel();
-                          _debounce = Timer(const Duration(milliseconds: 500), () {
-                            if (mounted) {
-                              context.read<PackageProvider>().setSearchQuery(value, context);
-                            }
-                          });
+                          _debounce = Timer(
+                            const Duration(milliseconds: 500),
+                            () {
+                              if (mounted) {
+                                context.read<PackageProvider>().setSearchQuery(
+                                  value,
+                                  context,
+                                );
+                              }
+                            },
+                          );
                         },
-                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
                         decoration: InputDecoration(
                           icon: const Icon(
                             Icons.search,
@@ -120,8 +136,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-
-
+                    const SizedBox(height: 20),
                     // Categories
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -152,14 +167,16 @@ class _HomePageState extends State<HomePage> {
                           _buildCategoryChip(
                             isArabic ? 'استرخاء' : 'Relaxation',
                             'relaxation',
-                            destinationProvider.selectedCategory == 'relaxation',
+                            destinationProvider.selectedCategory ==
+                                'relaxation',
                             isDark,
                             context,
                           ),
                           _buildCategoryChip(
                             isArabic ? 'تاريخي' : 'Historical',
                             'historical',
-                            destinationProvider.selectedCategory == 'historical',
+                            destinationProvider.selectedCategory ==
+                                'historical',
                             isDark,
                             context,
                           ),
@@ -178,39 +195,49 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            
+
             // Packages Vertical List
             if (packageProvider.packages.isNotEmpty)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      return PackageCard(
-                        package: packageProvider.packages[index],
-                        isDark: isDark,
-                        isArabic: isArabic,
-                        currency: settings.currency,
-                      ).animate().fade(duration: 400.ms).slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOut);
-                    },
-                    childCount: packageProvider.packages.length,
-                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    return PackageCard(
+                          package: packageProvider.packages[index],
+                          isDark: isDark,
+                          isArabic: isArabic,
+                          currency: settings.currency,
+                        )
+                        .animate()
+                        .fade(duration: 400.ms)
+                        .slideY(
+                          begin: 0.1,
+                          end: 0,
+                          duration: 400.ms,
+                          curve: Curves.easeOut,
+                        );
+                  }, childCount: packageProvider.packages.length),
                 ),
               ),
 
-            if (packageProvider.packages.isNotEmpty && !destinationProvider.isLoading && destinationProvider.destinations.isNotEmpty)
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 20),
-              ),
+            if (packageProvider.packages.isNotEmpty &&
+                !destinationProvider.isLoading &&
+                destinationProvider.destinations.isNotEmpty)
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
             if (packageProvider.isLoading && packageProvider.packages.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Center(
-                    child: const Icon(Icons.explore, size: 48, color: AppColors.primaryRust)
-                        .animate(onPlay: (c) => c.repeat())
-                        .rotate(duration: 2.seconds),
+                    child:
+                        const Icon(
+                              Icons.explore,
+                              size: 48,
+                              color: AppColors.primaryRust,
+                            )
+                            .animate(onPlay: (c) => c.repeat())
+                            .rotate(duration: 2.seconds),
                   ),
                 ),
               ),
@@ -220,9 +247,14 @@ class _HomePageState extends State<HomePage> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Center(
-                    child: const Icon(Icons.explore, size: 32, color: AppColors.primaryRust)
-                        .animate(onPlay: (c) => c.repeat())
-                        .rotate(duration: 2.seconds),
+                    child:
+                        const Icon(
+                              Icons.explore,
+                              size: 32,
+                              color: AppColors.primaryRust,
+                            )
+                            .animate(onPlay: (c) => c.repeat())
+                            .rotate(duration: 2.seconds),
                   ),
                 ),
               ),
@@ -232,9 +264,14 @@ class _HomePageState extends State<HomePage> {
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
-                  child: const Icon(Icons.explore, size: 48, color: AppColors.primaryRust)
-                      .animate(onPlay: (c) => c.repeat())
-                      .rotate(duration: 2.seconds),
+                  child:
+                      const Icon(
+                            Icons.explore,
+                            size: 48,
+                            color: AppColors.primaryRust,
+                          )
+                          .animate(onPlay: (c) => c.repeat())
+                          .rotate(duration: 2.seconds),
                 ),
               )
             else if (destinationProvider.error != null)
@@ -261,47 +298,58 @@ class _HomePageState extends State<HomePage> {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final destination = destinationProvider.destinations[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: DestinationCard(
-                          category: destination.category,
-                          title: destination.title,
-                          price:
-                              double.tryParse(
-                                destination.price.replaceAll(
-                                  RegExp(r'[^0-9.]'),
-                                  '',
-                                ),
-                              ) ??
-                              0.0,
-                          rating: destination.rating,
-                          imageUrl: destination.imageUrl,
-                          description: isArabic
-                              ? 'استمتع بتجربة فريدة في ${destination.title}'
-                              : 'Enjoy a unique experience in ${destination.title}',
-                          isDark: isDark,
-                          isArabic: isArabic,
-                          currency: settings.currency,
-                        ).animate().fade(duration: 400.ms).slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOut),
-                      );
-                    },
-                    childCount: destinationProvider.destinations.length,
-                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final destination = destinationProvider.destinations[index];
+                    final localizedTitle = TranslationHelper.getLocalizedTitle(destination.title, isArabic);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child:
+                          DestinationCard(
+                                category: destination.category,
+                                title: localizedTitle,
+                                price:
+                                    double.tryParse(
+                                      destination.price.replaceAll(
+                                        RegExp(r'[^0-9.]'),
+                                        '',
+                                      ),
+                                    ) ??
+                                    0.0,
+                                rating: destination.rating,
+                                imageUrl: destination.imageUrl,
+                                description: isArabic
+                                    ? 'استمتع بتجربة فريدة في $localizedTitle'
+                                    : 'Enjoy a unique experience in $localizedTitle',
+                                isDark: isDark,
+                                isArabic: isArabic,
+                                currency: settings.currency,
+                              )
+                              .animate()
+                              .fade(duration: 400.ms)
+                              .slideY(
+                                begin: 0.1,
+                                end: 0,
+                                duration: 400.ms,
+                                curve: Curves.easeOut,
+                              ),
+                    );
+                  }, childCount: destinationProvider.destinations.length),
                 ),
               ),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 30),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 30)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCategoryChip(String label, String categoryId, bool isSelected, bool isDark, BuildContext context) {
+  Widget _buildCategoryChip(
+    String label,
+    String categoryId,
+    bool isSelected,
+    bool isDark,
+    BuildContext context,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: InkWell(
@@ -316,7 +364,9 @@ class _HomePageState extends State<HomePage> {
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.primaryRust
-                : (isDark ? AppColors.surfaceLight.withValues(alpha: 0.1) : Colors.white),
+                : (isDark
+                      ? AppColors.surfaceLight.withValues(alpha: 0.1)
+                      : Colors.white),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isSelected

@@ -51,7 +51,10 @@ class ApiClient {
     final headers = await _getHeaders(requireAuth: requireAuth);
     
     try {
-      final response = await http.get(url, headers: headers);
+      final response = await http.get(url, headers: headers).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw ApiException('Connection timeout. Please check your internet connection.', 408),
+      );
       return _handleResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -65,7 +68,10 @@ class ApiClient {
     final headers = await _getHeaders(requireAuth: requireAuth);
     
     try {
-      final response = await http.post(url, headers: headers, body: body != null ? json.encode(body) : null);
+      final response = await http.post(url, headers: headers, body: body != null ? json.encode(body) : null).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw ApiException('Connection timeout. Please check your internet connection.', 408),
+      );
       return _handleResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -79,7 +85,10 @@ class ApiClient {
     final headers = await _getHeaders(requireAuth: requireAuth);
     
     try {
-      final response = await http.put(url, headers: headers, body: body != null ? json.encode(body) : null);
+      final response = await http.put(url, headers: headers, body: body != null ? json.encode(body) : null).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw ApiException('Connection timeout. Please check your internet connection.', 408),
+      );
       return _handleResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -107,7 +116,10 @@ class ApiClient {
     final headers = await _getHeaders(requireAuth: requireAuth);
     
     try {
-      final response = await http.delete(url, headers: headers);
+      final response = await http.delete(url, headers: headers).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw ApiException('Connection timeout. Please check your internet connection.', 408),
+      );
       return _handleResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;

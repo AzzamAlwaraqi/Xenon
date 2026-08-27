@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/screens/destination_details_page.dart';
+import 'package:gp/utils/translation_helper.dart';
 
 /// Reusable destination card extracted from home_page.dart.
 class DestinationCard extends StatelessWidget {
@@ -130,7 +131,7 @@ class DestinationCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      category,
+                      TranslationHelper.getLocalizedTitle(category, isArabic),
                       style: const TextStyle(
                         color: AppColors.primaryRust,
                         fontSize: 10,

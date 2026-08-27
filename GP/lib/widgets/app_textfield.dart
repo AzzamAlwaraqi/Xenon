@@ -31,6 +31,7 @@ class AppTextField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       obscureText: isPassword,
+      textDirection: isPassword ? TextDirection.ltr : null,
       keyboardType: keyboardType,
       style: TextStyle(
         color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,

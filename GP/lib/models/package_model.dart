@@ -6,6 +6,8 @@ class PackageModel {
   final double price;
   final String? image;
   final String? vendorId;
+  final double ratingsAverage;
+  final int ratingsQuantity;
 
   PackageModel({
     required this.id,
@@ -14,6 +16,8 @@ class PackageModel {
     required this.price,
     this.image,
     this.vendorId,
+    this.ratingsAverage = 0.0,
+    this.ratingsQuantity = 0,
   });
 
   factory PackageModel.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,8 @@ class PackageModel {
       price: parsedPrice,
       image: parsedImage,
       vendorId: parsedVendor,
+      ratingsAverage: (json['ratingsAverage'] ?? 0).toDouble(),
+      ratingsQuantity: (json['ratingsQuantity'] ?? 0).toInt(),
     );
   }
 }

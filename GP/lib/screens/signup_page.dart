@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/providers/signup_provider.dart';
+import 'package:gp/providers/settings_provider.dart';
 import 'package:gp/widgets/app_textfield.dart';
 import 'package:gp/widgets/compass_loading_overlay.dart';
 
@@ -23,6 +24,8 @@ class _SignUpPageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SignupProvider>();
+    final settings = context.watch<SettingsProvider>();
+    final isArabic = settings.locale.languageCode == 'ar';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final size = MediaQuery.of(context).size;
 
@@ -83,7 +86,7 @@ class _SignUpPageContent extends StatelessWidget {
                   children: [
                     const SizedBox(height: 32),
                     Text(
-                      'Begin Your Journey',
+                      isArabic ? 'ابدأ رحلتك' : 'Begin Your Journey',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
@@ -93,7 +96,9 @@ class _SignUpPageContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Create an account to unlock luxurious\ndiscovery.',
+                      isArabic 
+                          ? 'قم بإنشاء حساب لاكتشاف الفخامة.'
+                          : 'Create an account to unlock luxurious\ndiscovery.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -103,16 +108,16 @@ class _SignUpPageContent extends StatelessWidget {
                     const SizedBox(height: 24),
 
                     // Form Fields
-                    const FieldLabel(text: 'Full Name'),
+                    FieldLabel(text: isArabic ? 'الاسم الكامل' : 'Full Name'),
                     AppTextField(
                       controller: provider.fullNameController,
-                      hint: 'John Doe',
+                      hint: isArabic ? 'فلان الفلاني' : 'John Doe',
                       prefixIcon: Icons.person_outline,
                     ),
 
                     const SizedBox(height: 16),
 
-                    const FieldLabel(text: 'Email Address'),
+                    FieldLabel(text: isArabic ? 'البريد الإلكتروني' : 'Email Address'),
                     AppTextField(
                       controller: provider.emailController,
                       hint: 'john@example.com',
@@ -122,7 +127,7 @@ class _SignUpPageContent extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
-                    const FieldLabel(text: 'Phone Number'),
+                    FieldLabel(text: isArabic ? 'رقم الهاتف' : 'Phone Number'),
                     AppTextField(
                       controller: provider.phoneController,
                       hint: '+962 7 9000 0000',
@@ -132,7 +137,7 @@ class _SignUpPageContent extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
-                    const FieldLabel(text: 'Gender'),
+                    FieldLabel(text: isArabic ? 'الجنس' : 'Gender'),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -148,7 +153,7 @@ class _SignUpPageContent extends StatelessWidget {
                           value: provider.gender,
                           dropdownColor: isDark ? AppColors.surfaceDark : Colors.white,
                           hint: Text(
-                            'Select Gender',
+                            isArabic ? 'اختر الجنس' : 'Select Gender',
                             style: TextStyle(
                               color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                               fontSize: 14,
@@ -162,7 +167,10 @@ class _SignUpPageContent extends StatelessWidget {
                           items: ['male', 'female'].map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
-                              child: Text(value == 'male' ? 'Male' : 'Female',
+                              child: Text(
+                                value == 'male' 
+                                    ? (isArabic ? 'ذكر' : 'Male') 
+                                    : (isArabic ? 'أنثى' : 'Female'),
                                 style: TextStyle(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                               ),
                             );
@@ -174,7 +182,7 @@ class _SignUpPageContent extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
-                    const FieldLabel(text: 'Date of Birth'),
+                    FieldLabel(text: isArabic ? 'تاريخ الميلاد' : 'Date of Birth'),
                     GestureDetector(
                       onTap: () async {
                         final date = await showDatePicker(
@@ -220,7 +228,7 @@ class _SignUpPageContent extends StatelessWidget {
                             Text(
                               provider.dateOfBirth != null
                                   ? "${provider.dateOfBirth!.day}/${provider.dateOfBirth!.month}/${provider.dateOfBirth!.year}"
-                                  : 'Select Date of Birth',
+                                  : (isArabic ? 'اختر تاريخ الميلاد' : 'Select Date of Birth'),
                               style: TextStyle(
                                 color: provider.dateOfBirth != null
                                     ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
@@ -235,7 +243,7 @@ class _SignUpPageContent extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
-                    const FieldLabel(text: 'Password'),
+                    FieldLabel(text: isArabic ? 'كلمة المرور' : 'Password'),
                     AppTextField(
                       controller: provider.passwordController,
                       hint: '••••••••',
@@ -246,7 +254,7 @@ class _SignUpPageContent extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
-                    const FieldLabel(text: 'Confirm Password'),
+                    FieldLabel(text: isArabic ? 'تأكيد كلمة المرور' : 'Confirm Password'),
                     AppTextField(
                       controller: provider.confirmPasswordController,
                       hint: '••••••••',
@@ -289,7 +297,7 @@ class _SignUpPageContent extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _getStrengthText(provider.passwordStrengthLevel),
+                            _getStrengthText(provider.passwordStrengthLevel, isArabic),
                             style: TextStyle(
                               color: _getStrengthColor(
                                 provider.passwordStrengthLevel,
@@ -301,23 +309,23 @@ class _SignUpPageContent extends StatelessWidget {
                           const SizedBox(height: 12),
                           // Checklist
                           _buildChecklistItem(
-                            'At least 8 characters',
+                            isArabic ? 'على الأقل 8 أحرف' : 'At least 8 characters',
                             provider.hasMinLength,
                           ),
                           _buildChecklistItem(
-                            'At least 1 capital letter',
+                            isArabic ? 'على الأقل حرف كبير واحد' : 'At least 1 capital letter',
                             provider.hasCapital,
                           ),
                           _buildChecklistItem(
-                            'At least 1 number',
+                            isArabic ? 'على الأقل رقم واحد' : 'At least 1 number',
                             provider.hasNumber,
                           ),
                           _buildChecklistItem(
-                            'At least 1 special character',
+                            isArabic ? 'على الأقل رمز خاص واحد' : 'At least 1 special character',
                             provider.hasSpecial,
                           ),
                           _buildChecklistItem(
-                            'Passwords match',
+                            isArabic ? 'كلمتا المرور متطابقتان' : 'Passwords match',
                             provider.passwordsMatch,
                           ),
                         ],
@@ -340,18 +348,18 @@ class _SignUpPageContent extends StatelessWidget {
                         ),
                         elevation: 0,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Create Account',
-                            style: TextStyle(
+                            isArabic ? 'إنشاء حساب' : 'Create Account',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 18),
+                          const SizedBox(width: 8),
+                          Icon(isArabic ? Icons.arrow_back : Icons.arrow_forward, size: 18),
                         ],
                       ),
                     ),
@@ -362,16 +370,16 @@ class _SignUpPageContent extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          "Already have an account? ",
-                          style: TextStyle(color: AppColors.textSecondaryLight),
+                        Text(
+                          isArabic ? "لديك حساب بالفعل؟ " : "Already have an account? ",
+                          style: const TextStyle(color: AppColors.textSecondaryLight),
                         ),
                         GestureDetector(
                           onTap: () =>
                               Navigator.pushReplacementNamed(context, '/login'),
-                          child: const Text(
-                            'Log In',
-                            style: TextStyle(
+                          child: Text(
+                            isArabic ? 'تسجيل الدخول' : 'Log In',
+                            style: const TextStyle(
                               color: AppColors.primaryRust,
                               fontWeight: FontWeight.bold,
                             ),
@@ -407,10 +415,10 @@ class _SignUpPageContent extends StatelessWidget {
     return Colors.transparent;
   }
 
-  String _getStrengthText(int level) {
-    if (level == 1) return 'Weak';
-    if (level == 2) return 'Medium';
-    if (level == 3) return 'Strong';
+  String _getStrengthText(int level, bool isArabic) {
+    if (level == 1) return isArabic ? 'ضعيف' : 'Weak';
+    if (level == 2) return isArabic ? 'متوسط' : 'Medium';
+    if (level == 3) return isArabic ? 'قوي' : 'Strong';
     return '';
   }
 

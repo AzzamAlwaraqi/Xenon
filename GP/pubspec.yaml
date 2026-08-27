@@ -63,6 +63,8 @@ flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/images/new_logo_square.jpg"
+  adaptive_icon_background: "#F8F9FF"
+  adaptive_icon_foreground: "assets/images/camel_pixel.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -23,13 +23,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final isArabic = settings.locale.languageCode == 'ar';
 
     final String title = widget.destination['title'] ?? 'The Treasury at Petra';
-    final String imageUrl = widget.destination['imageUrl'] ?? 'https://images.unsplash.com/photo-1547234935-80c7145ec969';
+    final String imageUrl =
+        widget.destination['imageUrl'] ??
+        'https://images.unsplash.com/photo-1547234935-80c7145ec969';
     final String priceString = widget.destination['price'] ?? '\$120';
-    
+
     // Calculate total price based on guests
-    final baseNumericPrice = double.tryParse(priceString.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
+    final baseNumericPrice =
+        double.tryParse(priceString.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
     final totalPrice = baseNumericPrice * _guests;
-    
+
     // Get currency symbol from original string or use default
     String currencySymbol = '\$';
     if (priceString.contains('JOD')) {
@@ -37,26 +40,35 @@ class _CheckoutPageState extends State<CheckoutPage> {
     } else if (priceString.contains('€')) {
       currencySymbol = '€';
     }
-    
-    final formattedTotalPrice = currencySymbol == 'JOD ' 
-        ? '${totalPrice.toStringAsFixed(0)} JOD' 
+
+    final formattedTotalPrice = currencySymbol == 'JOD '
+        ? '${totalPrice.toStringAsFixed(0)} JOD'
         : '$currencySymbol${totalPrice.toStringAsFixed(0)}';
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         title: Text(
           isArabic ? 'تأكيد الحجز' : 'Confirm Booking',
           style: TextStyle(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -70,7 +82,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
               decoration: BoxDecoration(
                 color: isDark ? AppColors.surfaceDark : Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isDark ? AppColors.borderDark : Colors.grey[300]!),
+                border: Border.all(
+                  color: isDark ? AppColors.borderDark : Colors.grey[300]!,
+                ),
               ),
               clipBehavior: Clip.antiAlias,
               child: Row(
@@ -95,7 +109,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         Text(
                           title,
                           style: TextStyle(
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -116,12 +132,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Guests Selection
             Text(
               isArabic ? 'عدد الضيوف' : 'Number of Guests',
               style: TextStyle(
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -132,7 +150,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
               decoration: BoxDecoration(
                 color: isDark ? AppColors.surfaceDark : Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isDark ? AppColors.borderDark : Colors.grey[300]!),
+                border: Border.all(
+                  color: isDark ? AppColors.borderDark : Colors.grey[300]!,
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -140,7 +160,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   Text(
                     '$_guests ${isArabic ? 'ضيف' : (_guests == 1 ? 'Guest' : 'Guests')}',
                     style: TextStyle(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -148,13 +170,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   Row(
                     children: [
                       IconButton(
-                        onPressed: _guests > 1 ? () => setState(() => _guests--) : null,
-                        icon: Icon(Icons.remove_circle_outline, color: _guests > 1 ? AppColors.primaryRust : Colors.grey),
+                        onPressed: _guests > 1
+                            ? () => setState(() => _guests--)
+                            : null,
+                        icon: Icon(
+                          Icons.remove_circle_outline,
+                          color: _guests > 1
+                              ? AppColors.primaryRust
+                              : Colors.grey,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        onPressed: _guests < 5 ? () => setState(() => _guests++) : null,
-                        icon: Icon(Icons.add_circle_outline, color: _guests < 5 ? AppColors.primaryRust : Colors.grey),
+                        onPressed: _guests < 5
+                            ? () => setState(() => _guests++)
+                            : null,
+                        icon: Icon(
+                          Icons.add_circle_outline,
+                          color: _guests < 5
+                              ? AppColors.primaryRust
+                              : Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -162,14 +198,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Total Price Summary
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.surfaceDark : Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isDark ? AppColors.borderDark : Colors.blue.shade100),
+                border: Border.all(
+                  color: isDark ? AppColors.borderDark : Colors.blue.shade100,
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -177,7 +215,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   Text(
                     isArabic ? 'الإجمالي' : 'Total Price',
                     style: TextStyle(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -194,12 +234,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Payment Method Section
             Text(
               isArabic ? 'طريقة الدفع' : 'Payment Method',
               style: TextStyle(
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -214,13 +256,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.money, color: AppColors.primaryRust),
+                  const Icon(Icons.account_balance_wallet, color: AppColors.primaryRust),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      isArabic ? 'دفع نقدي' : 'Cash',
+                      isArabic ? 'كليك (CliQ)' : 'CliQ',
                       style: TextStyle(
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -231,23 +275,31 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
             ),
             const SizedBox(height: 48),
-            
+
             // Confirm Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () async {
-                  final success = await context.read<BookingProvider>().createBooking({
-                    'package_Name': widget.destination['package_name'] ?? widget.destination['title'],
-                    'vendor_id': widget.destination['vendor_id'],
-                    'date': DateTime.now().add(const Duration(days: 1)).toIso8601String(),
-                    'guests': _guests,
-                  }, context);
+                  final success = await context
+                      .read<BookingProvider>()
+                      .createBooking({
+                        'package_Name':
+                            widget.destination['package_name'] ??
+                            widget.destination['title'],
+                        'vendor_id': widget.destination['vendor_id'],
+                        'date': DateTime.now()
+                            .add(const Duration(days: 1))
+                            .toIso8601String(),
+                        'guests': _guests,
+                      }, context);
 
                   if (success && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(isArabic ? 'تم الحجز بنجاح!' : 'Booking confirmed!'),
+                        content: Text(
+                          isArabic ? 'تم الحجز بنجاح!' : 'Booking confirmed!',
+                        ),
                         backgroundColor: Colors.green,
                       ),
                     );
@@ -264,8 +316,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ),
                 ),
                 child: Text(
-                  isArabic ? 'احجز الآن (الدفع عند الوصول)' : 'Book Now (Pay on Arrival)',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  isArabic
+                      ? 'احجز الآن (الدفع عند الوصول)'
+                      : 'Book Now (Pay on Arrival)',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),

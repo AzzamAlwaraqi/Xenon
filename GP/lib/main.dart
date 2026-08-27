@@ -4,16 +4,11 @@ import 'package:gp/app.dart';
 
 import 'firebase_options.dart'; // You must run `flutterfire configure` to generate this
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
 }
-
-

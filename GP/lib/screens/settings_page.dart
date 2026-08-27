@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/providers/settings_screen_provider.dart';
+import 'package:gp/providers/settings_provider.dart';
 import 'package:gp/widgets/settings_tile.dart';
 import 'package:gp/screens/loading_screen.dart';
 import 'package:gp/screens/error_404_page.dart';
@@ -29,7 +30,9 @@ class _SettingsPageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SettingsScreenProvider>();
+    final globalSettings = context.watch<SettingsProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isArabic = globalSettings.locale.languageCode == 'ar';
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
@@ -42,7 +45,7 @@ class _SettingsPageContent extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Settings',
+          isArabic ? 'الإعدادات' : 'Settings',
           style: TextStyle(
             color: AppColors.primaryRust,
             fontWeight: FontWeight.bold,
@@ -56,7 +59,7 @@ class _SettingsPageContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle('PREFERENCES', isDark),
+              _buildSectionTitle(isArabic ? 'التفضيلات' : 'PREFERENCES', isDark),
               const SizedBox(height: 12),
               Container(
                 decoration: BoxDecoration(
@@ -65,18 +68,30 @@ class _SettingsPageContent extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    SettingsTile(icon: Icons.language, title: 'Language', subtitle: 'English (US)', isDark: isDark),
+                    SettingsTile(
+                      icon: Icons.language, 
+                      title: isArabic ? 'اللغة' : 'Language', 
+                      subtitle: globalSettings.locale.languageCode == 'ar' ? 'العربية' : 'English (US)', 
+                      isDark: isDark,
+                      onTap: () => _showLanguagePicker(context, globalSettings, isDark),
+                    ),
                     SettingsDivider(isDark: isDark),
-                    SettingsTile(icon: Icons.public, title: 'Country/Region', subtitle: 'Jordan', isDark: isDark),
+                    SettingsTile(icon: Icons.public, title: isArabic ? 'البلد / المنطقة' : 'Country/Region', subtitle: isArabic ? 'الأردن' : 'Jordan', isDark: isDark),
                     SettingsDivider(isDark: isDark),
-                    SettingsTile(icon: Icons.payments_outlined, title: 'Currency', subtitle: 'JOD', isDark: isDark),
+                    SettingsTile(
+                      icon: Icons.payments_outlined, 
+                      title: isArabic ? 'العملة' : 'Currency', 
+                      subtitle: globalSettings.currency, 
+                      isDark: isDark,
+                      onTap: () => _showCurrencyPicker(context, globalSettings, isDark),
+                    ),
                   ],
                 ),
               ),
               
               const SizedBox(height: 32),
               
-              _buildSectionTitle('DISPLAY', isDark),
+              _buildSectionTitle(isArabic ? 'العرض' : 'DISPLAY', isDark),
               const SizedBox(height: 12),
               Container(
                 decoration: BoxDecoration(
@@ -101,7 +116,7 @@ class _SettingsPageContent extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Dark Mode',
+                              isArabic ? 'الوضع الليلي' : 'Dark Mode',
                               style: TextStyle(
                                 color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                                 fontWeight: FontWeight.bold,
@@ -110,7 +125,7 @@ class _SettingsPageContent extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'System default',
+                              isArabic ? 'الافتراضي للنظام' : 'System default',
                               style: TextStyle(
                                 color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                                 fontSize: 14,
@@ -131,7 +146,7 @@ class _SettingsPageContent extends StatelessWidget {
               
               const SizedBox(height: 32),
               
-              _buildSectionTitle('DESIGN PREVIEWS', isDark),
+              _buildSectionTitle(isArabic ? 'معاينة التصميم' : 'DESIGN PREVIEWS', isDark),
               const SizedBox(height: 12),
               Container(
                 decoration: BoxDecoration(
@@ -165,9 +180,9 @@ class _SettingsPageContent extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () => provider.logout(context),
                   icon: const Icon(Icons.logout, color: Color(0xFFA02B2B)),
-                  label: const Text(
-                    'Log Out',
-                    style: TextStyle(
+                  label: Text(
+                    isArabic ? 'تسجيل الخروج' : 'Log Out',
+                    style: const TextStyle(
                       color: Color(0xFFA02B2B),
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -202,6 +217,80 @@ class _SettingsPageContent extends StatelessWidget {
           letterSpacing: 1.2,
         ),
       ),
+    );
+  }
+
+  void _showLanguagePicker(BuildContext context, SettingsProvider provider, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('English (US)', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+                trailing: provider.locale.languageCode == 'en' ? Icon(Icons.check, color: AppColors.primaryRust) : null,
+                onTap: () {
+                  provider.setLocale('en');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text('العربية', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+                trailing: provider.locale.languageCode == 'ar' ? Icon(Icons.check, color: AppColors.primaryRust) : null,
+                onTap: () {
+                  provider.setLocale('ar');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCurrencyPicker(BuildContext context, SettingsProvider provider, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('JOD - Jordanian Dinar', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+                trailing: provider.currency == 'JOD' ? Icon(Icons.check, color: AppColors.primaryRust) : null,
+                onTap: () {
+                  provider.setCurrency('JOD');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text('USD - US Dollar', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+                trailing: provider.currency == 'USD' ? Icon(Icons.check, color: AppColors.primaryRust) : null,
+                onTap: () {
+                  provider.setCurrency('USD');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text('EUR - Euro', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+                trailing: provider.currency == 'EUR' ? Icon(Icons.check, color: AppColors.primaryRust) : null,
+                onTap: () {
+                  provider.setCurrency('EUR');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
