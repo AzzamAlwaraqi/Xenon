@@ -31,7 +31,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
     const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
 
-     
+     //to check if vendor use web or not
     if (checkRole(role, ["vendor"]) && isMobile) {
         throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
     }
