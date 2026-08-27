@@ -90,7 +90,9 @@ const vendorSubscriptionSchema = new mongoose.Schema({
         type: Object, 
         default: {},
     }
-}, { timestamps: true });
+}, { timestamps: true,
+    strict: 'throw',
+    versionKey: false,});
 
 vendorSubscriptionSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("VendorSubscription", vendorSubscriptionSchema);

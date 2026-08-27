@@ -2,6 +2,7 @@ const express = require("express");
 const { protect, restrictTo } = require("../middlewares/authMiddleware");
 const { createReviewValidation, getReviewsQueryValidation, paramIdValidation, updateReviewValidation,updateReviewStatusValidation} = require("../validations/reviewValidation");
 const reviewController = require("../controllers/Client/reviewController");
+const { cacheMiddleware } = require("../middlewares/cacheMiddleware");
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ router.patch("/deleteReview/:id", protect, restrictTo("user", "admin"), paramIdV
 // Note: Public
 // Route Parameters: packageId (UUID)
 
-router.get("/package/:packageId", getReviewsQueryValidation, reviewController.getPackageReviews);
+router.get("/package/:packageId", cacheMiddleware(300), getReviewsQueryValidation, reviewController.getPackageReviews);
 
 // Admin routes
 // Note: Accessible by admin

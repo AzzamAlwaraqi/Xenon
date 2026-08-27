@@ -55,23 +55,14 @@ exports.addBookingPaymentCore = async function (user, paymentData, file) {
             throw new AppError("The payment deadline (48h) for this booking has expired. The booking has been automatically cancelled.", 400);
         }
 
-        // 🌟 2. حماية المقاعد: إذا الحجز مش مؤكد، نأكده ونخصم المقاعد الآن
+        // 🌟 2. تحديث حالة الحجز (المقاعد تم خصمها مسبقاً عند إنشاء الحجز)
         if (booking.status === 'pending_payment') {
-            const packageDoc = await Package.findById(booking.package_id).session(session);
-            if (!packageDoc || packageDoc.available_seats < booking.number_of_people) {
-                throw new AppError("Cannot process payment! Seats have been taken by others while waiting.", 400);
-            }
-            // خصم المقاعد
-            packageDoc.available_seats -= booking.number_of_people;
-            await packageDoc.save({ session });
-            
-            // تحديث حالة الحجز
             booking.status = 'accepted';
             booking.status_history.push({ status: 'accepted', changed_by: user._id, changed_at: Date.now() });
             await booking.save({ session });
         }
 
-        const requiresImage = paymentData.payment_method === 'CliQ';
+        const requiresImage = paymentData.payment_method === 'CliQ' || paymentData.payment_method === 'Cash';
         
         if (requiresImage) {
             if (!file) throw new AppError(`A receipt image is required when the payment method is ${paymentData.payment_method}`, 400);

@@ -295,14 +295,18 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 
             newUploadedImageId = uploadResult.public_id;
 
-            packageUpdates.images = [{
-                url: uploadResult.secure_url,
-                public_id: uploadResult.public_id
-            }];
-
-            if (existingPackage.images && existingPackage.images.length > 0) {
-                oldImagesToDelete = existingPackage.images;
+            if (existingPackage.images && existingPackage.images.length >= 5) {
+                await FileStorageService.deleteImage(newUploadedImageId);
+                throw new AppError("Maximum of 5 images allowed per package. Please delete an existing image first.", 400);
             }
+
+            packageUpdates.images = [
+                ...(existingPackage.images || []),
+                {
+                    url: uploadResult.secure_url,
+                    public_id: uploadResult.public_id
+                }
+            ];
         }
 
         if (Object.keys(packageUpdates).length === 0 && Object.keys(detailsUpdates).length === 0) {

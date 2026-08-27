@@ -38,7 +38,6 @@ const BookingSchema = new mongoose.Schema({
         enum: ["user", "vendor"],
         required: true
     },
-    // 🌟 [جديد]: توثيق الحجز بالنيابة ومصدر الحجز
     booked_by: {
         type: mongoose.Schema.Types.UUID,
         ref: "User",
@@ -58,20 +57,19 @@ const BookingSchema = new mongoose.Schema({
     payment_deadline: {
         type: Date,
         default: function() {
-            return new Date(Date.now() + 48 * 60 * 60 * 1000);
+            return new Date(Date.now() + 1 * 60 * 60 * 1000); // المهلة أصبحت ساعة واحدة
         }
     },
     total_price: {
         type: Number,
-        required: true
+        required: true,
+        min: [0, "Total price cannot be negative"]
     },
-    // 🌟 [جديد] توثيق مَن قام بإلغاء الحجز
     cancelled_by: {
         type: mongoose.Schema.Types.UUID,
         ref: "User",
         default: null
     },
-    // 🌟 [جديد] سجل التدقيق (Audit Trail)
     status_history: [{
         status: { type: String },
         changed_by: { type: mongoose.Schema.Types.UUID, ref: "User" },
@@ -83,11 +81,12 @@ const BookingSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true,
+    strict: 'throw', 
+    versionKey: false,
     toJSON: { getters: true, virtuals: true },
     toObject: { getters: true, virtuals: true }
 });
 
-// Virtuals (تبقى كما هي)
 BookingSchema.virtual('booking_time_formatted').get(function() {
     if (!this.createdAt) return null;
     

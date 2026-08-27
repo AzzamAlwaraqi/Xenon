@@ -2,6 +2,8 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const mongoSanitize = require("express-mongo-sanitize");
+const compression = require("compression");
+const { globalLimiter } = require("./middlewares/rateLimiter");
 const authRoutes = require("./Routes/authRoutes");
 const profileRoutes = require("./Routes/profileRoutes");
 const bookingRoutes = require("./Routes/bookingRoutes");
@@ -20,10 +22,14 @@ const app = express();
 
 // Middlewares
 app.use(cors());
+app.use(compression()); // Compress all responses
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(mongoSanitize());
 app.use(morgan("dev"));
+
+// Rate Limiting: Use existing global limiter from rateLimiter.js
+app.use('/api', globalLimiter);
 
 // Unified Response Pattern (res.AppError)
 app.use((req, res, next) => {

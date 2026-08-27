@@ -11,7 +11,9 @@ const PackageModel = require("../../Models/PackageModel");
 const EmployeeModel = require("../../Models/EmployeeModels");
 const { checkRole } = require("../../utils/checkvalidete");
 const vendorApprovalCore = require("./Admin/vendorApprovalCore");
-
+const VendorVerificationModel = require("../../Models/VendorVerificationModel");
+const FileStorageService = require("../Integration/FileStorageService");
+const sharp = require("sharp");
 // ==========================================
 // 1. Get Profile
 // ==========================================
@@ -314,6 +316,146 @@ exports.updateFCMTokenCore = async function (user, fcm_token) {
     try {
         await UserModel.findByIdAndUpdate(user._id, { fcm_token });
     } catch (error) {
+        if (error.statusCode) throw error;
+        throw new AppError(error.message, 500);
+    }
+};
+
+exports.requestVendorOnboardingCore = async function (user, body, files) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        if (!checkRole(user.role, ["user"])) {
+            throw new AppError("Only users can apply for vendor onboarding", 403);
+        }
+
+        let existingVendor = await VendorModel.findOne({ vendor_owner_id: user._id });
+        if (existingVendor) {
+            if (existingVendor.vendor_status === 'pending_approval') {
+                throw new AppError("You already have a vendor application pending approval.", 400);
+            } else if (existingVendor.vendor_status === 'active') {
+                throw new AppError("You are already registered as an active vendor.", 400);
+            }
+            // If rejected, we allow them to proceed and we will update their existing record.
+        }
+        
+        const requiredFields = ['company_name', 'address', 'city', 'state', 'pincode', 'country', 'vendor_type', 'iban_number'];
+        for (const field of requiredFields) {
+            if (!body[field]) throw new AppError(`Field ${field} is required`, 400);
+        }
+
+        const existingCompany = await VendorModel.findOne({ vendor_company: { $regex: new RegExp(`^${body.company_name}$`, 'i') } });
+        if (existingCompany) {
+            throw new AppError("A vendor with this company name already exists.", 409);
+        }
+
+        if (!files || !files.commercial_register_image || !files.vocational_license_image || !files.owner_id_image || !files.iban_letter_image) {
+            throw new AppError("Missing required documents", 400);
+        }
+
+        const safeCompanyName = body.company_name.replace(/[^a-zA-Z0-9]/g, '_');
+        
+        const uploadFile = async (fileObj, docName) => {
+            const optimizedBuffer = await sharp(fileObj[0].buffer)
+                .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+                .webp({ quality: 80 })
+                .toBuffer();
+            const uploadPath = `xenon/vendors/${safeCompanyName}/documents/${docName}`;
+            const res = await FileStorageService.uploadImageFromBuffer(optimizedBuffer, uploadPath);
+            return { url: res.secure_url, public_id: res.public_id };
+        };
+
+        const docs = {
+            commercial_register_image: await uploadFile(files.commercial_register_image, 'commercial_register'),
+            vocational_license_image: await uploadFile(files.vocational_license_image, 'vocational_license'),
+            owner_id_image: await uploadFile(files.owner_id_image, 'owner_id'),
+            iban_letter_image: await uploadFile(files.iban_letter_image, 'iban_letter')
+        };
+
+        if (files.tourism_license_image) {
+            docs.tourism_license_image = await uploadFile(files.tourism_license_image, 'tourism_license');
+        }
+
+        let vendorId;
+        let finalVendor;
+        let finalVerification;
+
+        if (existingVendor) {
+            vendorId = existingVendor._id;
+            existingVendor.vendor_company = body.company_name;
+            existingVendor.vendor_address = body.address;
+            existingVendor.vendor_city = body.city;
+            existingVendor.vendor_state = body.state;
+            existingVendor.vendor_pincode = body.pincode;
+            existingVendor.vendor_country = body.country;
+            existingVendor.vendor_type = body.vendor_type;
+            existingVendor.vendor_status = 'pending_approval';
+            await existingVendor.save({ session });
+            finalVendor = existingVendor;
+
+            const existingVerification = await VendorVerificationModel.findOne({ vendor_id: vendorId }).session(session);
+            if (existingVerification) {
+                existingVerification.commercial_register_image = docs.commercial_register_image;
+                existingVerification.vocational_license_image = docs.vocational_license_image;
+                existingVerification.tourism_license_image = docs.tourism_license_image || null;
+                existingVerification.owner_id_image = docs.owner_id_image;
+                existingVerification.iban_letter_image = docs.iban_letter_image;
+                existingVerification.iban_number = body.iban_number;
+                await existingVerification.save({ session });
+                finalVerification = existingVerification;
+            } else {
+                const newVerification = new VendorVerificationModel({
+                    vendor_id: vendorId,
+                    commercial_register_image: docs.commercial_register_image,
+                    vocational_license_image: docs.vocational_license_image,
+                    tourism_license_image: docs.tourism_license_image || null,
+                    owner_id_image: docs.owner_id_image,
+                    iban_letter_image: docs.iban_letter_image,
+                    iban_number: body.iban_number
+                });
+                await newVerification.save({ session });
+                finalVerification = newVerification;
+            }
+        } else {
+            const newVendor = new VendorModel({
+                vendor_company: body.company_name,
+                vendor_address: body.address,
+                vendor_city: body.city,
+                vendor_state: body.state,
+                vendor_pincode: body.pincode,
+                vendor_country: body.country,
+                vendor_type: body.vendor_type,
+                vendor_owner_id: user._id,
+                vendor_user_id: user._id,
+                vendor_status: 'pending_approval'
+            });
+            await newVendor.save({ session });
+
+            vendorId = newVendor._id;
+            finalVendor = newVendor;
+
+            const newVerification = new VendorVerificationModel({
+                vendor_id: vendorId,
+                commercial_register_image: docs.commercial_register_image,
+                vocational_license_image: docs.vocational_license_image,
+                tourism_license_image: docs.tourism_license_image || null,
+                owner_id_image: docs.owner_id_image,
+                iban_letter_image: docs.iban_letter_image,
+                iban_number: body.iban_number
+            });
+            await newVerification.save({ session });
+            finalVerification = newVerification;
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return {
+            data: { vendor: finalVendor, verification_id: finalVerification._id }
+        };
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
         if (error.statusCode) throw error;
         throw new AppError(error.message, 500);
     }

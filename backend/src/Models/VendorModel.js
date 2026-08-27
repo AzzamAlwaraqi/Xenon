@@ -8,11 +8,6 @@ const VendorSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
     },
-    vendor_company:{
-        type:String,
-        unique:true,
-        required:true
-    },
     vendor_address: {
         type: String,
         required: true
@@ -36,8 +31,8 @@ const VendorSchema = new mongoose.Schema({
     vendor_status: {
         type: String,
         required: true,
-        enum: ["active", "inactive", "pending_deletion"],
-        default: "active"
+        enum: ["active", "inactive", "pending_deletion", "pending_approval", "rejected"],
+        default: "pending_approval"
     },
     vendor_type: {
         type: String,

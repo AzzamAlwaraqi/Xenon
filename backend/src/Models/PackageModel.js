@@ -48,7 +48,7 @@ const PackageSchema = new mongoose.Schema({
         }],
         validate: [
             {
-                validator: function (val) { return val.length > 0; },
+                validator: function (val) { return val.length >= 1; },
                 message: 'you must add one image at least'
             },
             {
@@ -99,6 +99,8 @@ const PackageSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true,
+    strict: 'throw', 
+    versionKey: false,
     toJSON: { getters: true, virtuals: true },
     toObject: { getters: true, virtuals: true }
 });

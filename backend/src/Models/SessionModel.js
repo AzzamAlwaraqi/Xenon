@@ -59,7 +59,9 @@ const SessionSchema = new mongoose.Schema({
         required: true
     }
 }, { 
-    timestamps: true, 
+    timestamps: true,
+    strict: 'throw', 
+    versionKey: false, 
     toJSON: { getters: true, virtuals: true }, 
     toObject: { getters: true, virtuals: true }
 });

@@ -11,29 +11,16 @@ exports.register = async (req, res, next) => {
         const deviceInfo = sessionHelper.extractAndValidateSessionData(req, role);
         const result = await authCore.createAccountCore(req.body, role, deviceInfo);
 
-        if (checkRole( role ,["user"])) {
-            return res.status(201).json({
-                status: "success",
-                message: "Account created successfully.",
-                data: {
-                    user: {
-                        id: result.user._id,
-                        name: result.user.name,
-                        email: result.user.email
-                    },
-                    accessToken: result.accessToken,
-                    refreshToken: result.refreshToken
-                }
-            });
-        } 
-        
         return res.status(201).json({
             status: "success",
-            message: "Vendor account created successfully",
+            message: "Account created successfully.",
             data: {
-                newVendor: result.vendor,
-                session: result.session,
-                token: result.accessToken,
+                user: {
+                    id: result.user._id,
+                    name: result.user.name,
+                    email: result.user.email,
+                    role: result.user.role
+                },
                 accessToken: result.accessToken,
                 refreshToken: result.refreshToken
             }
