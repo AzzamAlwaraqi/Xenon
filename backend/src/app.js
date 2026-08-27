@@ -3,7 +3,7 @@ const morgan = require("morgan");
 const cors = require("cors");
 const mongoSanitize = require("express-mongo-sanitize");
 const compression = require("compression");
-const rateLimit = require("express-rate-limit");
+const { globalLimiter } = require("./middlewares/rateLimiter");
 const authRoutes = require("./Routes/authRoutes");
 const profileRoutes = require("./Routes/profileRoutes");
 const bookingRoutes = require("./Routes/bookingRoutes");
@@ -28,13 +28,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(mongoSanitize());
 app.use(morgan("dev"));
 
-// Rate Limiting: Max 500 requests per 15 minutes per IP
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 500, 
-    message: { status: 'error', message: 'Too many requests from this IP, please try again after 15 minutes' }
-});
-app.use('/api', limiter);
+// Rate Limiting: Use existing global limiter from rateLimiter.js
+app.use('/api', globalLimiter);
 
 // Unified Response Pattern (res.AppError)
 app.use((req, res, next) => {
