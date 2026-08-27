@@ -64,6 +64,8 @@ const PackageDetailsSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true,
+    strict: 'throw', 
+    versionKey: false,
     toJSON: { getters: true },
     toObject: { getters: true }
 });

@@ -91,7 +91,9 @@ const bookingPaymentSchema = new mongoose.Schema({
         type: Object,
         default: {},
     }
-}, { timestamps: true });
+}, { timestamps: true,
+    strict: 'throw',
+    versionKey: false,});
 
 bookingPaymentSchema.plugin(softDeletePlugin);
 module.exports = mongoose.model("BookingPayment", bookingPaymentSchema);

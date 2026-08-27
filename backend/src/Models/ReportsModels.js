@@ -71,6 +71,8 @@ const ReportSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true,
+    strict: 'throw', 
+    versionKey: false,
     toJSON: { getters: true, virtuals: true },
     toObject: { getters: true, virtuals: true }
 });

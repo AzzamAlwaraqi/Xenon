@@ -58,7 +58,8 @@ const VendorSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true, 
-    strict: false,
+    versionKey: false, 
+    strict: 'throw',
     toJSON: { getters: true, virtuals: true }, 
     toObject: { getters: true, virtuals: true }
 });

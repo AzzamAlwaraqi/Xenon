@@ -53,6 +53,8 @@ const OTPSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true,
+    strict: 'throw', 
+    versionKey: false,
     toJSON:   { virtuals: true },
     toObject: { virtuals: true }
 });

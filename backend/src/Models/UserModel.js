@@ -88,6 +88,8 @@ const UserSchema = new mongoose.Schema({
     }
     },
     { timestamps: true,
+    strict: 'throw', 
+    versionKey: false,
     toJSON: {
         getters: true,
         virtuals: true,

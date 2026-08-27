@@ -37,5 +37,7 @@ const employeeSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-}, { timestamps: true });
+}, { timestamps: true,
+    strict: 'throw',
+    versionKey: false,});
 module.exports = mongoose.model('Employee', employeeSchema);
