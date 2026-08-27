@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/providers/profile_provider.dart';
+import 'package:gp/providers/settings_provider.dart';
 import 'package:gp/widgets/compass_loading_overlay.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -19,7 +20,9 @@ class _ProfilePageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProfileProvider>();
+    final settings = context.watch<SettingsProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isArabic = settings.locale.languageCode == 'ar';
 
     return Scaffold(
       backgroundColor: isDark
@@ -41,7 +44,7 @@ class _ProfilePageContent extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Ahlan wa Sahlan',
+                      isArabic ? 'أهلاً وسهلاً' : 'Ahlan wa Sahlan',
                       style: TextStyle(
                         color: AppColors.primaryRust,
                         fontSize: 24,
@@ -76,7 +79,7 @@ class _ProfilePageContent extends StatelessWidget {
                 GestureDetector(
                   onTap: () => provider.navigateToEditProfile(context),
                   child: Text(
-                    'Edit Profile Details',
+                    isArabic ? 'تعديل تفاصيل الحساب' : 'Edit Profile Details',
                     style: TextStyle(
                       color: AppColors.primaryRust,
                       fontSize: 14,
@@ -113,13 +116,13 @@ class _ProfilePageContent extends StatelessWidget {
 
                 // Menu Options
                 _buildMenuTile(
-                  icon: Icons.payments_outlined,
-                  title: 'Payment Method: Cash',
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: isArabic ? 'طريقة الدفع: كليك (CliQ)' : 'Payment Method: CliQ',
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(
-                          'Cash is currently the only supported payment method',
+                          isArabic ? 'الدفع عبر كليك هو الطريقة الوحيدة المدعومة حالياً' : 'CliQ is currently the only supported payment method',
                         ),
                       ),
                     );
@@ -128,7 +131,7 @@ class _ProfilePageContent extends StatelessWidget {
                 ),
                 _buildMenuTile(
                   icon: Icons.lock_reset_outlined,
-                  title: 'Reset Password',
+                  title: isArabic ? 'إعادة تعيين كلمة المرور' : 'Reset Password',
                   onTap: () => provider.navigateToResetPassword(context),
                   isDark: isDark,
                 ),
@@ -141,9 +144,9 @@ class _ProfilePageContent extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: () => provider.logout(context),
                     icon: const Icon(Icons.logout, color: Color(0xFFA02B2B)),
-                    label: const Text(
-                      'Log Out',
-                      style: TextStyle(
+                    label: Text(
+                      isArabic ? 'تسجيل الخروج' : 'Log Out',
+                      style: const TextStyle(
                         color: Color(0xFFA02B2B),
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

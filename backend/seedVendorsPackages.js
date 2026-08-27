@@ -52,6 +52,7 @@ const seedDB = async () => {
         for(let i = 0; i < createdUsers.length; i++) {
             vendorsData.push({
                 vendor_owner_id: createdUsers[i]._id,
+                vendor_company: `Tourism Company ${i} ${generateRandomString(4)}`,
                 vendor_email: `unique_vendor_${Date.now()}_${i}@example.com`,
                 vendor_phone: generateRandomPhone(),
                 vendor_address: `123 Vendor Street ${i}`,

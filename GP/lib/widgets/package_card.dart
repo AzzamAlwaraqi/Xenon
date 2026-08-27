@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/models/package_model.dart';
 import 'package:gp/screens/destination_details_page.dart';
+import 'package:gp/utils/translation_helper.dart';
 
 class PackageCard extends StatelessWidget {
   final PackageModel package;
@@ -26,6 +27,9 @@ class PackageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizedTitle = TranslationHelper.getLocalizedTitle(package.title, isArabic);
+    final localizedDesc = TranslationHelper.getLocalizedDescription(package.description, isArabic);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -35,13 +39,16 @@ class PackageCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => DestinationDetailsPage(
                 destination: {
-                  'title': package.title,
+                  'title': localizedTitle,
                   'imageUrl': package.image ?? '',
-                  'description': package.description,
+                  'description': localizedDesc,
                   'price': _formattedPrice,
                   'category': 'package',
-                  'package_name': package.title,
+                  'package_name': localizedTitle,
                   'vendor_id': package.vendorId,
+                  'id': package.id,
+                  'ratingsAverage': package.ratingsAverage,
+                  'ratingsQuantity': package.ratingsQuantity,
                 },
               ),
             ),
@@ -128,7 +135,7 @@ class PackageCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      package.title,
+                      localizedTitle,
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black,
                         fontSize: 20,
@@ -137,7 +144,7 @@ class PackageCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      package.description,
+                      localizedDesc,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

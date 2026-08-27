@@ -21,7 +21,7 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _checkLoginStatus() async {
     // Increased delay to make the splash screen visible for longer
-    await Future.delayed(const Duration(milliseconds: 5000));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     final token = await SecureStorageHelper.getToken();
 

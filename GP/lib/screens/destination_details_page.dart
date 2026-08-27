@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
 import 'package:gp/screens/checkout_page.dart';
 import 'package:gp/providers/destination_details_provider.dart';
+import 'package:gp/providers/review_provider.dart';
+import 'package:gp/providers/settings_provider.dart';
 
 class DestinationDetailsPage extends StatelessWidget {
   final Map<String, dynamic>? destination;
@@ -29,7 +31,7 @@ class DestinationDetailsPage extends StatelessWidget {
   }
 }
 
-class _DestinationDetailsPageContent extends StatelessWidget {
+class _DestinationDetailsPageContent extends StatefulWidget {
   final Map<String, dynamic>? destination;
   final bool isAlreadyBooked;
   final String? bookingStatus;
@@ -41,9 +43,29 @@ class _DestinationDetailsPageContent extends StatelessWidget {
   });
 
   @override
+  State<_DestinationDetailsPageContent> createState() => _DestinationDetailsPageContentState();
+}
+
+class _DestinationDetailsPageContentState extends State<_DestinationDetailsPageContent> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.destination != null && widget.destination!['id'] != null) {
+        context.read<ReviewProvider>().fetchPackageReviews(widget.destination!['id'], context);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final destination = widget.destination;
+    final isAlreadyBooked = widget.isAlreadyBooked;
+    final bookingStatus = widget.bookingStatus;
+
     final provider = context.watch<DestinationDetailsProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isArabic = context.watch<SettingsProvider>().locale.languageCode == 'ar';
     
     // Use fallback data if destination is null
     final String title = destination?['title'] ?? 'The Treasury at Petra';
@@ -144,9 +166,9 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                             const SizedBox(width: 8),
                             const Icon(Icons.star, color: Colors.amber, size: 14),
                             const SizedBox(width: 4),
-                            const Text(
-                              '4.9 (1.2k Reviews)',
-                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            Text(
+                              '${destination?['ratingsAverage'] ?? 0.0} (${destination?['ratingsQuantity'] ?? 0} ${isArabic ? 'تقييم' : 'Reviews'})',
+                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -210,9 +232,9 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        _buildTab(context, provider, 0, 'ITINERARY', isDark),
-                        _buildTab(context, provider, 1, 'INCLUDED', isDark),
-                        _buildTab(context, provider, 2, 'REVIEWS', isDark),
+                        _buildTab(context, provider, 0, isArabic ? 'مسار الرحلة' : 'ITINERARY', isDark),
+                        _buildTab(context, provider, 1, isArabic ? 'يتضمن' : 'INCLUDED', isDark),
+                        _buildTab(context, provider, 2, isArabic ? 'التقييمات' : 'REVIEWS', isDark),
                       ],
                     ),
                   ),
@@ -220,7 +242,7 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                   // Tab Content
                   Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: _buildTabContent(context, provider.selectedTabIndex, isDark),
+                    child: _buildTabContent(context, provider.selectedTabIndex, isDark, isArabic),
                   ),
                 ],
               ),
@@ -290,8 +312,8 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                 ),
                 child: Text(
                   isAlreadyBooked 
-                      ? (bookingStatus?.toUpperCase() ?? 'BOOKED')
-                      : 'Proceed to Booking', 
+                      ? (bookingStatus?.toUpperCase() ?? (isArabic ? 'محجوز' : 'BOOKED'))
+                      : (isArabic ? 'متابعة الحجز' : 'Proceed to Booking'), 
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
@@ -334,14 +356,14 @@ class _DestinationDetailsPageContent extends StatelessWidget {
     );
   }
 
-  Widget _buildTabContent(BuildContext context, int tabIndex, bool isDark) {
+  Widget _buildTabContent(BuildContext context, int tabIndex, bool isDark, bool isArabic) {
     if (tabIndex == 0) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // About Section
           Text(
-            'About this experience',
+            isArabic ? 'حول هذه التجربة' : 'About this experience',
             style: TextStyle(
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
               fontSize: 18,
@@ -359,7 +381,7 @@ class _DestinationDetailsPageContent extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Read more ∨',
+            isArabic ? 'اقرأ المزيد ∨' : 'Read more ∨',
             style: TextStyle(
               color: AppColors.primaryRust,
               fontSize: 12,
@@ -371,7 +393,7 @@ class _DestinationDetailsPageContent extends StatelessWidget {
           
           // Itinerary Timeline
           Text(
-            'Itinerary Overview',
+            isArabic ? 'نظرة عامة على خط سير الرحلة' : 'Itinerary Overview',
             style: TextStyle(
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
               fontSize: 18,
@@ -412,7 +434,7 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Arrival & Exploration',
+                      isArabic ? 'الوصول والاستكشاف' : 'Arrival & Exploration',
                       style: TextStyle(
                         color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                         fontSize: 16,
@@ -421,7 +443,7 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      destination?['description'] ?? 'Your journey begins! Enjoy a breathtaking experience curated specifically for this package.',
+                      widget.destination?['description'] ?? 'Your journey begins! Enjoy a breathtaking experience curated specifically for this package.',
                       style: TextStyle(
                         color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                         fontSize: 14,
@@ -457,7 +479,7 @@ class _DestinationDetailsPageContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'EXPERT LOCAL GUIDE',
+                        isArabic ? 'مرشد محلي خبير' : 'EXPERT LOCAL GUIDE',
                         style: TextStyle(
                           color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                           fontSize: 10,
@@ -492,10 +514,95 @@ class _DestinationDetailsPageContent extends StatelessWidget {
           const SizedBox(height: 100), // Padding for bottom nav
         ],
       );
+    } else if (tabIndex == 2) {
+      final reviewProvider = context.watch<ReviewProvider>();
+      if (reviewProvider.isLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      
+      final reviews = reviewProvider.packageReviews;
+      if (reviews.isEmpty) {
+        return Center(
+          child: Text(
+            'No reviews yet for this package.',
+            style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+          ),
+        );
+      }
+      
+      return ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: reviews.length,
+        separatorBuilder: (context, index) => const Divider(height: 32),
+        itemBuilder: (context, index) {
+          final review = reviews[index];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: AppColors.primaryRust,
+                    child: Text(
+                      review.user != null && review.user!.isNotEmpty ? review.user![0].toUpperCase() : 'U',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          review.user ?? 'User',
+                          style: TextStyle(
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              review.rating.toString(),
+                              style: TextStyle(
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (review.createdAt != null)
+                    Text(
+                      '${review.createdAt!.year}-${review.createdAt!.month.toString().padLeft(2, '0')}-${review.createdAt!.day.toString().padLeft(2, '0')}',
+                      style: TextStyle(
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                review.review,
+                style: TextStyle(
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          );
+        },
+      );
     } else {
       return Center(
         child: Text(
-          'Content for ${tabIndex == 1 ? 'Included' : 'Reviews'}',
+          'Content for Included',
           style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
         ),
       );

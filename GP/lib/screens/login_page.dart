@@ -249,6 +249,7 @@ class _LoginPageContentState extends State<_LoginPageContent> {
                             controller: _passwordController,
                             autofillHints: const [AutofillHints.password],
                             obscureText: provider.obscurePassword,
+                            textDirection: TextDirection.ltr,
                             style: TextStyle(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                             decoration: InputDecoration(
                               hintText: 'Enter your password',
