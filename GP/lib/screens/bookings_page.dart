@@ -99,7 +99,7 @@ class _BookingsPageState extends State<BookingsPage> {
                               ),
                             );
                           },
-                          onCancel: (booking.status == 'pending' && isUpcoming) ? () async {
+                          onCancel: ((booking.status == 'pending' || booking.status == 'pending_payment') && isUpcoming) ? () async {
                             final confirm = await showDialog<bool>(
                               context: context,
                               builder: (context) => AlertDialog(

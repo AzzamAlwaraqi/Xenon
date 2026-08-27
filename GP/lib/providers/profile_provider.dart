@@ -29,6 +29,15 @@ class ProfileProvider with ChangeNotifier {
         notifyListeners();
       }
     } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        if (context.mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Session expired. Please log in again.'), backgroundColor: Colors.red),
+           );
+           logout(context);
+        }
+        return;
+      }
       _errorMessage = e.message;
       if (context.mounted && !silent) _showErrorSnackBar(context, e.message);
     } catch (e) {

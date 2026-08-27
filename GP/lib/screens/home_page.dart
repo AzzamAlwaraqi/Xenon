@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/theme/colors.dart';
@@ -20,6 +21,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -90,7 +93,15 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       child: TextField(
-                        onChanged: (value) => destinationProvider.setSearchQuery(value),
+                        onChanged: (value) {
+                          destinationProvider.setSearchQuery(value);
+                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                          _debounce = Timer(const Duration(milliseconds: 500), () {
+                            if (mounted) {
+                              context.read<PackageProvider>().setSearchQuery(value, context);
+                            }
+                          });
+                        },
                         style: TextStyle(color: isDark ? Colors.white : Colors.black),
                         decoration: InputDecoration(
                           icon: const Icon(
@@ -122,42 +133,42 @@ class _HomePageState extends State<HomePage> {
                             'All',
                             destinationProvider.selectedCategory == 'All',
                             isDark,
-                            destinationProvider,
+                            context,
                           ),
                           _buildCategoryChip(
                             isArabic ? 'مغامرة' : 'Adventure',
                             'adventure',
                             destinationProvider.selectedCategory == 'adventure',
                             isDark,
-                            destinationProvider,
+                            context,
                           ),
                           _buildCategoryChip(
                             isArabic ? 'ثقافي' : 'Cultural',
                             'cultural',
                             destinationProvider.selectedCategory == 'cultural',
                             isDark,
-                            destinationProvider,
+                            context,
                           ),
                           _buildCategoryChip(
                             isArabic ? 'استرخاء' : 'Relaxation',
                             'relaxation',
                             destinationProvider.selectedCategory == 'relaxation',
                             isDark,
-                            destinationProvider,
+                            context,
                           ),
                           _buildCategoryChip(
                             isArabic ? 'تاريخي' : 'Historical',
                             'historical',
                             destinationProvider.selectedCategory == 'historical',
                             isDark,
-                            destinationProvider,
+                            context,
                           ),
                           _buildCategoryChip(
                             isArabic ? 'عائلي' : 'Family',
                             'family',
                             destinationProvider.selectedCategory == 'family',
                             isDark,
-                            destinationProvider,
+                            context,
                           ),
                         ],
                       ),
@@ -169,7 +180,7 @@ class _HomePageState extends State<HomePage> {
             ),
             
             // Packages Vertical List
-            if (!packageProvider.isLoading && packageProvider.packages.isNotEmpty)
+            if (packageProvider.packages.isNotEmpty)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList(
@@ -187,47 +198,62 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-            if (!packageProvider.isLoading && packageProvider.packages.isNotEmpty && !destinationProvider.isLoading && destinationProvider.destinations.isNotEmpty)
+            if (packageProvider.packages.isNotEmpty && !destinationProvider.isLoading && destinationProvider.destinations.isNotEmpty)
               const SliverToBoxAdapter(
                 child: SizedBox(height: 20),
               ),
 
-            if (packageProvider.isFetchingMore)
-              const SliverToBoxAdapter(
+            if (packageProvider.isLoading && packageProvider.packages.isEmpty)
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primaryRust),
+                    child: const Icon(Icons.explore, size: 48, color: AppColors.primaryRust)
+                        .animate(onPlay: (c) => c.repeat())
+                        .rotate(duration: 2.seconds),
+                  ),
+                ),
+              ),
+
+            if (packageProvider.isFetchingMore)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: const Icon(Icons.explore, size: 32, color: AppColors.primaryRust)
+                        .animate(onPlay: (c) => c.repeat())
+                        .rotate(duration: 2.seconds),
                   ),
                 ),
               ),
 
             // Dynamic Content (Destinations)
             if (destinationProvider.isLoading)
-              const SliverFillRemaining(
+              SliverFillRemaining(
+                hasScrollBody: false,
                 child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primaryRust,
-                  ),
+                  child: const Icon(Icons.explore, size: 48, color: AppColors.primaryRust)
+                      .animate(onPlay: (c) => c.repeat())
+                      .rotate(duration: 2.seconds),
                 ),
               )
             else if (destinationProvider.error != null)
               SliverFillRemaining(
+                hasScrollBody: false,
                 child: EmptyState(
                   icon: Icons.error_outline,
                   message: isArabic ? 'حدث خطأ ما' : 'Something went wrong',
                   isDark: isDark,
                   retryLabel: isArabic ? 'إعادة المحاولة' : 'Try Again',
-                  onRetry: destinationProvider.fetchDestinations,
+                  onRetry: () => destinationProvider.fetchDestinations(),
                 ),
               )
             else if (destinationProvider.destinations.isEmpty)
               SliverFillRemaining(
+                hasScrollBody: false,
                 child: EmptyState(
                   icon: Icons.explore_off,
-                  message: isArabic
-                      ? 'لا توجد وجهات حالياً'
-                      : 'No destinations found',
+                  message: isArabic ? 'لا توجد وجهات' : 'No destinations found',
                   isDark: isDark,
                 ),
               )
@@ -275,11 +301,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildCategoryChip(String label, String categoryId, bool isSelected, bool isDark, DestinationProvider provider) {
+  Widget _buildCategoryChip(String label, String categoryId, bool isSelected, bool isDark, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: InkWell(
-        onTap: () => provider.setCategory(categoryId),
+        onTap: () {
+          context.read<DestinationProvider>().setCategory(categoryId);
+          context.read<PackageProvider>().setCategory(categoryId, context);
+        },
         borderRadius: BorderRadius.circular(24),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),

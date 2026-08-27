@@ -150,12 +150,15 @@ class PackageCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          _formattedPrice,
-                          style: const TextStyle(
-                            color: AppColors.primaryRust,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Text(
+                            _formattedPrice,
+                            style: const TextStyle(
+                              color: AppColors.primaryRust,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Container(
