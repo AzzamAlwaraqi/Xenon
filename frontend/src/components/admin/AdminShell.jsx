@@ -1,6 +1,6 @@
 // Libraries
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { BarChart3, Bell, BookOpen, LayoutDashboard, LogOut, MessageSquareWarning, Store, Users, UserCog } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, CircleDollarSign, CircleUserRound, LayoutDashboard, LogOut, MessageSquareWarning, Settings, Store, UserCog } from 'lucide-react'
 
 // Services
 import { authApi } from '../../services/api.js'
@@ -9,13 +9,16 @@ import { storage } from '../../services/storage.js'
 const links = [
   ['/admin', 'Dashboard', LayoutDashboard],
   ['/admin/bookings', 'Bookings', BookOpen],
-  ['/admin/users', 'Users', Users],
   ['/admin/vendors', 'Vendors', Store],
   ['/admin/reviews', 'Reviews', MessageSquareWarning],
   ['/admin/staff', 'Staff', UserCog],
   ['/admin/reports', 'Reports', MessageSquareWarning],
+  ['/admin/complaints', 'Complaints', MessageSquareWarning],
   ['/admin/analytics', 'Analytics', BarChart3],
   ['/admin/notifications', 'Notifications', Bell],
+  ['/admin/payments', 'Payments', CircleDollarSign],
+  ['/admin/profile', 'Profile', CircleUserRound],
+  ['/admin/settings', 'Settings', Settings],
 ]
 
 // Shared admin portal layout

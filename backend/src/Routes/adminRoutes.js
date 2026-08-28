@@ -6,7 +6,7 @@ const adminValidation = require("../validations/adminOperationsValidator");
 const router = express.Router();
 
 // Apply auth protection and admin check for all admin routes
-router.use(authMiddleware.protect);
+router.use(authMiddleware.protect, authMiddleware.restrictTo("admin"));
 
 
 

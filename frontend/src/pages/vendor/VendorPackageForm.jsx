@@ -6,11 +6,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import VendorShell from '../../components/vendor/VendorShell.jsx'
 import { VendorField } from '../../components/vendor/VendorUi.jsx'
 import { packageApi } from '../../services/api.js'
+import { localToday, validatePackage } from '../../utils/formValidation.js'
 import { getPackageId, getRecord } from '../../utils/vendorData.js'
 
 // Constants
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const EDIT_FIELDS = new Set(['package_name', 'package_price', 'package_image'])
 const EMPTY_PACKAGE = {
   package_name: '',
   package_description: '',
@@ -20,6 +22,10 @@ const EMPTY_PACKAGE = {
   startDate: '',
   endDate: '',
   max_people: '',
+  itinerary: '',
+  included_services: '',
+  meeting_point: '',
+  cancellation_policy: '',
   package_image: null,
 }
 
@@ -28,6 +34,7 @@ function dateInputValue(value) {
 }
 
 function normalizePackage(record) {
+  const details = record.details || record.package_details || record
   return {
     ...EMPTY_PACKAGE,
     package_name: record.package_name || '',
@@ -38,21 +45,31 @@ function normalizePackage(record) {
     startDate: dateInputValue(record.startDate),
     endDate: dateInputValue(record.endDate),
     max_people: record.max_people ?? '',
+    itinerary: formatDetails(details.itinerary),
+    included_services: formatDetails(details.included_services),
+    meeting_point: details.meeting_point || '',
+    cancellation_policy: details.cancellation_policy || '',
   }
 }
 
-function validatePackage(form, edit) {
-  if (form.package_name.trim().length < 3) return 'Package name must contain at least 3 characters.'
-  if (!form.package_description.trim()) return 'Add a package description.'
-  if (form.package_description.trim().length > 500) return 'Description must not exceed 500 characters.'
-  if (form.package_price === '' || Number(form.package_price) < 0) return 'Enter a valid non-negative price.'
-  if (!form.startDate || !form.endDate) return 'Select both start and end dates.'
-  if (new Date(form.endDate) <= new Date(form.startDate)) return 'End date must be after the start date.'
-  if (!Number.isInteger(Number(form.max_people)) || Number(form.max_people) < 1 || Number(form.max_people) > 100) return 'Capacity must be a whole number from 1 to 100.'
-  if (!edit && !form.package_image) return 'Choose a JPEG, PNG, or WebP cover photo.'
-  if (form.package_image && !ALLOWED_IMAGE_TYPES.has(form.package_image.type)) return 'Cover photo must be JPEG, PNG, or WebP.'
-  if (form.package_image && form.package_image.size > MAX_IMAGE_BYTES) return 'Cover photo must be 5 MB or smaller.'
-  return ''
+function formatDetails(value) {
+  if (!value) return ''
+  if (!Array.isArray(value)) return String(value)
+  return value.map((item) => item.activities || item.description || item.title || String(item)).join('\n')
+}
+
+function nonEmptyLines(value) {
+  return value.split('\n').map((line) => line.trim()).filter(Boolean)
+}
+
+function serializeDetails(key, value) {
+  if (key === 'itinerary') {
+    return JSON.stringify(nonEmptyLines(value).map((activities, index) => ({ day_number: index + 1, title: `Day ${index + 1}`, activities })))
+  }
+  if (key === 'included_services') {
+    return JSON.stringify(nonEmptyLines(value).map((title) => ({ title, description: '' })))
+  }
+  return value
 }
 
 // Page component
@@ -79,7 +96,7 @@ export default function VendorPackageForm({ edit = false }) {
 
   async function submitPackage(event) {
     event.preventDefault()
-    const validationError = validatePackage(form, edit)
+    const validationError = validatePackage(form, edit, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES)
     if (validationError) {
       setStatus({ loading: false, message: validationError, type: 'error' })
       return
@@ -88,7 +105,8 @@ export default function VendorPackageForm({ edit = false }) {
     setStatus({ loading: true, message: '', type: '' })
     const body = new FormData()
     Object.entries(form).forEach(([key, value]) => {
-      if (value !== null && value !== '') body.append(key, value)
+      if (edit && !EDIT_FIELDS.has(key)) return
+      if (value !== null && value !== '') body.append(key, serializeDetails(key, value))
     })
 
     try {
@@ -109,34 +127,47 @@ export default function VendorPackageForm({ edit = false }) {
         <section className="vendor-card vendor-form">
           <h2>Package basics</h2>
           <VendorField label="Package name" maxLength="100" value={form.package_name} onChange={updateField('package_name')} required />
-          <label>Description<textarea rows="7" maxLength="500" value={form.package_description} onChange={updateField('package_description')} required /></label>
           <VendorField label="Price per traveller (JOD)" type="number" min="0" step="0.01" value={form.package_price} onChange={updateField('package_price')} required />
-          <label>
-            Experience type
-            <select value={form.package_type} onChange={updateField('package_type')} required>
-              <option value="adventure">Adventure</option>
-              <option value="cultural">Cultural</option>
-              <option value="relaxation">Relaxation</option>
-              <option value="historical">Historical</option>
-              <option value="family">Family</option>
-            </select>
-          </label>
-          <div className="field-grid">
-            <VendorField label="Start date" type="date" value={form.startDate} onChange={updateField('startDate')} required />
-            <VendorField label="End date" type="date" min={form.startDate || undefined} value={form.endDate} onChange={updateField('endDate')} required />
-          </div>
+          {!edit && <>
+            <label>Description<textarea rows="7" maxLength="500" value={form.package_description} onChange={updateField('package_description')} required /></label>
+            <label>
+              Experience type
+              <select value={form.package_type} onChange={updateField('package_type')} required>
+                <option value="adventure">Adventure</option>
+                <option value="cultural">Cultural</option>
+                <option value="relaxation">Relaxation</option>
+                <option value="historical">Historical</option>
+                <option value="family">Family</option>
+              </select>
+            </label>
+            <div className="field-grid">
+              <VendorField label="Start date" type="date" min={localToday()} max={form.endDate || undefined} value={form.startDate} onChange={updateField('startDate')} required />
+              <VendorField label="End date" type="date" min={form.startDate || localToday()} value={form.endDate} onChange={updateField('endDate')} required />
+            </div>
+          </>}
+          {!edit && <fieldset className="vendor-form detail-fieldset">
+            <h2>Experience details</h2>
+            <label>Itinerary<textarea rows="5" value={form.itinerary} onChange={updateField('itinerary')} placeholder="Describe the daily activities and schedule." /></label>
+            <label>Included services<textarea rows="4" value={form.included_services} onChange={updateField('included_services')} placeholder="Transport, meals, guide..." /></label>
+            <VendorField label="Meeting point" value={form.meeting_point} onChange={updateField('meeting_point')} placeholder="Exact meeting location" required />
+            <label>Cancellation policy<textarea rows="4" value={form.cancellation_policy} onChange={updateField('cancellation_policy')} /></label>
+          </fieldset>}
+          {edit && <p className="vendor-hint">Postman permits changing only the package name, price, and cover photo.</p>}
         </section>
 
         <aside className="vendor-card vendor-form">
           <h2>Publishing</h2>
-          <label>
-            Status
-            <select value={form.package_status} onChange={updateField('package_status')}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </label>
-          <VendorField label="Maximum travellers" type="number" min="1" max="100" step="1" value={form.max_people} onChange={updateField('max_people')} required />
+          {!edit && <>
+            <label>
+              Status
+              <select value={form.package_status} onChange={updateField('package_status')}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="draft">Draft</option>
+              </select>
+            </label>
+            <VendorField label="Maximum travellers" type="number" min="1" max="100" step="1" value={form.max_people} onChange={updateField('max_people')} required />
+          </>}
           <label>
             Cover photo
             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={updateField('package_image')} required={!edit} />

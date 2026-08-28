@@ -2,11 +2,11 @@ const PackageCore = require("../../services/Core/Vendor/PackageCore");
 
 exports.createPackage = async (req, res, next) => {
     try {
-        const package = await PackageCore.createPackageCore(req.user, req.body, req.file);
+        const packageResult = await PackageCore.createPackageCore(req.user, req.body, req.file);
         res.status(201).json({
             status: "success",
             data: {
-                package,
+                package: packageResult
             }
         });
     } catch (error) {
@@ -31,11 +31,11 @@ exports.getAllPackages = async (req, res, next) => {
 exports.getPackage = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const package = await PackageCore.getPackageCore(id, req.query);
+        const packageResult = await PackageCore.getPackageCore(id, req.query);
         res.status(200).json({
             status: "success",
             data: {
-                package,
+                package: packageResult
             }
         });
     } catch (error) {
@@ -46,11 +46,11 @@ exports.getPackage = async (req, res, next) => {
 exports.updatePackage = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const package = await PackageCore.updatePackageCore(req.user, id, req.body, req.file);
+        const packageResult = await PackageCore.updatePackageCore(req.user, id, req.body, req.file);
         res.status(200).json({
             status: "success",
             data: {
-                package,
+                package: packageResult
             }
         });
     } catch (error) {
@@ -61,11 +61,11 @@ exports.updatePackage = async (req, res, next) => {
 exports.deletePackage = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const package = await PackageCore.deletePackageCore(req.user, id);
+        const packageResult = await PackageCore.deletePackageCore(req.user, id);
         res.status(200).json({
             status: "success",
             data: {
-                package,
+                package: packageResult
             }
         });
     } catch (error) {

@@ -35,6 +35,14 @@ exports.authLimiter = createRateLimiterMiddleware(
     'Too many failed attempts from this IP. Please try again after an hour to protect your account.'
 );
 
+exports.otpLimiter = createRateLimiterMiddleware(
+    {
+        points: 5, 
+        duration: 15 * 60, 
+    },
+    'Too many OTP requests from this IP. Please try again after 15 minutes.'
+);
+
 
 exports.actionLimiter = createRateLimiterMiddleware(
     {

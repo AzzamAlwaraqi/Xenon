@@ -76,13 +76,12 @@ const NotificationSchema = new mongoose.Schema({
     toObject: { getters: true, virtuals: true } 
 });
 
-NotificationSchema.pre(/^find/, function(next) {
+NotificationSchema.pre(/^find/, function() {
     const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
     this.find({ 
         isDeleted: { $ne: true },
         createdAt: { $gte: sixtyDaysAgo } 
     });
-    next();
 });
 
 NotificationSchema.plugin(softDeletePlugin);

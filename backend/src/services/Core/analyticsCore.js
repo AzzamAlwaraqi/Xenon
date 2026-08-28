@@ -194,7 +194,7 @@ const getVendorsLeaderboardCore = async () => {
         { $limit: 10 },
         { $lookup: { from: 'vendors', localField: '_id', foreignField: '_id', as: 'vendor_info' } },
         { $unwind: { path: "$vendor_info", preserveNullAndEmptyArrays: true } },
-        { $project: { vendor_id: "$_id", vendor_company: "$vendor_info.vendor_company", totalRevenue: 1, successfulBookings: 1, cancelledBookings: 1, _id: 0 } }
+        { $project: { vendor_id: "$_id", vendor_company_name: "$vendor_info.vendor_company_name", totalRevenue: 1, successfulBookings: 1, cancelledBookings: 1, _id: 0 } }
     ]);
 };
 

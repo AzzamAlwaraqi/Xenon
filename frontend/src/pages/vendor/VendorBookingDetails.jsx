@@ -7,7 +7,8 @@ import VendorShell from '../../components/vendor/VendorShell.jsx'
 import { VendorInfo, VendorNotice, VendorStatus } from '../../components/vendor/VendorUi.jsx'
 import useApi from '../../hooks/useApi.js'
 import { vendorBookingApi } from '../../services/api.js'
-import { getBookingId, getBookingPackage, getBookingTraveller, getCollection } from '../../utils/vendorData.js'
+import { validateBookingTransition } from '../../utils/formValidation.js'
+import { getBookingPackage, getBookingTraveller, getRecord } from '../../utils/vendorData.js'
 
 // Page component
 export default function VendorBookingDetails() {
@@ -15,10 +16,15 @@ export default function VendorBookingDetails() {
   const [refresh, setRefresh] = useState(0)
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState({ type: '', text: '' })
-  const bookingState = useApi(vendorBookingApi.getAll, [refresh])
-  const booking = getCollection(bookingState.data).find((item) => getBookingId(item) === id) || {}
+  const bookingState = useApi(() => vendorBookingApi.getById(id), [id, refresh])
+  const booking = getRecord(bookingState.data)
 
   async function updateDecision(status) {
+    const validationError = validateBookingTransition(booking.status, status)
+    if (validationError) {
+      setMessage({ type: 'error', text: validationError })
+      return
+    }
     setBusy(status)
     setMessage({ type: '', text: '' })
     try {
@@ -47,8 +53,10 @@ export default function VendorBookingDetails() {
           <div className="vendor-card">
             <h2>Trip summary</h2>
             <VendorInfo label="Package" value={getBookingPackage(booking)} />
-            <VendorInfo label="Date" value={booking.date || booking.booking_date} />
+            <VendorInfo label="Date" value={(booking.date || booking.booking_date) ? new Date(booking.date || booking.booking_date).toLocaleDateString() : '—'} />
             <VendorInfo label="Guests" value={booking.guests || booking.number_of_people} />
+            <VendorInfo label="Total" value={booking.total_price != null ? `JOD ${booking.total_price}` : '—'} />
+            <VendorInfo label="Payment" value={booking.payment_status || booking.payment?.payment_status || 'Not recorded'} />
             <VendorStatus value={booking.status} />
           </div>
         </section>

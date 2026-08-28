@@ -124,7 +124,7 @@ exports.resetPasswordValidation = function (req, res, next) {
     const cleanData = {
         email: req.body.email,
         password: req.body.newPassword || req.body.new_password || req.body.password,
-        confirm_password: req.body.confirmPassword || req.body.confirm_password || req.body.newPassword || req.body.password,
+        confirm_password: req.body.confirmPassword || req.body.confirm_password,
         token: req.body.token,
         otpCode: req.body.otpCode
     };
@@ -191,6 +191,7 @@ exports.sendOtpValidation = function (req, res, next) {
         email: joi.string().email().lowercase().trim().messages({
             "string.email": "Please provide a valid email address"
         }),
+        phone: joi.string().regex(jordanMobileRegex).messages(mobileMessages),
         purpose: joi.string().valid("registration", "password_reset", "login", "account_verification").default("registration"),
         length: joi.number().min(6).max(6).optional()
     }).or('email', 'phone').messages({
@@ -202,6 +203,7 @@ exports.sendOtpValidation = function (req, res, next) {
 exports.verifyOtpValidation = function (req, res, next) {
     const Schema = joi.object({
         email: joi.string().email().lowercase().trim(),
+        phone: joi.string().regex(jordanMobileRegex).messages(mobileMessages),
         otp: joi.string().trim().required().messages({
             "any.required": "OTP code is required",
             "string.empty": "OTP code cannot be empty"

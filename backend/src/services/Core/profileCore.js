@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const AppError = require("../../utils/AppError");
 const VendorModel = require("../../Models/VendorModel");
 const UserModel = require("../../Models/UserModel");
+const TouristModel = require("../../Models/TouristModels");
 const ReviewModel = require("../../Models/ReviewModel");
 const BookingModel = require("../../Models/BookingModel");
 const NotificationModel = require("../../Models/NotificationModel");
@@ -19,32 +20,29 @@ const sharp = require("sharp");
 // ==========================================
 exports.getProfileCore = async function (user) {
     try {
-        if (checkRole(user.role, ["user", "admin"])) {
-            // 🌟 إصلاح: لا تجلب الباسوورد أبداً!
+        if (checkRole(user.role, ["admin"])) {
             const profile = await UserModel.findById(user._id);
             if (!profile) throw new AppError(`${user.role} not found`, 404);
             return profile;
+        } else if (checkRole(user.role, ["user"])) {
+            const userDoc = await UserModel.findById(user._id);
+            if (!userDoc) throw new AppError(`User not found`, 404);
+            const touristDoc = await TouristModel.findOne({ user_id: user._id });
+            return { user: userDoc, profile: touristDoc };
+        } else if (checkRole(user.role, ["employee"])) {
+            const userDoc = await UserModel.findById(user._id);
+            if (!userDoc) throw new AppError(`User not found`, 404);
+            const employeeDoc = await EmployeeModel.findOne({ user_id: user._id });
+            return { user: userDoc, profile: employeeDoc };
         } else if (checkRole(user.role, ["vendor"])) {
             const profile = await VendorModel.findOne({
                 $or: [
                     { _id: user._id },
-                    { vendor_owner_id: user._id },
-                    { vendor_user_id: user._id }
+                    { owner_user_id: user._id }
                 ]
             });
 
             if (!profile) throw new AppError("Vendor not found", 404);
-
-            if (profile.deletionRequestedAt) {
-                const timeSinceRequest = Date.now() - new Date(profile.deletionRequestedAt).getTime();
-                const thirtyDaysInMillis = 30 * 24 * 60 * 60 * 1000;
-
-                if (timeSinceRequest > thirtyDaysInMillis) {
-                    throw new AppError("Account is permanently deleted", 403);
-                } else {
-                    throw new AppError("Account is pending deletion. Please restore your account to continue.", 403);
-                }
-            }
 
             if (profile.vendor_status !== 'active') {
                 throw new AppError("Your account has been blocked or deactivated", 403);
@@ -86,30 +84,69 @@ exports.updateProfileCore = async function (user, updates) {
             }
         }
 
-        if (checkRole(user.role, ["user", "admin"])) {
+        if (checkRole(user.role, ["admin"])) {
             const userUpdates = {};
             if (mobileNum) userUpdates.mobileNumber = mobileNum;
             if (updates.name) userUpdates.name = updates.name;
             if (updates.DateOfBirth) userUpdates.DateOfBirth = updates.DateOfBirth;
-
-            // 🌟 Security: إذا غير الإيميل، يجب أن نطلب منه تفعيله من جديد!
+            if (updates.gender) userUpdates.gender = updates.gender;
             if (cleanEmail && cleanEmail !== user.email) {
                 userUpdates.email = cleanEmail;
-                userUpdates.is_verified = false;
             }
-
             const updatedUser = await UserModel.findByIdAndUpdate(user._id, userUpdates, { new: true, runValidators: true });
             return updatedUser;
 
+        } else if (checkRole(user.role, ["user"])) {
+            const userUpdates = {};
+            if (mobileNum) userUpdates.mobileNumber = mobileNum;
+            if (updates.name) userUpdates.name = updates.name;
+            if (cleanEmail && cleanEmail !== user.email) {
+                userUpdates.email = cleanEmail;
+            }
+            if (updates.DateOfBirth) userUpdates.DateOfBirth = updates.DateOfBirth;
+            if (updates.gender) userUpdates.gender = updates.gender;
+            const updatedUser = await UserModel.findByIdAndUpdate(user._id, userUpdates, { new: true, runValidators: true });
+            
+            const touristUpdates = {};
+            if (updates.nationality) touristUpdates.nationality = updates.nationality;
+            
+            const updatedTourist = await TouristModel.findOneAndUpdate(
+                { user_id: user._id },
+                touristUpdates,
+                { new: true, runValidators: true }
+            );
+            return { user: updatedUser, profile: updatedTourist };
+            
+        } else if (checkRole(user.role, ["employee"])) {
+            const userUpdates = {};
+            if (mobileNum) userUpdates.mobileNumber = mobileNum;
+            if (updates.name) userUpdates.name = updates.name;
+            if (updates.DateOfBirth) userUpdates.DateOfBirth = updates.DateOfBirth;
+            if (updates.gender) userUpdates.gender = updates.gender;
+            if (cleanEmail && cleanEmail !== user.email) {
+                userUpdates.email = cleanEmail;
+            }
+            const updatedUser = await UserModel.findByIdAndUpdate(user._id, userUpdates, { new: true, runValidators: true });
+            
+            const employeeUpdates = {};
+            if (updates.position) employeeUpdates.position = updates.position;
+            
+            const updatedEmployee = await EmployeeModel.findOneAndUpdate(
+                { user_id: user._id },
+                employeeUpdates,
+                { new: true, runValidators: true }
+            );
+            return { user: updatedUser, profile: updatedEmployee };
+
         } else if (checkRole(user.role, ["vendor"])) {
             const vendor = await VendorModel.findOne({
-                $or: [{ _id: user._id }, { vendor_owner_id: user._id }, { vendor_user_id: user._id }]
+                $or: [{ _id: user._id }, { owner_user_id: user._id }]
             });
 
             if (!vendor) throw new AppError("Vendor profile not found", 404);
 
             // تحديث موديل اليوزر
-            const userId = vendor.vendor_owner_id || user._id; // Fallback
+            const userId = vendor.owner_user_id || user._id; // Fallback
             const userDoc = await UserModel.findById(userId);
             if (userDoc) {
                 if (updates.name) userDoc.name = updates.name;
@@ -122,21 +159,17 @@ exports.updateProfileCore = async function (user, updates) {
             }
 
             // تحديث اسم الشركة مع التحقق من عدم تكراره
-            let newCompanyName = updates.vendor_company || updates.company_name;
-            if (newCompanyName && newCompanyName !== vendor.vendor_company) {
-                const existingCompany = await VendorModel.findOne({ vendor_company: { $regex: new RegExp(`^${newCompanyName}$`, 'i') } });
+            let newCompanyName = updates.vendor_company_name || updates.company_name;
+            if (newCompanyName && newCompanyName !== vendor.vendor_company_name) {
+                const existingCompany = await VendorModel.findOne({ vendor_company_name: { $regex: new RegExp(`^${newCompanyName}$`, 'i') } });
                 if (existingCompany) {
                     throw new AppError("A vendor with this company name already exists. Please choose a different name.", 409);
                 }
-                vendor.vendor_company = newCompanyName;
+                vendor.vendor_company_name = newCompanyName;
             }
 
             if (updates.address) vendor.vendor_address = updates.address;
             if (updates.city) vendor.vendor_city = updates.city;
-            if (updates.state) vendor.vendor_state = updates.state;
-            if (updates.pincode) vendor.vendor_pincode = updates.pincode;
-            if (updates.country) vendor.vendor_country = updates.country;
-            if (updates.vendor_type) vendor.vendor_type = updates.vendor_type;
 
             await vendor.save();
             return vendor;
@@ -156,7 +189,7 @@ exports.updatePasswordCore = async function (user, oldPassword, newPassword) {
             throw new AppError("New password cannot be the same as old password", 400);
         }
 
-        const userId = user.vendor_owner_id || user._id; // Fallback
+        const userId = user.owner_user_id || user._id; // Fallback
         const userDoc = await UserModel.findById(userId).select("+password");
         if (!userDoc) throw new AppError("User not found", 404);
 
@@ -191,18 +224,18 @@ exports.deleteAccountCore = async function (user) {
     try {
         if (user.isActive === false) throw new AppError("Account is already deactivated", 400);
 
-        if (checkRole(user.role, ["user", "admin"])) {
+        if (checkRole(user.role, ["user", "employee", "admin"])) {
             await UserModel.findByIdAndUpdate(user._id, { isActive: false, updatedAt: new Date() }, { new: true, session });
 
         } else if (checkRole(user.role, ["vendor"])) {
             const vendor = await VendorModel.findOne({
-                $or: [{ _id: user._id }, { vendor_owner_id: user._id }]
+                $or: [{ _id: user._id }, { owner_user_id: user._id }]
             }).session(session);
 
             if (!vendor) throw new AppError("Only the store owner can request to delete this vendor account", 403);
 
-            if (vendor.vendor_status !== 'active' || vendor.deletionRequestedAt) {
-                throw new AppError("Account is already inactive or pending deletion", 400);
+            if (vendor.vendor_status !== 'active') {
+                throw new AppError("Account is already inactive or not active", 400);
             }
 
             const activeEmployees = await EmployeeModel.countDocuments({ vendor_id: vendor._id, job_active: true }).session(session);
@@ -231,13 +264,12 @@ exports.deleteAccountCore = async function (user) {
             await VendorModel.findByIdAndUpdate(
                 vendor._id,
                 {
-                    vendor_status: 'pending_deletion',
-                    deletionRequestedAt: Date.now()
+                    vendor_status: 'inactive'
                 },
                 { new: true, session }
             );
 
-            const userId = vendor.vendor_owner_id || user._id;
+            const userId = vendor.owner_user_id || user._id;
             await vendorApprovalCore.submitDowngradeRequestCore({
                 vendor_id: vendor._id,
                 user_id: userId,
@@ -271,6 +303,8 @@ exports.deleteAccountCore = async function (user) {
         throw new AppError(error.message, 500);
     }
 };
+
+
 // ==========================================
 // 5. Client Specific Helpers
 // ==========================================
@@ -279,7 +313,7 @@ exports.getAllReviewsCore = async function (user) {
     try {
         if (!checkRole(user.role, ["user"])) throw new AppError("Unauthorized", 403);
         const reviews = await ReviewModel.find({ user_id: user._id })
-            .populate("vendor_id", "vendor_company -_id");
+            .populate("vendor_id", "vendor_company_name -_id");
         return reviews;
     } catch (error) {
         if (error.statusCode) throw error;
@@ -291,7 +325,7 @@ exports.getAllBookingHistoryCore = async function (user) {
     try {
         if (!checkRole(user.role, ["user"])) throw new AppError("Unauthorized", 403);
         const getAllBookingHistory = await BookingModel.find({ user_id: user._id })
-            .populate("vendor_id", "vendor_company -_id")
+            .populate("vendor_id", "vendor_company_name -_id")
             .populate("package_id", "package_name -_id");
         return getAllBookingHistory;
     } catch (error) {
@@ -329,7 +363,7 @@ exports.requestVendorOnboardingCore = async function (user, body, files) {
             throw new AppError("Only users can apply for vendor onboarding", 403);
         }
 
-        let existingVendor = await VendorModel.findOne({ vendor_owner_id: user._id });
+        let existingVendor = await VendorModel.findOne({ owner_user_id: user._id });
         if (existingVendor) {
             if (existingVendor.vendor_status === 'pending_approval') {
                 throw new AppError("You already have a vendor application pending approval.", 400);
@@ -339,12 +373,12 @@ exports.requestVendorOnboardingCore = async function (user, body, files) {
             // If rejected, we allow them to proceed and we will update their existing record.
         }
         
-        const requiredFields = ['company_name', 'address', 'city', 'state', 'pincode', 'country', 'vendor_type', 'iban_number'];
+        const requiredFields = ['company_name', 'address', 'city', 'iban_number'];
         for (const field of requiredFields) {
             if (!body[field]) throw new AppError(`Field ${field} is required`, 400);
         }
 
-        const existingCompany = await VendorModel.findOne({ vendor_company: { $regex: new RegExp(`^${body.company_name}$`, 'i') } });
+        const existingCompany = await VendorModel.findOne({ vendor_company_name: { $regex: new RegExp(`^${body.company_name}$`, 'i') } });
         if (existingCompany) {
             throw new AppError("A vendor with this company name already exists.", 409);
         }
@@ -382,13 +416,9 @@ exports.requestVendorOnboardingCore = async function (user, body, files) {
 
         if (existingVendor) {
             vendorId = existingVendor._id;
-            existingVendor.vendor_company = body.company_name;
+            existingVendor.vendor_company_name = body.company_name;
             existingVendor.vendor_address = body.address;
             existingVendor.vendor_city = body.city;
-            existingVendor.vendor_state = body.state;
-            existingVendor.vendor_pincode = body.pincode;
-            existingVendor.vendor_country = body.country;
-            existingVendor.vendor_type = body.vendor_type;
             existingVendor.vendor_status = 'pending_approval';
             await existingVendor.save({ session });
             finalVendor = existingVendor;
@@ -418,15 +448,10 @@ exports.requestVendorOnboardingCore = async function (user, body, files) {
             }
         } else {
             const newVendor = new VendorModel({
-                vendor_company: body.company_name,
+                vendor_company_name: body.company_name,
                 vendor_address: body.address,
                 vendor_city: body.city,
-                vendor_state: body.state,
-                vendor_pincode: body.pincode,
-                vendor_country: body.country,
-                vendor_type: body.vendor_type,
-                vendor_owner_id: user._id,
-                vendor_user_id: user._id,
+                owner_user_id: user._id,
                 vendor_status: 'pending_approval'
             });
             await newVendor.save({ session });

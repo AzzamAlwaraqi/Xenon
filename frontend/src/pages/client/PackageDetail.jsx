@@ -9,7 +9,7 @@ import { VendorNotice } from '../../components/vendor/VendorUi.jsx'
 import useApi from '../../hooks/useApi.js'
 import { bookingApi, packageApi } from '../../services/api.js'
 import { storage, TOKEN_KEY } from '../../services/storage.js'
-import { validateBooking } from '../../utils/formValidation.js'
+import { localToday, validateBooking } from '../../utils/formValidation.js'
 import { getRecord } from '../../utils/vendorData.js'
 
 // Constants
@@ -35,7 +35,7 @@ export default function PackageDetail() {
       return
     }
 
-    const validationError = validateBooking(form)
+    const validationError = validateBooking(form, packageItem)
     if (validationError) {
       setStatus({ loading: false, message: validationError, type: 'error' })
       return
@@ -45,7 +45,7 @@ export default function PackageDetail() {
     try {
       await bookingApi.create({
         package_Name: packageItem.package_name,
-        VENDOR_Name: packageItem.vendor_id?.vendor_name,
+        vendor_id: packageItem.vendor_id?._id || packageItem.vendor_id?.id || packageItem.vendor_id,
         date: form.date,
         guests: Number(form.guests),
       })
@@ -56,6 +56,10 @@ export default function PackageDetail() {
   }
 
   const image = packageItem.images?.[0]?.url
+  const packageStart = String(packageItem.startDate || '').slice(0, 10)
+  const packageEnd = String(packageItem.endDate || '').slice(0, 10)
+  const minimumDate = packageStart && packageStart > localToday() ? packageStart : localToday()
+  const maximumGuests = Math.max(0, Math.min(5, Number(packageItem.available_seats ?? 5)))
 
   return (
     <ClientShell title={packageItem.package_name || 'Package details'} subtitle={packageItem.vendor_id?.vendor_name || 'Xenon Partner'}>
@@ -77,10 +81,10 @@ export default function PackageDetail() {
 
             <form className="vendor-form book-form" onSubmit={submitBooking}>
               <h2>Request to book</h2>
-              <label>Travel date<input type="date" min={new Date().toISOString().split('T')[0]} value={form.date} onChange={updateField('date')} required /></label>
-              <label>Guests<input type="number" min="1" max="5" value={form.guests} onChange={updateField('guests')} required /></label>
+              <label>Travel date<input type="date" min={minimumDate} max={packageEnd || undefined} value={form.date} onChange={updateField('date')} required /></label>
+              <label>Guests<input type="number" min="1" max={maximumGuests || 1} step="1" value={form.guests} onChange={updateField('guests')} required /></label>
               {status.message && <p className={`form-message ${status.type}`}>{status.message}</p>}
-              <button className="vendor-button" disabled={status.loading}>{status.loading ? 'Requesting…' : 'Request booking'}</button>
+              <button className="vendor-button" disabled={status.loading || maximumGuests < 1 || packageItem.package_status === 'inactive'}>{status.loading ? 'Requesting…' : maximumGuests < 1 ? 'Sold out' : 'Request booking'}</button>
             </form>
           </div>
         </section>

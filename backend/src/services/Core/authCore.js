@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const AppError = require("../../utils/AppError");
 const UserModel = require("../../Models/UserModel");
 const VendorModel = require("../../Models/VendorModel");
+const TouristModel = require("../../Models/TouristModels");
 const SessionModel = require("../../Models/SessionModel");
 const OTPModel = require("../../Models/OTPModel");
 const { setStandardDate } = require("../../utils/dateFormatter");
@@ -25,15 +26,18 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         purpose: "registration"
     });
 
-    const actualRole = "user"; // Force all new registrations to be 'user'
+    const actualRole = role;
 
     const rawDeviceType = deviceInfo.deviceType || deviceInfo.device_type || Body.device_type || "Desktop";
     const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
     const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
 
     //to check if vendor use web or not
+    if (checkRole(role, ["user"]) && !isMobile) {
+        throw new AppError("Access Denied: Tourist must register via the Xenon App.", 403);
+    }
     if (checkRole(role, ["vendor"]) && isMobile) {
-        throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
+        throw new AppError("Access Denied: Vendor must register via the Xenon Web Dashboard.", 403);
     }
 
     const existingUserByEmail = await UserModel.findOne({ email: cleanEmail });
@@ -62,17 +66,39 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         }
     }
 
-    const newUser = await UserModel.create({
-        name: Body.name,
-        email: cleanEmail,
-        password: Body.password,
-        role: actualRole,
-        mobileNumber: mobileNumber,
-        gender: Body.gender,
-        DateOfBirth: Body.DateOfBirth ? (checkRole(role, ["vendor"]) ? setStandardDate(Body.DateOfBirth) : Body.DateOfBirth) : undefined
-    });
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    let newUser, newTourist;
+    try {
+        newUser = await UserModel.create([{
+            name: Body.name,
+            email: cleanEmail,
+            password: Body.password,
+            role: "user", // Force role to user for new registrations
+            mobileNumber: mobileNumber,
+            gender: Body.gender || "male", // Fallback for strict mode
+            DateOfBirth: Body.DateOfBirth ? setStandardDate(Body.DateOfBirth) : setStandardDate(new Date('1990-01-01')) // Fallback for strict mode
+        }], { session });
 
-    const tokens = generateAuthTokens(newUser._id, role, deviceInfo.familyId || deviceInfo.family_id);
+        newTourist = await TouristModel.create([{
+            user_id: newUser[0]._id,
+            nationality: Body.nationality || null,
+            emergencyContact: Body.emergencyContact || "911",
+            preferredDestinations: Body.preferredDestinations || []
+        }], { session });
+
+        await session.commitTransaction();
+        session.endSession();
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+    }
+
+    newUser = newUser[0];
+    const profile = newTourist[0];
+
+    const tokens = generateAuthTokens(newUser._id, "user", deviceInfo.familyId || deviceInfo.family_id);
     const hashedTokenId = crypto.createHash("sha256").update(tokens.tokenId).digest("hex");
     const deviceId = deviceInfo.deviceId || deviceInfo.device_id || crypto.randomBytes(8).toString("hex");
 
@@ -85,13 +111,13 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         ip_address: sesstionHelper.getClientIp(deviceInfo.ip_address || Body.ip_address || "127.0.0.1"),
         device_type: resolvedDeviceType,
         device_id: sesstionHelper.getDeviceId(deviceInfo.device_id || deviceId),
-        role: sesstionHelper.getRole(role),
+        role: "user",
         is_active: sesstionHelper.getIsActive(deviceInfo.isActive || deviceInfo.is_active),
         session_status: sesstionHelper.getSessionStatus(deviceInfo.sessionStatus || deviceInfo.session_status),
         family_id: sesstionHelper.getFamilyId(tokens.familyId)
     });
 
-    return { user: newUser, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
+    return { user: newUser, profile: profile, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
 };
 
 exports.loginCore = async function (email, password, roleExpected, deviceInfo = {}) {
@@ -104,10 +130,13 @@ exports.loginCore = async function (email, password, roleExpected, deviceInfo = 
         const user = await UserModel.findOne({ email: email.toLowerCase().trim() });
         if (!user) throw new AppError("the account not founded", 401);
 
+    
         if (roleExpected && !checkRole(user.role, [roleExpected])) {
             throw new AppError("You are not authorized to login to this portal", 403);
         }
-
+        if (checkRole(user.role, ["user"]) && !isMobile) {
+            throw new AppError("Access Denied: Tourist must login via the Xenon App.", 403);
+        }
         // Allow users to login on Web (they might be accessing the vendor onboarding form)
         if (checkRole(user.role, ["vendor", "admin"]) && isMobile) {
             throw new AppError("Access Denied: Vendors and Admins must login via the Xenon Web Dashboard.", 403);
@@ -292,3 +321,4 @@ exports.refreshTokenCore = async function (refreshToken, deviceInfo = {}) {
         throw new AppError(error.message, 500);
     }
 };
+

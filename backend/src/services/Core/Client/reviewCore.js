@@ -5,6 +5,8 @@ const Review = require("../../../Models/ReviewModel");
 const Package = require("../../../Models/PackageModel"); // 🌟 تأكد من استيراد موديل الباقات
 const { checkRole } = require("../../../utils/checkvalidete");
 
+const { clearCache } = require("../../../middlewares/cacheMiddleware");
+
 // ==========================================
 // 🛡️ HELPER: Calculate Average Rating
 // ==========================================
@@ -43,6 +45,11 @@ const updatePackageAverageRating = async (packageId, session = null) => {
             ratingsAverage: 0 
         }, { session });
     }
+
+    // Invalidate caches
+    clearCache("/api/v1/packages");
+    clearCache(`/api/v1/packages/package/${packageId}`);
+    clearCache(`/api/v1/reviews/package/${packageId}`);
 };
 
 // ==========================================
@@ -71,12 +78,12 @@ exports.createReviewCore = async function (user, reviewData) {
         const booking = await Booking.findOne({
             user_id: user._id,
             package_id: packageDoc._id,
-            status: { $in: ['Completed', 'completed', 'accepted', 'Accepted'] },
+            status: { $in: ['Completed', 'completed'] },
             isDeleted: { $ne: true }
         }).sort({ updatedAt: -1 }); // Get the most recent booking
 
         if (!booking) {
-            throw new AppError(`You cannot review this package because you do not have an accepted or completed booking for it.`, 400);
+            throw new AppError(`You cannot review this package because you do not have a completed booking for it.`, 400);
         }
 
         // 🌟 نافذة التقييم الزمنية (30 يوماً من تاريخ تحديث الحجز للاكتمال)
@@ -214,7 +221,7 @@ exports.getMyReviewsCore = async function (user, queryParams = {}) {
             Review.find(query)
                 .populate({
                     path: 'vendor_id',
-                    select: 'vendor_company vendor_owner_id -_id',
+                    select: 'vendor_company_name vendor_owner_id -_id',
                     populate: { path: 'vendor_owner_id', select: 'email -_id' }
                 })
                 .populate('package_id', 'package_name package_price -_id')
@@ -254,7 +261,7 @@ exports.getReviewByIdCore = async function (user, reviewId) {
 
         const review = await Review.populate(rawReview, [
             { path: 'user_id', select: 'name email -_id' },
-            { path: 'vendor_id', select: 'vendor_company vendor_owner_id -_id', populate: { path: 'vendor_owner_id', select: 'email -_id' } },
+            { path: 'vendor_id', select: 'vendor_company_name vendor_owner_id -_id', populate: { path: 'vendor_owner_id', select: 'email -_id' } },
             { path: 'package_id', select: 'package_name package_price -_id' }
         ]);
 
@@ -325,7 +332,7 @@ exports.getAllReviewsCore = async function (user, queryParams = {}) {
                 .populate('user_id', 'name email -_id')
                 .populate({
                     path: 'vendor_id',
-                    select: 'vendor_company vendor_owner_id -_id',
+                    select: 'vendor_company_name vendor_owner_id -_id',
                     populate: { path: 'vendor_owner_id', select: 'email -_id' }
                 })
                 .populate('package_id', 'package_name -_id')

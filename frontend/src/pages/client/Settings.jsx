@@ -7,7 +7,7 @@ import ClientShell from '../../components/client/ClientShell.jsx'
 import { VendorField } from '../../components/vendor/VendorUi.jsx'
 import { profileApi } from '../../services/api.js'
 import { storage } from '../../services/storage.js'
-import { validateChangePassword } from '../../utils/formValidation.js'
+import { validateChangePassword, validateResponseText } from '../../utils/formValidation.js'
 
 // Constants
 const EMPTY_PASSWORDS = { old_password: '', new_password: '', confirm_password: '' }
@@ -41,6 +41,11 @@ export default function Settings() {
   }
 
   async function removeAccount() {
+    const reasonError = validateResponseText(reason, { required: false, max: 500, label: 'Deletion reason' })
+    if (reasonError) {
+      setMessage(reasonError)
+      return
+    }
     if (!window.confirm('Permanently delete your Xenon account?')) return
     try {
       await profileApi.delete(reason)
@@ -66,7 +71,7 @@ export default function Settings() {
       <section className="vendor-card danger-zone">
         <h2>Danger zone</h2>
         <p>Deleting your account removes access to Xenon. Existing bookings remain on record.</p>
-        <label>Reason (optional)<textarea rows="3" value={reason} onChange={(event) => setReason(event.target.value)} /></label>
+        <label>Reason (optional)<textarea rows="3" maxLength="500" value={reason} onChange={(event) => setReason(event.target.value)} /></label>
         <button className="vendor-button danger" onClick={removeAccount}>Delete my account</button>
       </section>
     </ClientShell>

@@ -3,6 +3,7 @@ const { protect, restrictTo } = require("../middlewares/authMiddleware");
 const { createReviewValidation, getReviewsQueryValidation, paramIdValidation, updateReviewValidation,updateReviewStatusValidation} = require("../validations/reviewValidation");
 const reviewController = require("../controllers/Client/reviewController");
 const { cacheMiddleware } = require("../middlewares/cacheMiddleware");
+const reviewValidation =require("../validations/reviewValidation");
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ router.patch("/deleteReview/:id", protect, restrictTo("user", "admin"), paramIdV
 // Note: Public
 // Route Parameters: packageId (UUID)
 
-router.get("/package/:packageId", cacheMiddleware(300), getReviewsQueryValidation, reviewController.getPackageReviews);
+router.get("/package/:packageId", cacheMiddleware(300), paramIdValidation, getReviewsQueryValidation, reviewController.getPackageReviews);
 
 // Admin routes
 // Note: Accessible by admin
@@ -44,5 +45,8 @@ router.get("/getAllReviews", protect, restrictTo("admin"), getReviewsQueryValida
 // Route Parameters: id (UUID)
 
 router.patch("/updateReviewStatus/:id", protect, restrictTo("admin"), paramIdValidation, updateReviewStatusValidation, reviewController.updateReviewStatus);
+
+// Vendor routes
+router.post("/reply/:id", protect, restrictTo("vendor", "admin"), paramIdValidation, reviewValidation.replyOnReviewValidation, reviewController.replyToReview);
 
 module.exports = router;

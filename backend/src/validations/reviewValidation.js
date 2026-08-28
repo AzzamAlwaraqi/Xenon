@@ -15,16 +15,17 @@ const createReviewSchema = Joi.object({
         'number.max': 'Rating must not be more than 5',
         'any.required': 'Rating is required'
     }),
-    comment: Joi.string().trim().min(3).max(500).optional().allow('', null).messages({
-        'string.base': 'Comment must be a string',
-        'string.min': 'Comment must be at least 3 characters long',
-        'string.max': 'Comment must not be more than 500 characters long'
-    })
+    comment: Joi.string().trim().min(3).max(500).optional(),
+    review_text: Joi.string().trim().min(3).max(500).optional()
+}).or('comment', 'review_text').messages({
+    'object.missing': 'Comment or review text is required'
 });
 
 const updateReviewBodySchema = Joi.object({
     rating: Joi.number().min(1).max(5).optional(),
-    comment: Joi.string().trim().min(3).max(500).optional()
+    review_rating: Joi.number().min(1).max(5).optional(),
+    comment: Joi.string().trim().min(3).max(500).optional(),
+    review_text: Joi.string().trim().min(3).max(500).optional()
 }).min(1);
 
 const replyReviewSchema = Joi.object({
@@ -75,10 +76,15 @@ exports.getReviewsQueryValidation = (req, res, next) => {
 };
 
 exports.paramIdValidation = (req, res, next) => {
-    const idToValidate = req.params.reviewId || req.params.targetId || req.params.id;
+    const idToValidate = req.params.reviewId || req.params.targetId || req.params.id || req.params.packageId;
     const { error, value } = paramIdSchema.validate({ id: idToValidate }, { abortEarly: false, stripUnknown: true });
     if (error) return next(new AppError(error.details.map(err => err.message).join(' | '), 400));
-    req.params.id = value.id;
+    
+    if (req.params.reviewId) req.params.reviewId = value.id;
+    else if (req.params.targetId) req.params.targetId = value.id;
+    else if (req.params.packageId) req.params.packageId = value.id;
+    else req.params.id = value.id;
+    
     next();
 };
 
