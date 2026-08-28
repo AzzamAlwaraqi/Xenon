@@ -12,6 +12,7 @@ class BookingModel {
   final Map<String, dynamic>? package;
   final Map<String, dynamic>? user;
   final Map<String, dynamic>? vendor;
+  final int guests;
 
   const BookingModel({
     required this.id,
@@ -24,6 +25,7 @@ class BookingModel {
     this.package,
     this.user,
     this.vendor,
+    this.guests = 1,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -66,6 +68,7 @@ class BookingModel {
       package: pkg,
       user: json['user_id'] is Map ? json['user_id'] : (json['user'] is Map ? json['user'] : null),
       vendor: json['vendor_id'] is Map ? json['vendor_id'] : (json['vendor'] is Map ? json['vendor'] : null),
+      guests: json['number_of_people'] ?? json['guests'] ?? 1,
     );
   }
 }

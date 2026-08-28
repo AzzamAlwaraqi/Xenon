@@ -31,7 +31,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
     const resolvedDeviceType = sesstionHelper.getDeviceType(rawDeviceType).toLowerCase();
     const isMobile = resolvedDeviceType === 'mobile' || resolvedDeviceType === 'tablet';
 
-     //to check if vendor use web or not
+    //to check if vendor use web or not
     if (checkRole(role, ["vendor"]) && isMobile) {
         throw new AppError("Access Denied: Vendors must register via the Xenon Web Dashboard.", 403);
     }
@@ -83,7 +83,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         user_id: newUser._id,
         expires_at: sesstionHelper.calculateSessionExpiry(deviceInfo.expiresAt || deviceInfo.expires_at),
         ip_address: sesstionHelper.getClientIp(deviceInfo.ip_address || Body.ip_address || "127.0.0.1"),
-        device_type: resolvedDeviceType, 
+        device_type: resolvedDeviceType,
         device_id: sesstionHelper.getDeviceId(deviceInfo.device_id || deviceId),
         role: sesstionHelper.getRole(role),
         is_active: sesstionHelper.getIsActive(deviceInfo.isActive || deviceInfo.is_active),
@@ -91,7 +91,7 @@ exports.createAccountCore = async function (Body, role = "user", deviceInfo = {}
         family_id: sesstionHelper.getFamilyId(tokens.familyId)
     });
 
-    return { user: newUser, vendor: newVendor, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
+    return { user: newUser, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
 };
 
 exports.loginCore = async function (email, password, roleExpected, deviceInfo = {}) {
@@ -161,10 +161,10 @@ exports.logoutCore = async function (user, token) {
         const hashedInputToken = crypto.createHash("sha256").update(token).digest("hex");
 
         const session = await SessionModel.findOneAndUpdate(
-            { 
-                user_id: user._id, 
+            {
+                user_id: user._id,
                 $or: [{ accessToken: hashedInputToken }, { refreshToken: hashedInputToken }],
-                is_active: true 
+                is_active: true
             },
             { is_active: false },
             { new: true }

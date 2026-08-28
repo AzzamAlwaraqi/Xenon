@@ -40,10 +40,7 @@ class _SettingsPageContent extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: AppColors.primaryRust),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: Text(
           isArabic ? 'الإعدادات' : 'Settings',
           style: TextStyle(

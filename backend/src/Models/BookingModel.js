@@ -73,7 +73,8 @@ const BookingSchema = new mongoose.Schema({
     status_history: [{
         status: { type: String },
         changed_by: { type: mongoose.Schema.Types.UUID, ref: "User" },
-        changed_at: { type: Date, default: Date.now }
+        changed_at: { type: Date, default: Date.now },
+        note: { type: String }
     }],
     deletionRequestedAt: {
         ...MongooseStandardDate,

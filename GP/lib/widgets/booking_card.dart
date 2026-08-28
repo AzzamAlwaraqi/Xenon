@@ -11,6 +11,7 @@ class BookingCard extends StatelessWidget {
   final bool isDark;
   final String currency;
   final double price;
+  final int guests;
   final String? bookingId;
   final String? footerText;
   final bool showCheckIn;
@@ -29,6 +30,7 @@ class BookingCard extends StatelessWidget {
     required this.isDark,
     required this.currency,
     required this.price,
+    this.guests = 1,
     this.bookingId,
     this.footerText,
     this.showCheckIn = false,
@@ -125,6 +127,10 @@ class BookingCard extends StatelessWidget {
                             Text(_formattedDate,
                                 style: TextStyle(
                                     color: isDark ? AppColors.textSecondaryLight : Colors.grey[600], fontSize: 12)),
+                            const SizedBox(width: 12),
+                            Icon(Icons.people, color: isDark ? AppColors.textSecondaryLight : Colors.grey[600], size: 12),
+                            const SizedBox(width: 4),
+                            Text('$guests', style: TextStyle(color: isDark ? AppColors.textSecondaryLight : Colors.grey[600], fontSize: 12)),
                           ],
                         ),
                         Text(

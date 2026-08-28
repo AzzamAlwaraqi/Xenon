@@ -24,6 +24,7 @@ class AuthService {
     required String gender,
     required String mobileNumber,
     required String dateOfBirth,
+    required String otp,
   }) async {
     try {
       final response = await register({
@@ -34,6 +35,7 @@ class AuthService {
         'gender': gender,
         'mobileNumber': mobileNumber,
         'DateOfBirth': dateOfBirth,
+        'otp': otp,
       });
       final data = response['data'] ?? {};
       final token = data['accessToken'] ?? data['token'];

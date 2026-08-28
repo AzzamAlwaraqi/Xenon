@@ -78,6 +78,7 @@ exports.getAllPackagesCore = async function (queryString) {
         const limit = parseInt(queryString.limit, 10) || 15;
         const totalPages = Math.ceil(totalDocuments / limit);
 
+        console.log("PACKAGES FETCHED SUCCESSFULLY, COUNT:", packages.length);
         return {
             count: packages.length,
             pagination: {
@@ -93,8 +94,12 @@ exports.getAllPackagesCore = async function (queryString) {
             data: packages
         };
     } catch (error) {
+        if (error.name === 'CastError') {
+            console.error("CAST ERROR ON PATH:", error.path);
+            throw new AppError(`Invalid value for path: ${error.path}`, 400);
+        }
         if (error.statusCode) throw error;
-        throw new AppError(error.message, 500);
+        throw new AppError(error.message || "Unknown error", 500);
     }
 };
 

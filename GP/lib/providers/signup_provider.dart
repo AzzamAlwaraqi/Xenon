@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gp/models/auth_model.dart';
+import 'package:gp/models/api_client.dart';
 import 'package:gp/utils/toast_utils.dart';
 import 'package:intl/intl.dart';
 
@@ -117,28 +118,34 @@ class SignupProvider extends ChangeNotifier {
 
     final formattedDate = DateFormat('dd/MM/yyyy').format(_dateOfBirth!);
 
-    final error = await AuthService.signUp(
-      name: fullNameController.text.trim(),
-      email: emailController.text.trim(),
-      password: passwordController.text,
-      confirmPassword: confirmPasswordController.text,
-      gender: _gender!,
-      mobileNumber: phoneController.text.trim(),
-      dateOfBirth: formattedDate,
-    );
+    try {
+      await AuthService.sendOtp(emailController.text.trim());
+      _isLoading = false;
+      notifyListeners();
 
-    _isLoading = false;
-    notifyListeners();
-
-    if (context.mounted) {
-      if (error == null) {
+      if (context.mounted) {
         Navigator.pushReplacementNamed(
           context,
           '/otp',
-          arguments: {'email': emailController.text.trim()},
+          arguments: {
+            'email': emailController.text.trim(),
+            'name': fullNameController.text.trim(),
+            'password': passwordController.text,
+            'confirmPassword': confirmPasswordController.text,
+            'gender': _gender!,
+            'mobileNumber': phoneController.text.trim(),
+            'dateOfBirth': formattedDate,
+            'isRegistration': true,
+          },
         );
-      } else {
-        showTopToast(context, error, isError: true);
+      }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      if (context.mounted) {
+        String errorMsg = 'Failed to send OTP';
+        if (e is ApiException) errorMsg = e.message;
+        showTopToast(context, errorMsg, isError: true);
       }
     }
   }
