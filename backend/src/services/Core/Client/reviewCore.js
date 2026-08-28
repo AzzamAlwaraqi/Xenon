@@ -221,8 +221,8 @@ exports.getMyReviewsCore = async function (user, queryParams = {}) {
             Review.find(query)
                 .populate({
                     path: 'vendor_id',
-                    select: 'vendor_company_name vendor_owner_id -_id',
-                    populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                    select: 'vendor_company_name owner_user_id -_id',
+                    populate: { path: 'owner_user_id', select: 'email -_id' }
                 })
                 .populate('package_id', 'package_name package_price -_id')
                 .sort({ createdAt: -1 })
@@ -261,7 +261,7 @@ exports.getReviewByIdCore = async function (user, reviewId) {
 
         const review = await Review.populate(rawReview, [
             { path: 'user_id', select: 'name email -_id' },
-            { path: 'vendor_id', select: 'vendor_company_name vendor_owner_id -_id', populate: { path: 'vendor_owner_id', select: 'email -_id' } },
+            { path: 'vendor_id', select: 'vendor_company_name owner_user_id -_id', populate: { path: 'owner_user_id', select: 'email -_id' } },
             { path: 'package_id', select: 'package_name package_price -_id' }
         ]);
 
@@ -332,8 +332,8 @@ exports.getAllReviewsCore = async function (user, queryParams = {}) {
                 .populate('user_id', 'name email -_id')
                 .populate({
                     path: 'vendor_id',
-                    select: 'vendor_company_name vendor_owner_id -_id',
-                    populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                    select: 'vendor_company_name owner_user_id -_id',
+                    populate: { path: 'owner_user_id', select: 'email -_id' }
                 })
                 .populate('package_id', 'package_name -_id')
                 .sort({ createdAt: -1 })

@@ -18,11 +18,11 @@ const checkPackageOwnership = (userOrVendor, packageDoc) => {
             : (packageDoc.vendor_id ? packageDoc.vendor_id.toString() : null);
 
         // Allow if it matches Vendor ID, OR if it matches the Vendor's Owner (User) ID
-        if (vendorId !== userOrVendor._id.toString() && vendorId !== userOrVendor.vendor_owner_id?.toString()) {
+        if (vendorId !== userOrVendor._id.toString() && vendorId !== userOrVendor.owner_user_id?.toString()) {
             console.log("OWNERSHIP FAILED!");
             console.log("Package vendorId:", vendorId);
             console.log("userOrVendor._id:", userOrVendor._id.toString());
-            console.log("userOrVendor.vendor_owner_id:", userOrVendor.vendor_owner_id?.toString());
+            console.log("userOrVendor.owner_user_id:", userOrVendor.owner_user_id?.toString());
             throw new AppError("You do not have permission to modify or delete this package", 403);
         }
     } else {
@@ -57,9 +57,9 @@ exports.getAllPackagesCore = async function (queryString) {
         // 3. Apply features (filter, sort, select, paginate)
         const baseQuery = Package.find(baseFilter).populate({
             path: 'vendor_id',
-            select: 'vendor_company_name vendor_owner_id',
+            select: 'vendor_company_name owner_user_id',
             populate: {
-                path: 'vendor_owner_id',
+                path: 'owner_user_id',
                 match: { role: 'vendor' },
                 select: 'name email mobileNumber role -_id'
             }
@@ -106,9 +106,9 @@ exports.getPackageCore = async function (packageId, queryString = {}) {
         let query = Package.findOne({ _id: packageId })
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company_name vendor_owner_id',
+                select: 'vendor_company_name owner_user_id',
                 populate: {
-                    path: 'vendor_owner_id',
+                    path: 'owner_user_id',
                     match: { role: 'vendor' },
                     select: 'name email mobileNumber role -_id'
                 }

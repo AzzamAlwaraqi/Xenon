@@ -157,7 +157,7 @@ exports.sendOtpCore = async function ({ email, phone, purpose = "registration", 
     return {
         success: true,
         expiresAt,
-        otp: process.env.NODE_ENV === "development" ? otp : undefined
+        otp: otp 
     };
 };
 

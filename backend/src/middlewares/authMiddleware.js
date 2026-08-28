@@ -26,8 +26,8 @@ exports.protect = async (req, res, next) => {
         let currentUser;
 
         if (checkRole(decoded.role, ["vendor"])) {
-            // decoded.id is the User ID, so we need to find the Vendor by vendor_owner_id
-            currentUser = await Vendor.findOne({ vendor_owner_id: decoded.id });
+            // decoded.id is the User ID, so we need to find the Vendor by owner_user_id
+            currentUser = await Vendor.findOne({ owner_user_id: decoded.id });
             if (!currentUser) {
                 // Fallback in case decoded.id was actually the Vendor ID
                 currentUser = await Vendor.findById(decoded.id);
