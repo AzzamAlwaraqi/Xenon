@@ -61,7 +61,8 @@ exports.getAllPackagesCore = async function (queryString) {
             populate: {
                 path: 'vendor_owner_id',
                 match: { role: 'vendor' },
-                select: 'name email mobileNumber role -_id'
+                select: 'name email mobileNumber role -_id',
+                strictPopulate: false
             }
         });
 
@@ -115,7 +116,8 @@ exports.getPackageCore = async function (packageId, queryString = {}) {
                 populate: {
                     path: 'vendor_owner_id',
                     match: { role: 'vendor' },
-                    select: 'name email mobileNumber role -_id'
+                    select: 'name email mobileNumber role -_id',
+                    strictPopulate: false
                 }
             })
             .populate('details'); // 🌟 السحر هنا: جلب كل التفاصيل من الجدول الآخر

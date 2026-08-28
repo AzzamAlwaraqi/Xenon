@@ -305,7 +305,7 @@ exports.getBookingCore = async function (userOrVendor, bookingId) {
             .populate({
                 path: 'vendor_id',
                 select: 'vendor_company_name vendor_owner_id -_id',
-                populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
             })
             .populate('user_id', 'name email mobileNumber -_id');
 
@@ -341,7 +341,7 @@ exports.getAllBookingCore = async function (userOrVendor) {
             .populate({
                 path: 'vendor_id',
                 select: 'vendor_company_name vendor_owner_id -_id',
-                populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
             })
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
@@ -404,7 +404,7 @@ exports.getAllMyBookingsCore = async function (userOrVendor) {
             .populate({
                 path: 'vendor_id',
                 select: 'vendor_company_name vendor_owner_id -_id',
-                populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
             })
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 }); 
@@ -448,7 +448,7 @@ exports.getBookingHistoryCore = async function (userOrVendor) {
             .populate({
                 path: 'vendor_id',
                 select: 'vendor_company_name vendor_owner_id -_id',
-                populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
             })
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
@@ -618,7 +618,7 @@ exports.getUserPendingRequestsCore = async function (userOrVendor) {
         .populate({
             path: 'vendor_id',
             select: 'vendor_company_name vendor_owner_id -_id',
-            populate: { path: 'vendor_owner_id', select: 'email -_id' }
+            populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
         })
         .sort({ createdAt: -1 });
 
