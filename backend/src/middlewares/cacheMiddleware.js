@@ -30,7 +30,11 @@ const cacheMiddleware = (duration) => {
         res.json = (body) => {
             // Only cache successful responses
             if (res.statusCode >= 200 && res.statusCode < 300) {
-                cache.set(key, body, duration);
+                let cacheableBody = body;
+                try {
+                    cacheableBody = JSON.parse(JSON.stringify(body));
+                } catch(e) {}
+                cache.set(key, cacheableBody, duration);
             }
             // Call the original res.json
             return originalJson.call(res, body);

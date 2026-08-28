@@ -21,6 +21,14 @@ class _BookingsPageState extends State<BookingsPage> {
   bool isUpcoming = true;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BookingProvider>().fetchMyBookings(context);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final bookingProvider = context.watch<BookingProvider>();
@@ -83,6 +91,7 @@ class _BookingsPageState extends State<BookingsPage> {
                           isDark: isDark,
                           currency: settings.currency,
                           price: booking.price,
+                          guests: booking.guests,
                           bookingId: booking.id,
                           onViewDetails: () {
                             Navigator.push(

@@ -154,10 +154,14 @@ exports.sendOtpCore = async function ({ email, phone, purpose = "registration", 
         await emailService.sendEmail({ to: cleanEmail, subject, text, html });
     }
 
+    console.log(`\n=========================================`);
+    console.log(`🔑 DEV OTP INTERCEPTED: ${otp} for ${cleanEmail || cleanPhone}`);
+    console.log(`=========================================\n`);
+
     return {
         success: true,
         expiresAt,
-        otp: otp 
+        otp: otp
     };
 };
 

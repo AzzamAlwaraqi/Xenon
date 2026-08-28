@@ -9,12 +9,10 @@ class OtpPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Extract email from arguments
     final Map<String, dynamic> args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final email = args['email'] as String;
 
     return ChangeNotifierProvider(
-      create: (_) => OtpProvider(email: email),
+      create: (_) => OtpProvider(args: args),
       child: const _OtpPageContent(),
     );
   }
