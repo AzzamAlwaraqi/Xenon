@@ -27,7 +27,7 @@ export default function useAuthSession() {
   }, [])
 
   useEffect(() => {
-    if (session.token && isExpiredToken(session.token)) storage.clearAuth()
+    if (session.token && isExpiredToken(session.token)) storage.clearAuth(false)
   }, [session.token])
 
   return session

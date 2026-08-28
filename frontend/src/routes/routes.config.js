@@ -1,4 +1,5 @@
 export const ROUTES = {
+  LANDING: '/',
   HOME: '/home',
   LOGIN: '/login',
   FORGOT_PASSWORD: '/forgot-password',
@@ -13,6 +14,11 @@ export const ROUTES = {
   VENDOR_ANALYTICS: '/vendor/analytics',
   VENDOR_PROFILE: '/vendor/profile',
   VENDOR_SETTINGS: '/vendor/settings',
+  VENDOR_STAFF: '/vendor/staff',
+  VENDOR_COMPLAINTS: '/vendor/complaints',
+  VENDOR_REVIEWS: '/vendor/reviews',
+  VENDOR_NOTIFICATIONS: '/vendor/notifications',
+  VENDOR_PAYMENTS: '/vendor/payments',
   ADMIN: '/admin',
   NOT_FOUND: '*',
 }

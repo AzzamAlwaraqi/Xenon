@@ -1,5 +1,5 @@
 // Libraries
-import { BarChart3, Box, CalendarDays, CircleUserRound, LayoutDashboard, LogOut, Settings } from 'lucide-react'
+import { BarChart3, Bell, Box, CalendarDays, CircleDollarSign, CircleUserRound, LayoutDashboard, LogOut, MessageSquareWarning, Settings, Star, UserCog } from 'lucide-react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 
 // Services
@@ -11,6 +11,11 @@ const navigation = [
   { to: '/vendor/packages', label: 'Packages', icon: Box },
   { to: '/vendor/bookings', label: 'Booking Requests', icon: CalendarDays },
   { to: '/vendor/analytics', label: 'Analytics', icon: BarChart3 },
+  { to: '/vendor/staff', label: 'Staff', icon: UserCog },
+  { to: '/vendor/complaints', label: 'Complaints', icon: MessageSquareWarning },
+  { to: '/vendor/reviews', label: 'Reviews', icon: Star },
+  { to: '/vendor/notifications', label: 'Notifications', icon: Bell },
+  { to: '/vendor/payments', label: 'Payments', icon: CircleDollarSign },
   { to: '/vendor/profile', label: 'Profile', icon: CircleUserRound },
   { to: '/vendor/settings', label: 'Settings', icon: Settings },
 ]
