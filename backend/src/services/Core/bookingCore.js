@@ -406,7 +406,6 @@ exports.getAllMyBookingsCore = async function (userOrVendor) {
                 select: 'vendor_company_name owner_user_id -_id',
                 populate: { path: 'owner_user_id', select: 'email -_id' }
             })
-        
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 }); 
 
