@@ -7,7 +7,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import AuthImage from '../components/AuthImage.jsx'
 import PasswordField from '../components/PasswordField.jsx'
 import { authApi } from '../services/api.js'
-import { ROLE_KEY, SESSION_KEY, TOKEN_KEY, USER_KEY, storage } from '../services/storage.js'
+import { storage } from '../services/storage.js'
 import { ROUTES } from '../routes/routes.config.js'
 import { validateLogin } from '../utils/formValidation.js'
 import { getPortalRole } from '../utils/authToken.js'
@@ -32,17 +32,20 @@ export default function Login() {
     }
     setStatus({ loading: true, message: '', type: '' })
     try {
-      const result = await authApi.login({ email: form.email.trim().toLowerCase(), password: form.password, role })
+      const result = await authApi.login({ email: form.email.trim().toLowerCase(), password: form.password })
       const token = result.data?.token
       if (!token) throw new Error('The API did not return an authentication token.')
-      const authenticatedRole = getPortalRole(token, role)
+      const authenticatedRole = getPortalRole(token)
       if (!authenticatedRole || authenticatedRole !== role) throw new Error('The authenticated account does not match the selected portal.')
-      storage.set(TOKEN_KEY, token)
-      storage.set(ROLE_KEY, authenticatedRole)
-      storage.set(SESSION_KEY, result.data?.session || null)
-      storage.set(USER_KEY, result.data?.user || null)
+      storage.setAuthSession({
+        token,
+        refreshToken: result.data?.refreshToken || null,
+        role: authenticatedRole,
+        session: result.data?.session || null,
+        user: result.data?.user || { email: form.email.trim().toLowerCase() },
+      })
       setStatus({ loading: false, message: 'Welcome back. Your session is ready.', type: 'success' })
-      navigate(authenticatedRole === 'admin' ? ROUTES.ADMIN : ROUTES.VENDOR)
+      navigate(authenticatedRole === 'admin' ? ROUTES.ADMIN : ROUTES.VENDOR, { replace: true })
     } catch (error) {
       setStatus({ loading: false, message: error.message, type: 'error' })
     }

@@ -4,10 +4,13 @@ import { createRoot } from 'react-dom/client'
 
 // Application
 import App from './app/App.jsx'
+import AppErrorBoundary from './components/AppErrorBoundary.jsx'
 import './assets/styles/index.css'
 
-createRoot(document.getElementById('root')).render(
+const rootElement = document.getElementById('root')
+
+createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <AppErrorBoundary><App /></AppErrorBoundary>
   </StrictMode>,
 )

@@ -6,6 +6,7 @@ import ClientShell from '../../components/client/ClientShell.jsx'
 import { VendorField, VendorNotice } from '../../components/vendor/VendorUi.jsx'
 import useApi from '../../hooks/useApi.js'
 import { profileApi } from '../../services/api.js'
+import { normalizePhone, validateProfile } from '../../utils/formValidation.js'
 import { getRecord } from '../../utils/vendorData.js'
 
 // Constants
@@ -29,9 +30,14 @@ export default function Profile() {
 
   async function saveProfile(event) {
     event.preventDefault()
+    const validationError = validateProfile(form)
+    if (validationError) {
+      setMessage(validationError)
+      return
+    }
     setMessage('Saving…')
     try {
-      await profileApi.update({ name: form.name, email: form.email, mobileNumber: form.mobileNumber })
+      await profileApi.update({ name: form.name.trim(), email: form.email.trim().toLowerCase(), mobileNumber: normalizePhone(form.mobileNumber) })
       setMessage('Profile saved.')
     } catch (error) {
       setMessage(error.message)
@@ -41,11 +47,11 @@ export default function Profile() {
   return (
     <ClientShell title="Your profile" subtitle="Keep your travel identity and contact information accurate.">
       <VendorNotice state={profileState} />
-      <form className="vendor-card vendor-form profile-form" onSubmit={saveProfile}>
+      <form className="vendor-card vendor-form profile-form" onSubmit={saveProfile} noValidate>
         <h2>Personal information</h2>
-        <VendorField label="Full name" value={form.name || ''} onChange={updateField('name')} />
-        <VendorField label="Email" type="email" value={form.email || ''} onChange={updateField('email')} />
-        <VendorField label="Mobile number" value={form.mobileNumber || ''} onChange={updateField('mobileNumber')} />
+        <VendorField label="Full name" minLength="2" maxLength="100" value={form.name || ''} onChange={updateField('name')} required />
+        <VendorField label="Email" type="email" value={form.email || ''} onChange={updateField('email')} required />
+        <VendorField label="Mobile number" inputMode="numeric" maxLength="10" value={form.mobileNumber || ''} onChange={updateField('mobileNumber')} required />
         {message && <p>{message}</p>}
         <button className="vendor-button">Save profile</button>
       </form>

@@ -50,9 +50,9 @@ export default function BookingDetail() {
     try {
       await reviewApi.create({
         PACKAGE_Name: booking.package_id?.package_name,
-        VENDOR_Name: booking.vendor_id?.vendor_name,
+        vendor_id: booking.vendor_id?._id || booking.vendor_id?.id || booking.vendor_id,
         rating: Number(review.rating),
-        comment: review.comment,
+        comment: review.comment.trim(),
       })
       setReviewStatus({ loading: false, message: 'Review submitted for approval.', type: 'success' })
     } catch (error) {
@@ -91,7 +91,7 @@ export default function BookingDetail() {
               {[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{value} star{value > 1 ? 's' : ''}</option>)}
             </select>
           </label>
-          <label>Comment<textarea rows="4" value={review.comment} onChange={(event) => setReview((current) => ({ ...current, comment: event.target.value }))} /></label>
+          <label>Comment<textarea rows="4" minLength="3" maxLength="500" value={review.comment} onChange={(event) => setReview((current) => ({ ...current, comment: event.target.value }))} /></label>
           {reviewStatus.message && <p className={`form-message ${reviewStatus.type}`}>{reviewStatus.message}</p>}
           <button className="vendor-button" disabled={reviewStatus.loading}>{reviewStatus.loading ? 'Submitting…' : 'Submit review'}</button>
         </form>
