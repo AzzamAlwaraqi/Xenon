@@ -304,8 +304,8 @@ exports.getBookingCore = async function (userOrVendor, bookingId) {
             .populate('package_id', 'package_name package_price package_type -_id')
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company_name vendor_owner_id -_id',
-                populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
+                select: 'vendor_company_name owner_user_id -_id',
+                populate: { path: 'owner_user_id', select: 'email -_id'}
             })
             .populate('user_id', 'name email mobileNumber -_id');
 
@@ -340,8 +340,8 @@ exports.getAllBookingCore = async function (userOrVendor) {
             .populate('package_id', 'package_name package_price package_type -_id')
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company_name vendor_owner_id -_id',
-                populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
+                select: 'vendor_company_name owner_user_id -_id',
+                populate: { path: 'owner_user_id', select: 'email -_id'}
             })
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
@@ -403,8 +403,8 @@ exports.getAllMyBookingsCore = async function (userOrVendor) {
             .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company_name vendor_owner_id -_id',
-                populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
+                select: 'vendor_company_name owner_user_id -_id',
+                populate: { path: 'owner_user_id', select: 'email -_id' }
             })
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 }); 
@@ -447,8 +447,8 @@ exports.getBookingHistoryCore = async function (userOrVendor) {
             .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company_name vendor_owner_id -_id',
-                populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
+                select: 'vendor_company_name owner_user_id -_id',
+                populate: { path: 'owner_user_id', select: 'email -_id' }
             })
             .populate('user_id', 'name email mobileNumber -_id')
             .sort({ createdAt: -1 });
@@ -617,8 +617,8 @@ exports.getUserPendingRequestsCore = async function (userOrVendor) {
         .populate('package_id', 'package_name package_price -_id')
         .populate({
             path: 'vendor_id',
-            select: 'vendor_company_name vendor_owner_id -_id',
-            populate: { path: 'vendor_owner_id', select: 'email -_id', strictPopulate: false }
+            select: 'vendor_company_name owner_user_id -_id',
+            populate: { path: 'owner_user_id', select: 'email -_id' }
         })
         .sort({ createdAt: -1 });
 
