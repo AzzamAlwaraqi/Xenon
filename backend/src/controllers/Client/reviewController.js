@@ -84,3 +84,11 @@ exports.updateReviewStatus = async (req, res, next) => {
         next(error);
     }
 };
+exports.replyToReview = async (req, res, next) => {
+    try {
+        const result = await reviewCore.replyToReviewCore(req.user, req.params.id, req.body.reply_text || req.body.replyText || req.body.reply);
+        res.status(200).json(result);
+    } catch (err) {
+        next(err);
+    }
+};

@@ -57,7 +57,7 @@ exports.getAllPackagesCore = async function (queryString) {
         // 3. Apply features (filter, sort, select, paginate)
         const baseQuery = Package.find(baseFilter).populate({
             path: 'vendor_id',
-            select: 'vendor_company vendor_owner_id',
+            select: 'vendor_company_name vendor_owner_id',
             populate: {
                 path: 'vendor_owner_id',
                 match: { role: 'vendor' },
@@ -106,7 +106,7 @@ exports.getPackageCore = async function (packageId, queryString = {}) {
         let query = Package.findOne({ _id: packageId })
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company vendor_owner_id',
+                select: 'vendor_company_name vendor_owner_id',
                 populate: {
                     path: 'vendor_owner_id',
                     match: { role: 'vendor' },
@@ -149,7 +149,7 @@ exports.createPackageCore = async function (user, packageData, file) {
         }
 
         const secureVendorId = user._id;
-        const vendorName = user.vendor_company || user.name || 'Vendor';
+        const vendorName = user.vendor_company_name || user.name || 'Vendor';
 
         if (!file) throw new AppError("Package image is required", 400);
 
@@ -280,7 +280,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 
         // 4. Safe Cloud Storage Update
         if (file) {
-            const safeCompanyName = (userOrVendor.vendor_company || userOrVendor.company_name || userOrVendor.name || 'Vendor').replace(/[^a-zA-Z0-9]/g, '_');
+            const safeCompanyName = (userOrVendor.vendor_company_name || userOrVendor.company_name || userOrVendor.name || 'Vendor').replace(/[^a-zA-Z0-9]/g, '_');
             const safePackageName = (packageUpdates.package_name || existingPackage.package_name).replace(/[^a-zA-Z0-9]/g, '_');
 
             const optimizedBuffer = await sharp(file.buffer)

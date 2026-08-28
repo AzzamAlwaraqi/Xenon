@@ -1,7 +1,12 @@
 const paymentCore = require("../services/Core/paymentCore");
+const FileStorageService = require("../services/Integration/FileStorageService");
 
 exports.addBookingPayment = async (req, res, next) => {
     try {
+        if (req.file) {
+            const uploadResult = await FileStorageService.uploadImageFromBuffer(req.file.buffer, "xenon/payments");
+            req.body.receipt_image_url = uploadResult.secure_url;
+        }
         const payment = await paymentCore.addBookingPaymentCore(req.user, req.body);
         return res.status(201).json({
             status: "success",
@@ -27,6 +32,10 @@ exports.getBookingPayments = async (req, res, next) => {
 
 exports.updateBookingPayment = async (req, res, next) => {
     try {
+        if (req.file) {
+            const uploadResult = await FileStorageService.uploadImageFromBuffer(req.file.buffer, "xenon/payments");
+            req.body.receipt_image_url = uploadResult.secure_url;
+        }
         const payment = await paymentCore.updateBookingPaymentCore(req.user, req.params.id, req.body);
         return res.status(200).json({
             status: "success",
@@ -51,6 +60,10 @@ exports.cancelBookingPayment = async (req, res, next) => {
 
 exports.addVendorSubscriptionPayment = async (req, res, next) => {
     try {
+        if (req.file) {
+            const uploadResult = await FileStorageService.uploadImageFromBuffer(req.file.buffer, "xenon/payments");
+            req.body.receipt_image_url = uploadResult.secure_url;
+        }
         const subscription = await paymentCore.addVendorSubscriptionPaymentCore(req.user, req.body);
         return res.status(201).json({
             status: "success",
@@ -76,6 +89,10 @@ exports.getVendorSubscriptionPayments = async (req, res, next) => {
 
 exports.updateVendorSubscriptionPayment = async (req, res, next) => {
     try {
+        if (req.file) {
+            const uploadResult = await FileStorageService.uploadImageFromBuffer(req.file.buffer, "xenon/payments");
+            req.body.receipt_image_url = uploadResult.secure_url;
+        }
         const subscription = await paymentCore.updateVendorSubscriptionPaymentCore(req.user, req.params.id, req.body);
         return res.status(200).json({
             status: "success",

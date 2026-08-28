@@ -17,7 +17,6 @@ const VendorVerificationSchema = new mongoose.Schema({
         ref: "Vendor"
     },
     
-    // Official Documents
     commercial_register_image: { type: ImageSchema, required: true },
     vocational_license_image: { type: ImageSchema, required: true },
     tourism_license_image: { type: ImageSchema, default: null },

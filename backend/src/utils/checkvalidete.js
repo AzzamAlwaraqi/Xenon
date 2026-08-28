@@ -12,6 +12,8 @@ const STAFF_POSITIONS = Object.freeze({
     vendor: ["tour-guide", "driver", "event-organizer", "photographer", "translator", "hospitality"]
 });
 
+const SUPERIOR_ADMIN_POSITIONS = ["manager", "supervisor"];
+
 /**
  * @param {string} value - The value to check
  * @param {Array} allowedArray - Array of allowed values
@@ -48,3 +50,4 @@ exports.staffPosition = (role) => {
 };
 
 exports.STAFF_POSITIONS = STAFF_POSITIONS;
+exports.SUPERIOR_ADMIN_POSITIONS = SUPERIOR_ADMIN_POSITIONS;

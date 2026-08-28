@@ -70,11 +70,10 @@ exports.createBookingCore = async function (userOrVendor, bookingData) {
                     const randomPassword = crypto.randomBytes(8).toString('hex');
                     const newUser = new UserModel({
                         name: bookingData.customer_name,
+                        email: `walkin_${bookingData.customer_phone}@xenon.local`,
                         mobileNumber: bookingData.customer_phone,
                         role: 'user',
-                        password: randomPassword,
-                        passwordConfirm: randomPassword,
-                        isVerified: false
+                        password: randomPassword
                     });
                     await newUser.save({ session });
                     finalUserId = newUser._id;
@@ -305,7 +304,7 @@ exports.getBookingCore = async function (userOrVendor, bookingId) {
             .populate('package_id', 'package_name package_price package_type -_id')
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company vendor_owner_id -_id',
+                select: 'vendor_company_name vendor_owner_id -_id',
                 populate: { path: 'vendor_owner_id', select: 'email -_id' }
             })
             .populate('user_id', 'name email mobileNumber -_id');
@@ -341,7 +340,7 @@ exports.getAllBookingCore = async function (userOrVendor) {
             .populate('package_id', 'package_name package_price package_type -_id')
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company vendor_owner_id -_id',
+                select: 'vendor_company_name vendor_owner_id -_id',
                 populate: { path: 'vendor_owner_id', select: 'email -_id' }
             })
             .populate('user_id', 'name email mobileNumber -_id')
@@ -404,7 +403,7 @@ exports.getAllMyBookingsCore = async function (userOrVendor) {
             .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company vendor_owner_id -_id',
+                select: 'vendor_company_name vendor_owner_id -_id',
                 populate: { path: 'vendor_owner_id', select: 'email -_id' }
             })
             .populate('user_id', 'name email mobileNumber -_id')
@@ -448,7 +447,7 @@ exports.getBookingHistoryCore = async function (userOrVendor) {
             .populate('package_id', 'package_name package_price package_type startDate endDate -_id')
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company vendor_owner_id -_id',
+                select: 'vendor_company_name vendor_owner_id -_id',
                 populate: { path: 'vendor_owner_id', select: 'email -_id' }
             })
             .populate('user_id', 'name email mobileNumber -_id')
@@ -489,14 +488,9 @@ exports.acceptBookingCore = async function (vendorOrAdmin, bookingId) {
         packageDoc.available_seats -= booking.number_of_people;
         await packageDoc.save({ session });
  */
-        // 🌟 هنا يتم خصم المقاعد لأول مرة عند التأكيد
-        const packageDoc = await PackageModel.findById(booking.package_id).session(session);
-        if (packageDoc.available_seats < booking.number_of_people) {
-            throw new AppError("Cannot accept! Seats have been taken by others.", 400);
-        }
+        // 🌟 Seats were already deducted during booking creation.
+        // We do not deduct them again to prevent double-deduction.
 
-        packageDoc.available_seats -= booking.number_of_people;
-        await packageDoc.save({ session });
 
         booking.status = 'accepted';
         booking.status_history.push({
@@ -623,7 +617,7 @@ exports.getUserPendingRequestsCore = async function (userOrVendor) {
         .populate('package_id', 'package_name package_price -_id')
         .populate({
             path: 'vendor_id',
-            select: 'vendor_company vendor_owner_id -_id',
+            select: 'vendor_company_name vendor_owner_id -_id',
             populate: { path: 'vendor_owner_id', select: 'email -_id' }
         })
         .sort({ createdAt: -1 });

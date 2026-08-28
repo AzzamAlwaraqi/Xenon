@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-const { checkRole } = require("../utils/checkvalidete");
-const { MongooseStandardDate } = require("../utils/dateFormatter");
 const { v7: uuidv7 } = require("uuid");
+const { MongooseStandardDate } = require("../utils/dateFormatter");
 
 const UserSchema = new mongoose.Schema({
     _id: {
@@ -27,11 +26,6 @@ const UserSchema = new mongoose.Schema({
         minlength: [8, 'the password must be 8 characters long'],
         required: true
     },
-    gender: {
-        type: String,
-        required: function () { return this.role === 'user'; },
-        enum: ["male", "female"]
-    },
     mobileNumber: {
         type: String,
         minlength: [10, 'the phone number must be 10 digits'],
@@ -39,6 +33,25 @@ const UserSchema = new mongoose.Schema({
         match: [/^[0-9]{10}$/, 'Phone number must contain exactly 10 digits'],
         required: true,
         unique: true
+    },
+    role: {
+        type: String,
+        required: true,
+        enum: ["admin", "user", "vendor", "employee"],
+        default: "user"
+    },
+    gender: {
+        type: String,
+        enum: ["male", "female"],
+        required: true
+    },
+    DateOfBirth: {
+        ...MongooseStandardDate,
+        required: true
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     },
     isDelete: {
         type: Boolean,
@@ -48,68 +61,24 @@ const UserSchema = new mongoose.Schema({
         ...MongooseStandardDate,
         default: null
     },
-    isEmailVerified: {
-        type: Boolean,
-        default: false
-    },
-    recoveryEmail: {
-        type: String,
-        default: "",
-        lowercase: true,
-        trim: true
-    },
-    emailChangeDate: {
-        ...MongooseStandardDate,
-        default: Date.now
-    },
-    recoveryMobileNumber: {
-        type: String,
-        default: ""
-    },
-    mobileNumberChangeDate: {
-        ...MongooseStandardDate,
-        default: Date.now
-    },
-    role: {
-        type: String,
-        required: true,
-        enum: ["admin", "user", "vendor"],
-        default: "user"
-    },
-    DateOfBirth: {
-        ...MongooseStandardDate,
-        required: [function () { return checkRole(this.role, ['user']); }, 'Date of Birth is required']
-    },
     fcm_token: {
         type: String,
         default: null
-    },
-    isActive: {
-        type: Boolean,
-        default: true
     }
-    },
-    { timestamps: true,
-    strict: 'throw', 
+}, {
+    timestamps: true,
+    strict: 'throw',
     versionKey: false,
     toJSON: {
         getters: true,
         virtuals: true,
         transform: function (doc, ret) {
-            delete ret.isEmailVerified;
-            delete ret.password; // It's good practice to ensure password is not sent too
+            delete ret.password;
             delete ret.isDelete;
             delete ret.deletionRequestedAt;
-            delete ret.recoveryEmail;
-            delete ret.emailChangeDate;
-            delete ret.recoveryMobileNumber;
-            delete ret.mobileNumberChangeDate;
-            delete ret.role;
-            delete ret.isActive;
             return ret;
         }
-    },
-    toObject: { getters: true, virtuals: true }
+    }
 });
 
 UserSchema.pre('save', async function () {
