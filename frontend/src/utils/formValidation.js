@@ -126,12 +126,8 @@ export function validateVendorAccount(form) {
 export function validateVendorBusiness(form) {
   if (form.company_name.trim().length < 2) return 'Business name must contain at least 2 characters.'
   if (form.company_name.trim().length > 100) return 'Business name must not exceed 100 characters.'
-  if (!form.vendor_type) return 'Select a business type.'
   if (form.address.trim().length < 5) return 'Enter a complete business address.'
   if (form.city.trim().length < 2) return 'Enter a valid city.'
-  if (form.state.trim().length < 2) return 'Enter a valid state or governorate.'
-  if (!/^\d{4,10}$/.test(form.pincode.trim())) return 'Postal code must contain 4-10 digits.'
-  if (form.country.trim().length < 2) return 'Enter a valid country.'
   if (!/^JO\d{28}$/.test(String(form.iban_number || '').replace(/\s/g, '').toUpperCase())) return 'Enter a valid Jordanian IBAN beginning with JO followed by 28 digits.'
   const requiredDocuments = [
     ['commercial_register_image', 'Commercial registration'],
@@ -192,12 +188,17 @@ export function validatePayment(form, role) {
   if (!isUuid(recordId)) return `Enter a valid ${role === 'admin' ? 'vendor' : 'booking'} ID.`
   const amount = Number(form.amount)
   if (!Number.isFinite(amount) || amount < 0.01) return 'Amount must be at least JOD 0.01.'
-  const allowedMethods = role === 'admin' ? ['ManualBankTransfer', 'OnlineGateway'] : ['CliQ', 'Cash', 'ManualBankTransfer', 'OnlineGateway']
+  const allowedMethods = role === 'admin' ? ['CliQ', 'ManualBankTransfer', 'OnlineGateway'] : ['CliQ', 'Cash', 'ManualBankTransfer', 'OnlineGateway']
   if (!allowedMethods.includes(form.payment_method)) return 'Select a supported payment method.'
   if (role === 'vendor' && !/^\d{10}$/.test(normalizePhone(form.customer_phone))) return 'Customer phone must contain exactly 10 digits.'
   const description = form.payment_description.trim()
   if (!description) return 'Enter a payment description.'
   if (description.length > 500) return 'Payment description must not exceed 500 characters.'
+  if (form.receipt) {
+    const allowedReceiptTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+    if (!allowedReceiptTypes.includes(form.receipt.type)) return 'Receipt must be a JPEG, PNG, WebP, or PDF file.'
+    if (form.receipt.size <= 0 || form.receipt.size > 5 * 1024 * 1024) return 'Receipt must be a non-empty file no larger than 5 MB.'
+  }
   return ''
 }
 
@@ -261,14 +262,13 @@ export function validateChangePassword(form) {
 }
 
 export function validateProfile(form, { vendor = false } = {}) {
-  if (String(form.name || '').trim().length < 2 || String(form.name || '').trim().length > 100) return 'Name must contain 2–100 characters.'
   if (vendor) {
     if (String(form.company_name || '').trim().length < 2 || String(form.company_name || '').trim().length > 100) return 'Business name must contain 2–100 characters.'
+    if (String(form.address || '').trim().length < 5) return 'Enter a complete business address.'
     if (String(form.city || '').trim().length < 2) return 'Enter a valid city.'
-    if (String(form.state || '').trim().length < 2) return 'Enter a valid governorate.'
-    if (String(form.country || '').trim().length < 2) return 'Enter a valid country.'
     return ''
   }
+  if (String(form.name || '').trim().length < 2 || String(form.name || '').trim().length > 100) return 'Name must contain 2–100 characters.'
   if (!isValidEmail(form.email)) return 'Enter a valid email address.'
   if (!jordanMobilePattern.test(normalizePhone(form.mobileNumber))) return 'Use a Jordanian mobile number beginning with 077, 078, or 079.'
   return ''

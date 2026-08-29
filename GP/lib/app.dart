@@ -19,6 +19,7 @@ import 'package:gp/providers/review_provider.dart';
 import 'package:gp/providers/complaint_provider.dart';
 import 'package:gp/providers/notification_provider.dart';
 import 'package:gp/providers/payment_provider.dart';
+import 'package:gp/providers/ai_advisor_provider.dart';
 
 import 'package:gp/screens/splash_page.dart';
 
@@ -39,6 +40,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ComplaintProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => PaymentProvider()),
+        // Held above the navigation tree so the travel assistant conversation survives tab changes.
+        ChangeNotifierProvider(create: (_) => AiAdvisorProvider()),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {

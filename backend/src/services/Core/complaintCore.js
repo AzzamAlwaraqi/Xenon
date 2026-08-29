@@ -52,7 +52,7 @@ exports.createComplaintCore = async function (user, complaintData, files) {
         }
 
         if (files && files.length > 0) {
-            const usernameFolder = user.vendor_company || user.name || 'User';
+            const usernameFolder = user.vendor_company_name || user.name || 'User';
             const uploadPromises = files.map(async (file, index) => {
                 const optimizedBuffer = await sharp(file.buffer)
                     .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
@@ -132,8 +132,8 @@ exports.getMyComplaintsCore = async function (user, queryParams = {}) {
             ComplaintModel.find(query)
                 .populate({
                     path: 'vendor_id',
-                    select: 'vendor_company vendor_owner_id -_id',
-                    populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                    select: 'vendor_company_name owner_user_id -_id',
+                    populate: { path: 'owner_user_id', select: 'email -_id' }
                 })
                 .populate('booking_id', 'package_name startDate total_price -_id')
                 .sort({ createdAt: -1 })
@@ -179,8 +179,8 @@ exports.getComplaintByIdCore = async function (user, complaintId) {
             .populate('user_id', 'name email mobileNumber -_id')
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company vendor_owner_id -_id',
-                populate: { path: 'vendor_owner_id', select: 'email mobileNumber -_id' }
+                select: 'vendor_company_name owner_user_id -_id',
+                populate: { path: 'owner_user_id', select: 'email mobileNumber -_id' }
             })
             .populate('booking_id', 'package_name startDate endDate total_price -_id');
 
@@ -258,8 +258,8 @@ exports.getAllComplaintsCore = async function (user, queryParams = {}) {
                 .populate('user_id', 'name email -_id')
                 .populate({
                     path: 'vendor_id',
-                    select: 'vendor_company vendor_owner_id -_id',
-                    populate: { path: 'vendor_owner_id', select: 'email -_id' }
+                    select: 'vendor_company_name owner_user_id -_id',
+                    populate: { path: 'owner_user_id', select: 'email -_id' }
                 })
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -403,7 +403,7 @@ exports.vendorReplyToComplaintCore = async function (user, complaintId, replyTex
         if (global.io) {
             global.io.to(`user_${complaint.user_id}`).emit('vendor_reply_received', {
                 complaint_id: complaint._id,
-                vendor_company: user.vendor_company || user.name,
+                vendor_company_name: user.vendor_company_name || user.name,
                 message: "The vendor has replied to your complaint.",
                 reply: replyText
             });

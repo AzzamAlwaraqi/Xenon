@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gp/providers/settings_provider.dart';
+import 'package:gp/providers/ai_advisor_provider.dart';
 
 class SettingsScreenProvider extends ChangeNotifier {
   bool isDarkMode(BuildContext context) {
@@ -18,6 +19,8 @@ class SettingsScreenProvider extends ChangeNotifier {
 
   void logout(BuildContext context) {
     // Perform logout logic
+    // The assistant transcript belongs to the account signing out, so it must not survive.
+    context.read<AiAdvisorProvider>().clearForLogout();
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 }

@@ -21,6 +21,7 @@ import {
 } from '../src/utils/formValidation.js'
 import { retrySimultaneousLogin } from '../src/utils/retryLogin.js'
 import { shouldInvalidateSession } from '../src/utils/sessionPolicy.js'
+import { canResumeVendorOnboarding, createVendorOnboardingDraft } from '../src/utils/vendorOnboarding.js'
 
 function tokenWithClaims(claims) {
   const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url')
@@ -57,9 +58,32 @@ test('requires vendor applicants to be at least 18 on their exact birthday', () 
 
 test('validates the complete vendor onboarding contract and documents', () => {
   const image = { type: 'image/jpeg', size: 1024 }
-  const valid = { company_name: 'Xenon Travel', vendor_type: 'Tourism', address: 'King Abdullah II Street', city: 'Amman', state: 'Amman Governorate', pincode: '11181', country: 'Jordan', iban_number: `JO${'1'.repeat(28)}`, commercial_register_image: image, vocational_license_image: image, owner_id_image: image, iban_letter_image: image, tourism_license_image: null }
+  const valid = { company_name: 'Xenon Travel', address: 'King Abdullah II Street', city: 'Amman', iban_number: `JO${'1'.repeat(28)}`, commercial_register_image: image, vocational_license_image: image, owner_id_image: image, iban_letter_image: image, tourism_license_image: null }
   assert.equal(validateVendorBusiness(valid), '')
   assert.match(validateVendorBusiness({ ...valid, iban_letter_image: null }), /IBAN letter image/i)
+})
+
+test('resumes vendor business details without storing credentials or files', () => {
+  const draft = createVendorOnboardingDraft({
+    name: 'Dana Vendor',
+    email: 'dana@example.com',
+    company_name: 'Dana Tours',
+    address: 'Amman',
+    city: 'Amman',
+    iban_number: `JO${'1'.repeat(28)}`,
+    password: 'NeverStoreThis123!',
+    otp: '123456',
+    owner_id_image: { type: 'image/jpeg', size: 1024 },
+  })
+
+  assert.equal(draft.accountCreated, true)
+  assert.equal(draft.company_name, 'Dana Tours')
+  assert.equal('password' in draft, false)
+  assert.equal('otp' in draft, false)
+  assert.equal('owner_id_image' in draft, false)
+  assert.equal(canResumeVendorOnboarding({ draft, token: 'token', role: 'user' }), true)
+  assert.equal(canResumeVendorOnboarding({ draft, token: 'token', role: 'vendor' }), false)
+  assert.equal(canResumeVendorOnboarding({ draft, token: 'token', role: 'user', expired: true }), false)
 })
 
 test('uses the JWT portal role instead of a conflicting selected tab', () => {
@@ -117,6 +141,9 @@ test('validates Postman create and edit package fields', () => {
 test('validates financial records before converting values for the API', () => {
   const valid = { booking_id: '742a8d92-3e87-49f4-9f4e-67d3eeda2ffc', amount: '15.25', payment_method: 'Cash', customer_phone: '0791234567', payment_description: 'Cash received at office' }
   assert.equal(validatePayment(valid, 'vendor'), '')
+  assert.equal(validatePayment({ ...valid, receipt: { type: 'application/pdf', size: 1024 } }, 'vendor'), '')
+  assert.match(validatePayment({ ...valid, receipt: { type: 'text/plain', size: 1024 } }, 'vendor'), /JPEG, PNG, WebP, or PDF/i)
+  assert.match(validatePayment({ ...valid, receipt: { type: 'image/jpeg', size: 6 * 1024 * 1024 } }, 'vendor'), /5 MB/i)
   assert.match(validatePayment({ ...valid, amount: 'not-a-number' }, 'vendor'), /at least/i)
   assert.match(validatePayment({ ...valid, booking_id: '123' }, 'vendor'), /booking ID/i)
   assert.match(validatePayment({ ...valid, customer_phone: '0791' }, 'vendor'), /10 digits/i)

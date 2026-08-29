@@ -19,13 +19,14 @@ router.post("/broadcast", notificationController.sendBroadcastNotification);
 router.get("/", notificationController.getMyNotifications);
 // Note: Accessible by admin or vendor to see notifications they sent
 router.get("/sent", authMiddleware.restrictTo("admin", "vendor"), notificationController.getSentNotifications);
-// Note: Accessible by user, vendor, admin
-router.patch("/:id/read", notificationController.markAsRead);
+// Specific named routes MUST come before the /:id wildcard
 // Note: Accessible by user, vendor, admin
 router.patch("/read-all", notificationController.markAllAsRead);
 // Note: Accessible by user, vendor, admin
-router.patch("/:id", notificationController.deleteNotification);
-// Note: Accessible by user, vendor, admin
 router.patch("/delete-all", notificationController.deleteAllNotifications);
+// Note: Accessible by user, vendor, admin
+router.patch("/:id/read", notificationController.markAsRead);
+// Note: Accessible by user, vendor, admin
+router.patch("/:id", notificationController.deleteNotification);
 
 module.exports = router;

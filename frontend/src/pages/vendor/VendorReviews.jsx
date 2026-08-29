@@ -19,7 +19,7 @@ export default function VendorReviews() {
   const [drafts, setDrafts] = useState({})
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState({ type: '', text: '' })
-  const state = useApi(reviewApi.getMine, [refresh])
+  const state = useApi(reviewApi.getVendorReviews, [refresh])
   const reviews = getCollection(state.data)
 
   function updateDraft(reviewId, value) {

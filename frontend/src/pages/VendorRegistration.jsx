@@ -1,6 +1,6 @@
 // Libraries
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 // Components and services
@@ -8,13 +8,15 @@ import AuthImage from '../components/AuthImage.jsx'
 import PasswordField from '../components/PasswordField.jsx'
 import { ROUTES } from '../routes/routes.config.js'
 import { authApi, profileApi } from '../services/api.js'
-import { storage } from '../services/storage.js'
+import { ROLE_KEY, storage, TOKEN_KEY } from '../services/storage.js'
+import { isExpiredToken } from '../utils/authToken.js'
 import { formatBirthDateForApi, isValidEmail, latestBirthDateForAge, validateVendorAccount, validateVendorBusiness } from '../utils/formValidation.js'
+import { canResumeVendorOnboarding, createVendorOnboardingDraft, VENDOR_ONBOARDING_KEY } from '../utils/vendorOnboarding.js'
 
 const vendorImage = 'https://images.unsplash.com/photo-1666689468289-bd7ae53d5ba9?auto=format&fit=crop&w=1800&q=88'
 const EMPTY_FORM = {
   name: '', email: '', DateOfBirth: '', gender: '', mobileNumber: '', password: '', confirm: '', otp: '',
-  company_name: '', vendor_type: 'Tourism', address: '', city: '', state: '', pincode: '', country: 'Jordan', iban_number: '',
+  company_name: '', address: '', city: '', iban_number: '',
   commercial_register_image: null, vocational_license_image: null, tourism_license_image: null, owner_id_image: null, iban_letter_image: null,
 }
 const DOCUMENTS = [
@@ -27,10 +29,21 @@ const DOCUMENTS = [
 
 // Vendor account and onboarding application
 export default function VendorRegistration() {
-  const [step, setStep] = useState(1)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const savedDraft = storage.get(VENDOR_ONBOARDING_KEY)
+  const canResume = canResumeVendorOnboarding({
+    draft: savedDraft,
+    token: storage.get(TOKEN_KEY),
+    role: storage.get(ROLE_KEY),
+    expired: isExpiredToken(storage.get(TOKEN_KEY)),
+  })
+  const [step, setStep] = useState(canResume ? 2 : 1)
+  const [form, setForm] = useState(() => canResume ? { ...EMPTY_FORM, ...savedDraft } : EMPTY_FORM)
   const [status, setStatus] = useState({ loading: false, message: '', type: '' })
   const [otpStatus, setOtpStatus] = useState({ loading: false, sent: false, message: '' })
+
+  useEffect(() => {
+    if (step === 2) storage.set(VENDOR_ONBOARDING_KEY, createVendorOnboardingDraft(form))
+  }, [form, step])
 
   function update(key) {
     return (event) => {
@@ -78,21 +91,15 @@ export default function VendorRegistration() {
     if (!/^\d{6}$/.test(form.otp.trim())) return setStatus({ loading: false, message: 'Enter the six-digit verification code.', type: 'error' })
 
     setStatus({ loading: true, message: '', type: '' })
-    const credentials = { email: form.email.trim().toLowerCase(), password: form.password, role: 'user' }
+    const credentials = { email: form.email.trim().toLowerCase(), password: form.password, role: 'vendor' }
     try {
-      let result
-      try {
-        result = await authApi.register({
-          name: form.name.trim(), email: credentials.email, password: form.password, passwordConfirm: form.confirm,
-          role: 'user', DateOfBirth: formatBirthDateForApi(form.DateOfBirth), gender: form.gender,
-          mobileNumber: form.mobileNumber.replace(/\D/g, ''), otp: form.otp.trim(),
-        })
-      } catch (registrationError) {
-        // Current backend versions may save the user before failing to compose the response.
-        if (![409, 500].includes(registrationError.status)) throw registrationError
-        result = await authApi.login(credentials)
-      }
+      const result = await authApi.register({
+        name: form.name.trim(), email: credentials.email, password: form.password, passwordConfirm: form.confirm,
+        role: 'vendor', DateOfBirth: formatBirthDateForApi(form.DateOfBirth), gender: form.gender,
+        mobileNumber: form.mobileNumber.replace(/\D/g, ''), otp: form.otp.trim(),
+      })
       saveAccountSession(result)
+      storage.set(VENDOR_ONBOARDING_KEY, createVendorOnboardingDraft(form))
       setStatus({ loading: false, message: '', type: '' })
       setStep(2)
     } catch (error) {
@@ -106,13 +113,14 @@ export default function VendorRegistration() {
     if (validationError) return setStatus({ loading: false, message: validationError, type: 'error' })
 
     const body = new FormData()
-    ;['company_name', 'address', 'city', 'state', 'pincode', 'country', 'vendor_type'].forEach((key) => body.append(key, form[key].trim()))
+    ;['company_name', 'address', 'city'].forEach((key) => body.append(key, form[key].trim()))
     body.append('iban_number', form.iban_number.replace(/\s/g, '').toUpperCase())
     DOCUMENTS.forEach(([key]) => { if (form[key]) body.append(key, form[key]) })
 
     setStatus({ loading: true, message: '', type: '' })
     try {
       await profileApi.requestVendor(body)
+      storage.remove(VENDOR_ONBOARDING_KEY)
       storage.clearAuth()
       setStatus({ loading: false, message: '', type: '' })
       setStep(3)
@@ -142,13 +150,13 @@ export default function VendorRegistration() {
 
           {step === 2 && <form className="register-form" onSubmit={submitApplication} noValidate>
             <div className="field"><label>Business Name</label><input maxLength="100" value={form.company_name} onChange={update('company_name')} required /></div>
-            <div className="field-grid"><div className="field"><label>Business Type</label><select value={form.vendor_type} onChange={update('vendor_type')}><option>Tourism</option><option>Boutique Hotel</option><option>Tour Operator</option><option>Artisan Experience</option><option>Wellness Retreat</option></select></div><div className="field"><label>IBAN Number</label><input placeholder="JO00 0000 0000 0000 0000 0000 0000 00" value={form.iban_number} onChange={update('iban_number')} required /></div></div>
+            <div className="field"><label>IBAN Number</label><input placeholder="JO00 0000 0000 0000 0000 0000 0000 00" value={form.iban_number} onChange={update('iban_number')} required /></div>
             <div className="field"><label>Business Address</label><input value={form.address} onChange={update('address')} required /></div>
-            <div className="field-grid"><div className="field"><label>City</label><input value={form.city} onChange={update('city')} required /></div><div className="field"><label>Governorate</label><input value={form.state} onChange={update('state')} required /></div></div>
-            <div className="field"><label>Postal Code</label><input inputMode="numeric" maxLength="10" value={form.pincode} onChange={update('pincode')} required /><p className="field-hint">Vendor applications are currently available for businesses operating in Jordan.</p></div>
+            <div className="field"><label>City</label><input value={form.city} onChange={update('city')} required /><p className="field-hint">Vendor applications are currently available for businesses operating in Jordan.</p></div>
             <div className="document-grid">{DOCUMENTS.map(([key, label, required]) => <div className="field" key={key}><label>{label}{required ? ' *' : ' (optional)'}</label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={updateFile(key)} required={required} /><p className="field-hint">JPEG, PNG, or WebP · maximum 5 MB</p></div>)}</div>
             {status.message && <p className={`form-message ${status.type}`} role="alert">{status.message}</p>}
-            <div className="vendor-actions"><button className="secondary-button" type="button" onClick={() => setStep(1)}><ArrowLeft size={15} /> Back</button><button className="primary-button" disabled={status.loading}>{status.loading ? 'Submitting…' : <>Submit Application <ArrowRight size={15} /></>}</button></div>
+            <p className="field-hint">Your business details are saved in this browser tab. Uploaded documents must be selected again after a refresh.</p>
+            <div className="vendor-actions"><Link className="secondary-button" to={ROUTES.LANDING}><ArrowLeft size={15} /> Return Home</Link><button className="primary-button" disabled={status.loading}>{status.loading ? 'Submitting…' : <>Submit Application <ArrowRight size={15} /></>}</button></div>
           </form>}
 
           {step === 3 && <section className="registration-success" role="status"><CheckCircle2 size={52} /><h2>Pending administrator approval</h2><p>We will review your company information and documents. You can sign in to the Vendor portal after an administrator approves and activates your application.</p><Link className="primary-button" to={ROUTES.LANDING}>Return to Home</Link></section>}

@@ -56,7 +56,7 @@ export default function AdminReviews() {
                 ))}
               </p>
               <VendorInfo label="Traveller" value={review.user_id?.name || review.user_id?.email} />
-              <VendorInfo label="Vendor" value={review.vendor_id?.vendor_company} />
+              <VendorInfo label="Vendor" value={review.vendor_id?.vendor_company_name} />
               <p>{review.review_text}</p>
               {review.vendor_reply && <p className="vendor-hint"><strong>Vendor reply:</strong> {review.vendor_reply}</p>}
               <div className="row-actions">

@@ -22,6 +22,22 @@ exports.createReportCore = async function (reportData, userId) {
             throw new AppError("You already have an active report for this content.", 400);
         }
 
+        const UserModel = require("../../../Models/UserModel");
+        const existingUser = await UserModel.findById(reported_user);
+        if (!existingUser) throw new AppError("Reported user does not exist", 404);
+        
+        let contentExists = false;
+        if (content_type === "package") {
+            const PackageModel = require("../../../Models/PackageModel");
+            contentExists = await PackageModel.findById(content_id);
+        } else if (content_type === "review") {
+            const ReviewModel = require("../../../Models/ReviewModel");
+            contentExists = await ReviewModel.findById(content_id);
+        } else {
+            contentExists = true; // Fallback for other content types
+        }
+        if (!contentExists) throw new AppError(`${content_type} does not exist`, 404);
+
         const newReport = await Report.create({
             reporter: userId,
             reported_user,

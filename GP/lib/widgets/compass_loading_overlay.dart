@@ -39,27 +39,43 @@ class CompassLoadingOverlay extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
+                        width: 50,
+                        height: 50,
+                        child: Icon(
+                          Icons.explore_rounded,
                           color: AppColors.primaryRust,
-                          strokeWidth: 3,
+                          size: 50,
                         ),
+                      )
+                      .animate(onPlay: (controller) => controller.repeat())
+                      .rotate(duration: 2.seconds)
+                      .scale(
+                        begin: const Offset(0.8, 0.8),
+                        end: const Offset(1.1, 1.1),
+                        duration: 1.seconds,
+                        curve: Curves.easeInOut,
+                      )
+                      .then()
+                      .scale(
+                        begin: const Offset(1.1, 1.1),
+                        end: const Offset(0.8, 0.8),
+                        duration: 1.seconds,
+                        curve: Curves.easeInOut,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
                       const Text(
                         'Preparing your journey...',
                         style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 1.1,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.2,
                           color: AppColors.primaryRust,
                         ),
                       )
                       .animate(onPlay: (controller) => controller.repeat())
-                      .fade(begin: 0.6, end: 1.0, duration: 1000.ms)
+                      .fade(begin: 0.5, end: 1.0, duration: 1.seconds)
                       .then()
-                      .fade(begin: 1.0, end: 0.6, duration: 1000.ms),
+                      .fade(begin: 1.0, end: 0.5, duration: 1.seconds),
                     ],
                   ),
                 ),

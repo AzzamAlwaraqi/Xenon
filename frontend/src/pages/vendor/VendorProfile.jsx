@@ -11,17 +11,15 @@ import { getRecord } from '../../utils/vendorData.js'
 
 // Constants
 const EMPTY_PROFILE = {
-  name: '', company_name: '', city: '', state: '', country: 'Jordan',
+  company_name: '', address: '', city: '',
 }
 
 function normalizeProfile(record) {
   return {
     ...EMPTY_PROFILE,
-    name: record.name || record.vendor_owner_id?.name || '',
-    company_name: record.company_name || record.vendor_company || '',
+    company_name: record.company_name || record.vendor_company_name || '',
+    address: record.address || record.vendor_address || '',
     city: record.city || record.vendor_city || '',
-    state: record.state || record.vendor_state || '',
-    country: record.country || record.vendor_country || 'Jordan',
   }
 }
 
@@ -51,11 +49,9 @@ export default function VendorProfile() {
     setMessage('Saving…')
     try {
       await profileApi.update({
-        name: form.name.trim(),
         company_name: form.company_name.trim(),
+        address: form.address.trim(),
         city: form.city.trim(),
-        state: form.state.trim(),
-        country: form.country.trim(),
       })
       setMessage('Profile saved.')
     } catch (error) {
@@ -68,10 +64,9 @@ export default function VendorProfile() {
       <VendorNotice state={profileState} />
       <form className="vendor-card vendor-form profile-form" onSubmit={saveProfile} noValidate>
         <h2>Business information</h2>
-        <VendorField label="Contact name" minLength="2" maxLength="100" value={form.name || ''} onChange={updateField('name')} required />
         <VendorField label="Business name" minLength="2" maxLength="100" value={form.company_name || ''} onChange={updateField('company_name')} required />
-        <div className="field-grid"><VendorField label="City" value={form.city} onChange={updateField('city')} /><VendorField label="Governorate" value={form.state} onChange={updateField('state')} /></div>
-        <VendorField label="Country" value={form.country} onChange={updateField('country')} required />
+        <VendorField label="Business address" value={form.address} onChange={updateField('address')} required />
+        <VendorField label="City" value={form.city} onChange={updateField('city')} required />
         {message && <p>{message}</p>}
         <button className="vendor-button">Save profile</button>
       </form>

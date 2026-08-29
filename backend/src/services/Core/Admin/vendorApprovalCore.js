@@ -11,7 +11,7 @@ exports.getAllVendorsCore = async function (queryString, user) {
         if (!checkRole(user.role, ["admin"])) throw new AppError("Unauthorized", 403); 
 
         const features = new APIFeatures(
-            Vendor.find().populate('vendor_owner_id', 'name email mobileNumber -_id'), 
+            Vendor.find().populate('owner_user_id', 'name email mobileNumber -_id'), 
             queryString
         )
             .filter()
@@ -69,7 +69,7 @@ exports.updateApprovalStatusCore = async function (vendorId, status, rejectionRe
         
         await vendor.save({ session });
 
-        const targetUserId = vendor.vendor_owner_id || vendor.vendor_user_id;
+        const targetUserId = vendor.owner_user_id;
 
         if (dbStatus === 'active' && !isApprovingDeletion) {
             await User.findByIdAndUpdate(targetUserId, { role: 'vendor' }, { session });
@@ -101,13 +101,19 @@ exports.getVendorDetailsCore = async function (vendorId, user) {
         if (!checkRole(user.role, ["admin"])) throw new AppError("Unauthorized", 403); 
         
         const vendor = await Vendor.findById(vendorId)
-            .populate('vendor_owner_id', 'name email mobileNumber -_id'); 
+            .populate('owner_user_id', 'name email mobileNumber -_id'); 
             
         if (!vendor) {
             throw new AppError("Vendor not found", 404);
         }
+
+        const VendorVerificationModel = require("../../../Models/VendorVerificationModel");
+        const verification = await VendorVerificationModel.findOne({ vendor_id: vendorId, isDeleted: { $ne: true } });
         
-        return vendor;
+        return {
+            vendor,
+            verification: verification || null
+        };
     } catch (error) {
         if (error.statusCode) throw error;
         throw new AppError(error.message, 500);

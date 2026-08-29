@@ -28,6 +28,24 @@ function withQuery(path, query = {}) {
   return search ? `${path}?${search}` : path
 }
 
+function toFormData(data) {
+  if (data instanceof FormData) return data
+  const body = new FormData()
+  Object.entries(data || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') body.append(key, value)
+  })
+  return body
+}
+
+function collectionFrom(payload) {
+  const value = payload?.data ?? payload
+  if (Array.isArray(value)) return value
+  if (Array.isArray(value?.data)) return value.data
+  if (Array.isArray(value?.packages)) return value.packages
+  if (Array.isArray(value?.reviews)) return value.reviews
+  return []
+}
+
 const BASE_URL = resolveBaseUrl(import.meta.env.VITE_API_URL)
 let refreshPromise = null
 
@@ -192,7 +210,16 @@ export const reviewApi = {
   remove: (reviewId) => request(`/reviews/deleteReview/${reviewId}`, { method: 'PATCH' }),
   getAll: (query) => request(withQuery('/reviews/getAllReviews', query)),
   updateStatus: (reviewId, status) => request(`/reviews/updateReviewStatus/${reviewId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-  reply: (reviewId, replyComment) => request(`/reviews/replyToReview/${reviewId}`, { method: 'POST', body: JSON.stringify({ reply_comment: replyComment }) }),
+  reply: (reviewId, replyComment) => request(`/reviews/reply/${reviewId}`, { method: 'POST', body: JSON.stringify({ reply_comment: replyComment }) }),
+  getVendorReviews: async () => {
+    const packages = collectionFrom(await packageApi.getMine())
+    const responses = await Promise.all(packages.map((item) => {
+      const packageId = item._id || item.id
+      return packageId ? request(withQuery(`/reviews/package/${packageId}`, { limit: 100 })) : null
+    }))
+    const reviews = responses.flatMap(collectionFrom)
+    return { status: 'success', results: reviews.length, data: reviews }
+  },
 }
 
 // Analytics routes
@@ -226,12 +253,12 @@ export const notificationApi = {
 // Vendor and admin financial routes
 export const paymentApi = {
   getBookingPayments: (query) => request(withQuery('/payments/booking', query)),
-  createBookingPayment: (data) => request('/payments/booking', { method: 'POST', body: JSON.stringify(data) }),
-  updateBookingPayment: (paymentId, data) => request(`/payments/booking/${paymentId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  createBookingPayment: (data) => request('/payments/booking', { method: 'POST', body: toFormData(data) }),
+  updateBookingPayment: (paymentId, data) => request(`/payments/booking/${paymentId}`, { method: 'PUT', body: toFormData(data) }),
   cancelBookingPayment: (paymentId) => request(`/payments/booking/${paymentId}/delete`, { method: 'PATCH' }),
   getSubscriptions: (query) => request(withQuery('/payments/subscription', query)),
-  createSubscription: (data) => request('/payments/subscription', { method: 'POST', body: JSON.stringify(data) }),
-  updateSubscription: (paymentId, data) => request(`/payments/subscription/${paymentId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  createSubscription: (data) => request('/payments/subscription', { method: 'POST', body: toFormData(data) }),
+  updateSubscription: (paymentId, data) => request(`/payments/subscription/${paymentId}`, { method: 'PUT', body: toFormData(data) }),
   cancelSubscription: (paymentId) => request(`/payments/subscription/${paymentId}/delete`, { method: 'PATCH' }),
   getVendorStatement: (vendorId) => request(withQuery('/payments/statement/vendor', vendorId ? { vendor_id: vendorId } : {})),
   getCustomerStatement: (phone) => request(`/payments/statement/customer/${phone}`),
@@ -245,7 +272,7 @@ export const complaintApi = {
   againstVendor: (query) => request(withQuery('/complaints/getComplaintsAgainstMe', query)),
   getAll: (query) => request(withQuery('/complaints/getAllComplaints', query)),
   getById: (complaintId) => request(`/complaints/getComplaintById/${complaintId}`),
-  reply: (complaintId, reply) => request(`/complaints/${complaintId}/reply`, { method: 'POST', body: JSON.stringify({ reply }) }),
+  reply: (complaintId, reply) => request(`/complaints/respondToComplaint/${complaintId}`, { method: 'POST', body: JSON.stringify({ reply }) }),
   respond: (complaintId, data) => request(`/complaints/respondToComplaint/${complaintId}`, { method: 'POST', body: JSON.stringify(data) }),
 }
 

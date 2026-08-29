@@ -123,7 +123,7 @@ export function AdminAnalytics() {
               <AnalyticsRanking items={destinations} nameKey="package_name" valueKey="total_bookings" valueFormat={(value) => `${value} bookings`} />
             </AnalyticsSection>
             <AnalyticsSection title="Vendor leaderboard" eyebrow="Partner performance">
-              <AnalyticsRanking items={leaderboard.slice(0, 6)} nameKey="vendor_company" valueKey="totalRevenue" valueFormat={formatCurrency} />
+              <AnalyticsRanking items={leaderboard.slice(0, 6)} nameKey="vendor_company_name" valueKey="totalRevenue" valueFormat={formatCurrency} />
             </AnalyticsSection>
             <AnalyticsSection title="Audience mix" eyebrow="Registered accounts">
               <AnalyticsDonut items={demographics} labelKey="role" valueKey="count" centerLabel="Accounts" />

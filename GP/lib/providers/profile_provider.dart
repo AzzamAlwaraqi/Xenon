@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/user_model.dart';
+import 'ai_advisor_provider.dart';
 import '../models/profile_model.dart';
 import '../models/auth_model.dart';
 import '../models/api_client.dart';
@@ -114,6 +116,8 @@ class ProfileProvider with ChangeNotifier {
     _profile = null;
     _setLoading(false);
     if (context.mounted) {
+      // The assistant transcript belongs to the account signing out, so it must not survive.
+      context.read<AiAdvisorProvider>().clearForLogout();
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
   }

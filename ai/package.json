@@ -1,0 +1,22 @@
+{
+  "name": "xenon-ai-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone read-only AI travel recommendation service for Xenon",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "seed:fake": "node scripts/seedFakePackages.js",
+    "seed:remove": "node scripts/removeFakePackages.js",
+    "seed:knowledge": "node scripts/seedDestinationProfiles.js",
+    "seed:knowledge:remove": "node scripts/removeDestinationProfiles.js",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage"
+  },
+  "dependencies": {
+    "mongodb": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

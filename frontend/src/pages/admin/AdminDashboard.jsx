@@ -10,13 +10,13 @@ import { getCollection } from '../../utils/vendorData.js'
 
 // Page component
 export default function AdminDashboard() {
-  const vendorsState = useApi(adminApi.getVendors)
-  const reportsState = useApi(adminApi.getReports)
+  const vendorsState = useApi(adminApi.vendors)
+  const reportsState = useApi(adminApi.reports)
   const reviewsState = useApi(reviewApi.getAll)
   const vendors = getCollection(vendorsState.data)
   const reports = getCollection(reportsState.data)
   const reviews = getCollection(reviewsState.data)
-  const pendingVendors = vendors.filter((item) => !item.approval_status || item.approval_status === 'pending')
+  const pendingVendors = vendors.filter((item) => item.vendor_status === 'pending_approval')
   const pendingReports = reports.filter((item) => item.status === 'pending')
   const pendingReviews = reviews.filter((item) => item.review_status === 'in-progress')
 

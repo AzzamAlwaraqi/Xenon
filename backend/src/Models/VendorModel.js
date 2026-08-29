@@ -1,12 +1,22 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
-const { MongooseStandardDate } = require("../utils/dateFormatter");
 const { v7: uuidv7 } = require("uuid");
+const { MongooseStandardDate } = require("../utils/dateFormatter");
 
 const VendorSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.UUID,
         default: uuidv7,
+    },
+    owner_user_id: {
+        type: mongoose.Schema.Types.UUID,
+        ref: "User",
+        required: true,
+        unique: true 
+    },
+    vendor_company_name: {
+        type: String,
+        required: true,
+        trim: true
     },
     vendor_address: {
         type: String,
@@ -16,48 +26,16 @@ const VendorSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    vendor_state: {
-        type: String,
-        required: true,
-    },
-    vendor_pincode: {
-        type: String,
-        required: true
-    },
-    vendor_country: {
-        type: String,
-        required: true
-    },
     vendor_status: {
         type: String,
         required: true,
-        enum: ["active", "inactive", "pending_deletion", "pending_approval", "rejected"],
+        enum: ["active", "inactive", "pending_approval", "rejected"],
         default: "pending_approval"
-    },
-    vendor_type: {
-        type: String,
-        required: true
-    },
-    vendor_owner_id: {
-        type: mongoose.Schema.Types.UUID,
-        required: true,
-        ref: "User"
-    },
-    isDelete: {
-        type: Boolean,
-        default: false
-    },
-    deletionRequestedAt: {
-        ...MongooseStandardDate, 
-        default: null
     }
 }, {
     timestamps: true, 
-    strict: false,
-    toJSON: { getters: true, virtuals: true }, 
-    toObject: { getters: true, virtuals: true }
+    strict: 'throw',
+    versionKey: false
 });
-
-
 
 module.exports = mongoose.model("Vendor", VendorSchema);

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:gp/models/auth_model.dart';
 import 'package:gp/models/api_client.dart';
 import 'package:gp/utils/toast_utils.dart';
-import 'package:gp/utils/secure_storage_helper.dart';
 import 'dart:async';
 
 class OtpProvider extends ChangeNotifier {
-  final String email;
+  final Map<String, dynamic> args;
+  String get email => args['email'] as String;
 
   List<TextEditingController> controllers = List.generate(
     6,
@@ -18,7 +18,7 @@ class OtpProvider extends ChangeNotifier {
   int _countdown = 60;
   Timer? _timer;
 
-  OtpProvider({required this.email}) {
+  OtpProvider({required this.args}) {
     _startCountdown();
   }
 
@@ -62,21 +62,30 @@ class OtpProvider extends ChangeNotifier {
     bool success = false;
     String errorMessage = 'Invalid OTP. Please try again.';
     try {
-      final response = await AuthService.verifyOtp(email, code);
-      final data = response['data'] ?? {};
-      final token = data['token'] ?? data['accessToken'];
-      if (token != null) {
-        await SecureStorageHelper.saveToken(token);
-      }
+      final isRegistration = args['isRegistration'] == true;
       
-      final userData = response['data']?['user'];
-      if (userData != null) {
-        await SecureStorageHelper.saveUserData(
-          userData['_id']?.toString() ?? '',
-          userData['role']?.toString() ?? '',
+      if (isRegistration) {
+        final error = await AuthService.signUp(
+          name: args['name'],
+          email: args['email'],
+          password: args['password'],
+          confirmPassword: args['confirmPassword'],
+          gender: args['gender'],
+          mobileNumber: args['mobileNumber'],
+          dateOfBirth: args['dateOfBirth'],
+          otp: code,
         );
+        
+        if (error != null) {
+          success = false;
+          errorMessage = error;
+        } else {
+          success = true;
+        }
+      } else {
+        await AuthService.verifyOtp(email, code);
+        success = true;
       }
-      success = true;
     } on ApiException catch (e) {
       success = false;
       errorMessage = e.message;

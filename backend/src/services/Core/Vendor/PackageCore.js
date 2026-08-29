@@ -18,11 +18,11 @@ const checkPackageOwnership = (userOrVendor, packageDoc) => {
             : (packageDoc.vendor_id ? packageDoc.vendor_id.toString() : null);
 
         // Allow if it matches Vendor ID, OR if it matches the Vendor's Owner (User) ID
-        if (vendorId !== userOrVendor._id.toString() && vendorId !== userOrVendor.vendor_owner_id?.toString()) {
+        if (vendorId !== userOrVendor._id.toString() && vendorId !== userOrVendor.owner_user_id?.toString()) {
             console.log("OWNERSHIP FAILED!");
             console.log("Package vendorId:", vendorId);
             console.log("userOrVendor._id:", userOrVendor._id.toString());
-            console.log("userOrVendor.vendor_owner_id:", userOrVendor.vendor_owner_id?.toString());
+            console.log("userOrVendor.owner_user_id:", userOrVendor.owner_user_id?.toString());
             throw new AppError("You do not have permission to modify or delete this package", 403);
         }
     } else {
@@ -57,11 +57,12 @@ exports.getAllPackagesCore = async function (queryString) {
         // 3. Apply features (filter, sort, select, paginate)
         const baseQuery = Package.find(baseFilter).populate({
             path: 'vendor_id',
-            select: 'vendor_company vendor_owner_id',
+            select: 'vendor_company_name owner_user_id',
             populate: {
-                path: 'vendor_owner_id',
+                path: 'owner_user_id',
                 match: { role: 'vendor' },
-                select: 'name email mobileNumber role -_id'
+                select: 'name email mobileNumber role -_id',
+                strictPopulate: false
             }
         });
 
@@ -78,6 +79,7 @@ exports.getAllPackagesCore = async function (queryString) {
         const limit = parseInt(queryString.limit, 10) || 15;
         const totalPages = Math.ceil(totalDocuments / limit);
 
+        console.log("PACKAGES FETCHED SUCCESSFULLY, COUNT:", packages.length);
         return {
             count: packages.length,
             pagination: {
@@ -93,8 +95,12 @@ exports.getAllPackagesCore = async function (queryString) {
             data: packages
         };
     } catch (error) {
+        if (error.name === 'CastError') {
+            console.error("CAST ERROR ON PATH:", error.path);
+            throw new AppError(`Invalid value for path: ${error.path}`, 400);
+        }
         if (error.statusCode) throw error;
-        throw new AppError(error.message, 500);
+        throw new AppError(error.message || "Unknown error", 500);
     }
 };
 
@@ -106,11 +112,12 @@ exports.getPackageCore = async function (packageId, queryString = {}) {
         let query = Package.findOne({ _id: packageId })
             .populate({
                 path: 'vendor_id',
-                select: 'vendor_company vendor_owner_id',
+                select: 'vendor_company_name owner_user_id',
                 populate: {
-                    path: 'vendor_owner_id',
+                    path: 'owner_user_id',
                     match: { role: 'vendor' },
-                    select: 'name email mobileNumber role -_id'
+                    select: 'name email mobileNumber role -_id',
+                    strictPopulate: false
                 }
             })
             .populate('details'); // 🌟 السحر هنا: جلب كل التفاصيل من الجدول الآخر
@@ -149,7 +156,7 @@ exports.createPackageCore = async function (user, packageData, file) {
         }
 
         const secureVendorId = user._id;
-        const vendorName = user.vendor_company || user.name || 'Vendor';
+        const vendorName = user.vendor_company_name || user.name || 'Vendor';
 
         if (!file) throw new AppError("Package image is required", 400);
 
@@ -280,7 +287,7 @@ exports.updatePackageCore = async function (userOrVendor, packageId, updateData,
 
         // 4. Safe Cloud Storage Update
         if (file) {
-            const safeCompanyName = (userOrVendor.vendor_company || userOrVendor.company_name || userOrVendor.name || 'Vendor').replace(/[^a-zA-Z0-9]/g, '_');
+            const safeCompanyName = (userOrVendor.vendor_company_name || userOrVendor.company_name || userOrVendor.name || 'Vendor').replace(/[^a-zA-Z0-9]/g, '_');
             const safePackageName = (packageUpdates.package_name || existingPackage.package_name).replace(/[^a-zA-Z0-9]/g, '_');
 
             const optimizedBuffer = await sharp(file.buffer)
