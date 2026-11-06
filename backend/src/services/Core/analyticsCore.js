@@ -5,6 +5,7 @@ const Report = require("../../Models/ReportsModels");
 const Complaint = require("../../Models/ComplaintModel");
 const Package = require("../../Models/PackageModel");
 const Review = require("../../Models/ReviewModel"); 
+const BookingPayment = require("../../Models/BookingPaymentModels");
 const AppError = require("../../utils/AppError");
 
 const buildDateFilter = (startDate, endDate) => {
@@ -16,6 +17,18 @@ const buildDateFilter = (startDate, endDate) => {
     }
     return dateQuery;
 };
+
+// Bookings carry no payment field: a booking counts as paid once it has a verified, non-deleted BookingPayment
+const onlyPaidBookings = () => [
+    { $lookup: {
+        from: BookingPayment.collection.name, let: { bookingId: "$_id" },
+        pipeline: [
+            { $match: { $expr: { $eq: ["$booking_id", "$$bookingId"] }, payment_status: "Verified", isDeleted: { $ne: true } } },
+            { $limit: 1 }
+        ], as: "verified_payment"
+    }},
+    { $match: { "verified_payment.0": { $exists: true } } }
+];
 
 const getTrafficVolume = async (startDate, endDate) => {
     return await Booking.countDocuments(buildDateFilter(startDate, endDate));
@@ -59,10 +72,10 @@ const getAdminActualRevenueCore = async (startDate, endDate) => {
         { 
             $match: { 
                 status: { $in: ["completed", "accepted"] },
-                payment_status: "paid",
                 ...buildDateFilter(startDate, endDate)
             } 
         },
+        ...onlyPaidBookings(),
         { $group: { _id: null, totalPlatformSales: { $sum: "$total_price" }, totalSuccessfulBookings: { $sum: 1 } } },
         { $project: { _id: 0, totalSuccessfulBookings: 1, totalPlatformSales: 1, adminActualRevenue: { $multiply: ["$totalPlatformSales", COMMISSION_RATE] } } }
     ]);
@@ -145,13 +158,13 @@ const getVendorRevenue = async (vendorId, startDate, endDate) => {
 const getRevenueTrendsCore = async (vendorId = null, year = new Date().getFullYear()) => {
     let matchQuery = { 
         status: { $in: ["completed", "accepted"] },
-        payment_status: "paid",
         createdAt: { $gte: new Date(`${year}-01-01`), $lte: new Date(`${year}-12-31`) }
     };
     if (vendorId) matchQuery.vendor_id = vendorId;
 
     const trends = await Booking.aggregate([
         { $match: matchQuery },
+        ...onlyPaidBookings(),
         { $group: { _id: { $month: "$createdAt" }, monthlyRevenue: { $sum: "$total_price" }, bookingsCount: { $sum: 1 } } },
         { $sort: { "_id": 1 } }
     ]);
@@ -199,12 +212,13 @@ const getVendorsLeaderboardCore = async () => {
 };
 
 const getPaymentMethodsShareCore = async (vendorId = null, startDate, endDate) => {
-    let matchQuery = { payment_status: "paid", ...buildDateFilter(startDate, endDate) };
+    // The payment method lives on the payment record, not on the booking
+    let matchQuery = { payment_status: "Verified", isDeleted: { $ne: true }, ...buildDateFilter(startDate, endDate) };
     if (vendorId) matchQuery.vendor_id = vendorId;
 
-    const paymentShare = await Booking.aggregate([
+    const paymentShare = await BookingPayment.aggregate([
         { $match: matchQuery },
-        { $group: { _id: "$payment_method", totalAmount: { $sum: "$total_price" }, usageCount: { $sum: 1 } } },
+        { $group: { _id: "$payment_method", totalAmount: { $sum: "$amount" }, usageCount: { $sum: 1 } } },
         { $project: { method: "$_id", totalAmount: 1, usageCount: 1, _id: 0 } },
         { $sort: { usageCount: -1 } }
     ]);

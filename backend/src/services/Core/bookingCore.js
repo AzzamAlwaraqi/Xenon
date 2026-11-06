@@ -300,18 +300,22 @@ exports.deleteBookingCore = async function (userOrVendor, bookingId) {
 // ==========================================
 exports.getBookingCore = async function (userOrVendor, bookingId) {
     try {
-        const booking = await BookingModel.findById(bookingId)
-            .populate('package_id', 'package_name package_price package_type -_id')
-            .populate({
-                path: 'vendor_id',
-                select: 'vendor_company_name owner_user_id -_id',
-                populate: { path: 'owner_user_id', select: 'email -_id'}
-            })
-            .populate('user_id', 'name email mobileNumber -_id');
+        const booking = await BookingModel.findById(bookingId);
 
         if (!booking) throw new AppError("Booking not found", 404);
 
+        // Check ownership before populating: the populated vendor and user drop their _id, so the check has nothing to compare after it
         checkAuthorization(userOrVendor, booking);
+
+        await booking.populate([
+            { path: 'package_id', select: 'package_name package_price package_type -_id' },
+            {
+                path: 'vendor_id',
+                select: 'vendor_company_name owner_user_id -_id',
+                populate: { path: 'owner_user_id', select: 'email -_id'}
+            },
+            { path: 'user_id', select: 'name email mobileNumber -_id' }
+        ]);
 
         return { status: "success", data: booking };
     }
