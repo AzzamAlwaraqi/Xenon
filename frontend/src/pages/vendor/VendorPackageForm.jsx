@@ -163,7 +163,6 @@ export default function VendorPackageForm({ edit = false }) {
               <select value={form.package_status} onChange={updateField('package_status')}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="draft">Draft</option>
               </select>
             </label>
             <VendorField label="Maximum travellers" type="number" min="1" max="100" step="1" value={form.max_people} onChange={updateField('max_people')} required />

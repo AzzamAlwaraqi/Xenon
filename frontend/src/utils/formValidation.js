@@ -53,6 +53,24 @@ export function normalizePhone(value) {
   return String(value || '').replace(/\D/g, '')
 }
 
+export function normalizeIban(value) {
+  return String(value || '').replace(/\s/g, '').toUpperCase()
+}
+
+export function isValidJordanianIban(value) {
+  const iban = normalizeIban(value)
+  if (!/^JO\d{2}[A-Z]{4}\d{4}[A-Z0-9]{18}$/.test(iban)) return false
+
+  const rearranged = `${iban.slice(4)}${iban.slice(0, 4)}`
+  const numeric = Array.from(rearranged, (character) => (
+    /[A-Z]/.test(character) ? String(character.charCodeAt(0) - 55) : character
+  )).join('')
+
+  let remainder = 0
+  for (const digit of numeric) remainder = (remainder * 10 + Number(digit)) % 97
+  return remainder === 1
+}
+
 export function isValidEmail(email) {
   return emailPattern.test(String(email).trim())
 }
@@ -128,7 +146,7 @@ export function validateVendorBusiness(form) {
   if (form.company_name.trim().length > 100) return 'Business name must not exceed 100 characters.'
   if (form.address.trim().length < 5) return 'Enter a complete business address.'
   if (form.city.trim().length < 2) return 'Enter a valid city.'
-  if (!/^JO\d{28}$/.test(String(form.iban_number || '').replace(/\s/g, '').toUpperCase())) return 'Enter a valid Jordanian IBAN beginning with JO followed by 28 digits.'
+  if (!isValidJordanianIban(form.iban_number)) return 'Enter a valid 30-character Jordanian IBAN, including its bank code and check digits.'
   const requiredDocuments = [
     ['commercial_register_image', 'Commercial registration'],
     ['vocational_license_image', 'Vocational licence'],
@@ -174,7 +192,7 @@ export function validatePackage(form, edit = false, allowedImageTypes = new Set(
   if (!form.package_description.trim()) return 'Add a package description.'
   if (form.package_description.trim().length > 500) return 'Description must not exceed 500 characters.'
   if (!['adventure', 'cultural', 'relaxation', 'historical', 'family'].includes(form.package_type)) return 'Select a valid experience type.'
-  if (!['active', 'inactive', 'draft'].includes(form.package_status)) return 'Select a valid publishing status.'
+  if (!['active', 'inactive'].includes(form.package_status)) return 'Select a valid publishing status.'
   const dateError = validateDateRange(form.startDate, form.endDate, { futureOnly: true, allowSameDay: false })
   if (dateError) return dateError
   if (!Number.isInteger(Number(form.max_people)) || Number(form.max_people) < 1 || Number(form.max_people) > 100) return 'Capacity must be a whole number from 1 to 100.'

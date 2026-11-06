@@ -224,9 +224,9 @@ export const reviewApi = {
 
 // Analytics routes
 export const analyticsApi = {
-  vendor: (query) => request(withQuery('/analysis/vendor/dashboard', query)),
-  admin: (query) => request(withQuery('/analysis/admin/dashboard', query)),
-  package: (packageId, query) => request(withQuery(`/analysis/packages/${packageId}`, query)),
+  vendor: (query) => request(withQuery('/analytics/vendor/dashboard', query)),
+  admin: (query) => request(withQuery('/analytics/admin/dashboard', query)),
+  package: (packageId, query) => request(withQuery(`/analytics/packages/${packageId}`, query)),
 }
 
 // Staff routes shared by vendors and administrators

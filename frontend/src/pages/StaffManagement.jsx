@@ -55,6 +55,8 @@ export default function StaffManagement({ role = 'vendor' }) {
   }
 
   async function editStaff(employee) {
+    // Admin assignment ownership is not supplied by the API; fail closed.
+    if (role === 'admin') return
     setEditingId(employee.employee_id)
     setEditingPosition(employee.position || POSITIONS[role][0])
     setMessage('')
@@ -62,6 +64,10 @@ export default function StaffManagement({ role = 'vendor' }) {
 
   async function updatePosition(event, employeeId) {
     event.preventDefault()
+    if (role === 'admin') {
+      setMessage('Existing admin positions are read-only because assignment ownership cannot be verified.')
+      return
+    }
     if (!POSITIONS[role].includes(editingPosition)) {
       setMessage(`Choose a valid ${role} position.`)
       return
@@ -83,6 +89,8 @@ export default function StaffManagement({ role = 'vendor' }) {
   }
 
   async function removeStaff(employeeId) {
+    const employee = allStaff.find((item) => item.employee_id === employeeId)
+    if (!employee || employee.role === 'admin') return
     if (!window.confirm('Remove this staff member from the active team?')) return
     setBusy(employeeId)
     try {
@@ -112,16 +120,17 @@ export default function StaffManagement({ role = 'vendor' }) {
         <button className="vendor-button" disabled={busy === 'create'}>Create staff account</button>
       </form>}
       {message && <p className="admin-data-state">{message}</p>}
+      {role === 'admin' && <p className="vendor-hint">Select a position when adding staff. Existing admin positions are read-only until the API can verify who assigned them.</p>}
       <VendorNotice state={state} empty={!staff.length} />
       <section className="vendor-stack">
         {staff.map((employee) => <article className="vendor-card" key={employee.employee_id}>
           <div className="row-actions" style={{ justifyContent: 'space-between' }}><h2>{employee.name || 'Staff member'}</h2><VendorStatus value={employee.job_active === false ? 'Inactive' : 'Active'} /></div>
           <VendorInfo label="Email" value={employee.email} /><VendorInfo label="Position" value={employee.position} /><VendorInfo label="Work system" value={employee.workSystem} />
-          {editingId === employee.employee_id && <form className="vendor-form" onSubmit={(event) => updatePosition(event, employee.employee_id)}>
+          {role !== 'admin' && editingId === employee.employee_id && <form className="vendor-form" onSubmit={(event) => updatePosition(event, employee.employee_id)}>
             <label>Position<select value={editingPosition} onChange={(event) => setEditingPosition(event.target.value)}>{POSITIONS[role].map((position) => <option key={position} value={position}>{position.split('-').join(' ')}</option>)}</select></label>
             <div className="row-actions"><button className="vendor-button" disabled={busy === employee.employee_id}>Save position</button><button className="vendor-button secondary" type="button" onClick={() => setEditingId('')}>Cancel</button></div>
           </form>}
-          <div className="row-actions"><button className="vendor-button secondary" disabled={busy === employee.employee_id} onClick={() => editStaff(employee)}>Edit position</button><button className="vendor-button danger" disabled={busy === employee.employee_id} onClick={() => removeStaff(employee.employee_id)}>Remove</button></div>
+          <div className="row-actions">{role !== 'admin' && <button className="vendor-button secondary" disabled={busy === employee.employee_id} onClick={() => editStaff(employee)}>Edit position</button>}{employee.role !== 'admin' && <button className="vendor-button danger" disabled={busy === employee.employee_id} onClick={() => removeStaff(employee.employee_id)}>Remove</button>}</div>
         </article>)}
       </section>
     </>

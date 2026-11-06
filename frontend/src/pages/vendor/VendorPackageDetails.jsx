@@ -52,6 +52,7 @@ export default function VendorPackageDetails() {
               <span><b>Meeting point</b>{details.meeting_point || '—'}</span>
             </div>
             <div className="row-actions">
+              <Link className="vendor-button" to="/vendor/packages/new">Create another package</Link>
               <Link className="vendor-button" to={`/vendor/packages/${id}/edit`}>Edit package</Link>
               <button className="vendor-button danger" onClick={removePackage}>Remove package</button>
             </div>

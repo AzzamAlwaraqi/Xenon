@@ -58,7 +58,7 @@ test('requires vendor applicants to be at least 18 on their exact birthday', () 
 
 test('validates the complete vendor onboarding contract and documents', () => {
   const image = { type: 'image/jpeg', size: 1024 }
-  const valid = { company_name: 'Xenon Travel', address: 'King Abdullah II Street', city: 'Amman', iban_number: `JO${'1'.repeat(28)}`, commercial_register_image: image, vocational_license_image: image, owner_id_image: image, iban_letter_image: image, tourism_license_image: null }
+  const valid = { company_name: 'Xenon Travel', address: 'King Abdullah II Street', city: 'Amman', iban_number: 'JO94CBJO0010000000000131000302', commercial_register_image: image, vocational_license_image: image, owner_id_image: image, iban_letter_image: image, tourism_license_image: null }
   assert.equal(validateVendorBusiness(valid), '')
   assert.match(validateVendorBusiness({ ...valid, iban_letter_image: null }), /IBAN letter image/i)
 })
@@ -70,7 +70,7 @@ test('resumes vendor business details without storing credentials or files', () 
     company_name: 'Dana Tours',
     address: 'Amman',
     city: 'Amman',
-    iban_number: `JO${'1'.repeat(28)}`,
+    iban_number: 'JO94CBJO0010000000000131000302',
     password: 'NeverStoreThis123!',
     otp: '123456',
     owner_id_image: { type: 'image/jpeg', size: 1024 },

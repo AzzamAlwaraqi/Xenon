@@ -32,7 +32,12 @@ export default function Login() {
     }
     setStatus({ loading: true, message: '', type: '' })
     try {
-      const result = await authApi.login({ email: form.email.trim().toLowerCase(), password: form.password })
+      const result = await authApi.login({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        role,
+        device_type: 'web',
+      })
       const token = result.data?.token
       if (!token) throw new Error('The API did not return an authentication token.')
       const authenticatedRole = getPortalRole(token)
