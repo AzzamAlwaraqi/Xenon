@@ -47,9 +47,11 @@ test("repository constrains packages to the requested date", async () => {
     let pipeline;
     const client = { connect: async () => {}, db: () => ({ collection: () => ({ aggregate(value) { pipeline = value; return { toArray: async () => [] }; } }) }), close: async () => {} };
     const repository = createPackageRepository({ databaseUri: "mongodb://test", databaseName: "Xenon" }, () => client);
-    await repository.findCandidates({ people: 1, packageTypes: [], travelDate: "2026-09-05" });
-    assert.equal(pipeline[0].$match.startDate.$lte.toISOString(), "2026-09-05T23:59:59.999Z");
-    assert.equal(pipeline[0].$match.endDate.$gte.toISOString(), "2026-09-05T00:00:00.000Z");
+    // The repository reads the real clock, so the requested date must stay in the future
+    const travelDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    await repository.findCandidates({ people: 1, packageTypes: [], travelDate });
+    assert.equal(pipeline[0].$match.startDate.$lte.toISOString(), `${travelDate}T23:59:59.999Z`);
+    assert.equal(pipeline[0].$match.endDate.$gte.toISOString(), `${travelDate}T00:00:00.000Z`);
 });
 
 test("advisor converts budget, queries records, checks weather, and ranks", async () => {
@@ -205,4 +207,12 @@ test("advisor refuses unsupported tourism facts instead of inventing them", asyn
     const result = await createAdvisorService(dependencies).recommend("Who built Petra and do I need a visa?");
     assert.equal(result.outcome, "unsupported_tourism_information");
     assert.match(result.reply, /won't guess/i);
+});
+
+test("a food trail is not hiking, but a forest trail still is", () => {
+    const { includesPreferredActivity } = require("../src/services/packageFacts");
+    const pack = (title, activities) => ({ package_description: "", details: { itinerary: [{ title, activities }] } });
+    assert.equal(includesPreferredActivity(pack("Amman Culture and Food Trail", "Local souqs and food stops."), "hiking"), false);
+    assert.equal(includesPreferredActivity(pack("Ajloun Forest Family Hike", "Easy forest trail."), "hiking"), true);
+    assert.equal(includesPreferredActivity(pack("Dana Village Eco Retreat", "Gentle reserve trail."), "hiking"), true);
 });

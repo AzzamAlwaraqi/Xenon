@@ -130,7 +130,7 @@ function createAdvisorService({ config, preferences, currency, weather, packages
         const caveats = [];
         if (preference.travelDateInPast) caveats.push("The date you gave has already passed, so I searched upcoming packages instead.");
         if (budgetConversionFailed) caveats.push(`I could not convert your ${preference.currency} budget to ${config.packageCurrency} right now, so no budget filter was applied.`);
-        if (destinationFilterRelaxed) caveats.push(`No package explicitly names ${preference.destination}, so I widened the search to every matching package.`);
+        if (destinationFilterRelaxed) caveats.push(`No package that fits your other preferences names ${preference.destination}, so I widened the search to every matching package.`);
         const caveatSummary = caveats.length ? ` ${caveats.join(" ")}` : "";
 
         const reply = topRecommendation

@@ -9,6 +9,28 @@ const BUDGET_TRAIL = "max|maximum|at most|or less|budget|limit|كحد أقصى|�
 const SCALE_WORDS = "k|thousand|ألف|الف|mil|mille";
 const AMOUNT = `(?:${CURRENCY_WORDS})?\\s*\\d[\\d,]*(?:\\.\\d+)?\\s*(?:${SCALE_WORDS})?\\s*(?:${CURRENCY_WORDS})?`;
 
+const TEMPERATURE_UNIT = "°\\s*c?|degrees?(?:\\s*c(?:elsius)?)?|c(?:elsius)?\\b|درج(?:ة|ات)";
+
+const SITE_PATTERNS = {
+    Petra: /\bpetra\b|البتراء|البترا/iu,
+    Jerash: /\bjerash\b|جرش/iu,
+    Amman: /\bamman\b|عمّان|عمان/iu,
+    "Wadi Rum": /\bwadi rum\b|وادي رم/iu,
+    "Dead Sea": /\bdead sea\b|البحر الميت/iu,
+    Ajloun: /\bajloun\b|عجلون/iu,
+    Madaba: /\bmadaba\b|مادبا/iu,
+    "Umm Qais": /\bumm qais\b|أم قيس|ام قيس/iu,
+    Aqaba: /\baqaba\b|العقبة/iu,
+    Dana: /\bdana\b|ضانا/iu
+};
+
+// One named site is the destination. Naming several keeps them all in play, so none is filtered out.
+function destinationFrom(query) {
+    const sites = Object.keys(SITE_PATTERNS).filter(site => SITE_PATTERNS[site].test(query));
+    if (sites.length === 1) return sites[0];
+    return /\bjordan(?:ie)?\b|jordania|الأردن|الاردن/i.test(query) ? "Jordan" : null;
+}
+
 function amountFromText(value) {
     const match = String(value || "").match(new RegExp(`(?:${CURRENCY_WORDS})?\\s*(\\d[\\d,]*(?:\\.\\d+)?)\\s*(${SCALE_WORDS})?`, "iu"));
     return match ? Number(match[1].replace(/,/g, "")) * (match[2] ? 1000 : 1) : null;
@@ -16,7 +38,9 @@ function amountFromText(value) {
 
 // A budget may lead the amount ("under 300 JOD"), trail it ("300 dinar max"), or be carried
 // by the currency word alone ("300 JOD"). All three phrasings must be recognised.
-function budgetTextFrom(text) {
+// "under 25 degrees" and "below 55%" are weather limits, so they are removed before looking for an amount.
+function budgetTextFrom(query) {
+    const text = query.replace(new RegExp(`(?:(?:${BUDGET_LEAD})[^\\d$€]{0,24})?(?<![\\d,.])\\d{1,3}(?:\\.\\d+)?\\s*(?:${TEMPERATURE_UNIT}|%)`, "giu"), " ");
     return text.match(new RegExp(`(?:${BUDGET_LEAD})[^\\d$€]{0,24}${AMOUNT}`, "iu"))?.[0]
         || text.match(new RegExp(`${AMOUNT}\\s*(?:${BUDGET_TRAIL})\\b`, "iu"))?.[0]
         || text.match(new RegExp(`(?:\\$|€)\\s*\\d[\\d,]*(?:\\.\\d+)?\\s*(?:${SCALE_WORDS})?`, "iu"))?.[0]
@@ -74,7 +98,7 @@ function fallbackPreferences(query, now = new Date()) {
     const text = query.toLowerCase();
     const budgetText = budgetTextFrom(text);
     const people = text.match(/(\d+)\s*(?:people|persons|adults|travellers|travelers|guests|أشخاص|اشخاص|أفراد|افراد|personas|personnes)/iu)?.[1];
-    const explicitTemperature = text.match(/(?:under|below|maximum|max|أقل من|تحت)[^\d]{0,15}(\d{1,2})\s*°?\s*c/iu)?.[1];
+    const explicitTemperature = text.match(new RegExp(`(?:under|below|less than|up to|maximum|max|أقل من|اقل من|تحت)[^\\d]{0,15}(\\d{1,2})\\s*(?:${TEMPERATURE_UNIT})`, "iu"))?.[1];
     const explicitHumidity = text.match(/(?:humidity|humid|رطوبة)[^\d]{0,18}(?:under|below|max(?:imum)?|أقل من|تحت)?[^\d]{0,8}(\d{1,3})\s*%/iu)?.[1]
         || text.match(/(?:under|below|max(?:imum)?|أقل من|تحت)[^\d]{0,10}(\d{1,3})\s*%[^\n]{0,10}(?:humidity|humid|رطوبة)/iu)?.[1];
     const types = [];
@@ -95,7 +119,7 @@ function fallbackPreferences(query, now = new Date()) {
     const servicePatterns = { guide: /guide|guía|guia|مرشد/i, transport: /transport|transfer|transporte|مواصلات|نقل/i, meals: /meal|lunch|dinner|repas|comida incluida|food included|وجبة|غداء|عشاء/i, tickets: /ticket|billet|entrada incluida|entry included|تذكرة|دخول/i, accommodation: /hotel|accommodation|hébergement|alojamiento|overnight|إقامة|اقامة/i, equipment: /equipment|gear|équipement|equipo|معدات/i, "child-friendly": /child[- ]friendly|kids|enfants|niños|أطفال|اطفال/i };
     const travel = readTravelDate(query, now);
     return {
-        destination: /\bjordan(?:ie)?\b|jordania|الأردن|الاردن/i.test(query) ? "Jordan" : null,
+        destination: destinationFrom(query),
         packageTypes: [...new Set(types)],
         budget: amountFromText(budgetText),
         currency: /\b(?:jod|jd|dinar)|دينار/i.test(query) ? "JOD" : (/\b(?:eur|euro)|€/i.test(query) ? "EUR" : "USD"),
@@ -115,12 +139,14 @@ function mergeConversationPreferences(current, previous, query) {
     if (!previous) return current;
     const text = query.toLowerCase();
     const explicitly = {
-        destination: /\bjordan(?:ie)?\b|jordania|الأردن|الاردن/iu.test(query),
+        destination: destinationFrom(query) != null,
         packageTypes: /cultur|ثقاف|histor|تاريخ|adventure|مغامر|relax|استرخاء|family[- ]friendly|family package|باقة عائلية/iu.test(text),
-        budget: /budget|around|about|under|up to|spend|cheaper|less expensive|ميزاني|حوالي|أرخص|ارخص|presupuesto|environ|budget de|\$|€|\b(?:usd|jod|eur|jd|dinar)\b|دينار/iu.test(text),
+        // Only a stated amount replaces the budget: "what about tomorrow?" uses a budget word but names no amount.
+        // "cheaper" and "no budget" are handled below.
+        budget: current.budget != null,
         currency: /\$|€|\b(?:usd|jod|jd|eur|dinar|euro)\b|دينار/iu.test(text),
         people: /\d+\s*(?:people|persons|adults|travellers|travelers|guests|أشخاص|اشخاص|أفراد|افراد|personas|personnes)|family|عائل/iu.test(text),
-        maxTemperatureC: /hot|cool|mild|temperature|حار|معتدل|chaud|caluroso|°/iu.test(text),
+        maxTemperatureC: /hot|cool|mild|temperature|degree|\d\s*c\b|درجة|درجات|حار|معتدل|chaud|caluroso|°/iu.test(text),
         maxHumidityPercent: /humid|humidity|رطوب|humide|húmed/iu.test(text),
         travelDate: Boolean(readTravelDate(query)),
         familyFriendly: /family|children|kids|familia|famille|عائل|أطفال|اطفال/iu.test(text),

@@ -29,7 +29,7 @@ const SERVICE_PATTERNS = {
 const ACTIVITY_PATTERNS = {
     history: /\bhistor|heritage|archaeolog|\u062a\u0627\u0631\u064a\u062e|\u062a\u0631\u0627\u062b|\u0622\u062b\u0627\u0631|\u0627\u062b\u0627\u0631/iu,
     museums: /\bmuseum|\u0645\u062a\u062d\u0641/iu, food: /\bfood|cuisine|tasting|\u0637\u0639\u0627\u0645|\u062a\u0630\u0648\u0642/iu,
-    hiking: /\bhik|trail|trek|\u0645\u0634\u064a|\u0645\u0633\u0627\u0631/iu, nature: /\bnature|forest|wildlife|\u0637\u0628\u064a\u0639/iu,
+    hiking: /\bhik|(?<!food\s)trail|trek|\u0645\u0634\u064a|\u0645\u0633\u0627\u0631/iu, nature: /\bnature|forest|wildlife|\u0637\u0628\u064a\u0639/iu,
     art: /\bart|mosaic|craft|\u0641\u0646|\u0641\u0633\u064a\u0641\u0633\u0627\u0621/iu, snorkeling: /\bsnorkel|\u063a\u0648\u0635/iu,
     stargazing: /\bstargaz|stars|\u0646\u062c\u0648\u0645/iu, spa: /\bspa|wellness|\u0633\u0628\u0627/iu,
     shopping: /\bshop|market|souq|\u062a\u0633\u0648\u0642|\u0633\u0648\u0642/iu, photography: /\bphoto|\u062a\u0635\u0648\u064a\u0631/iu
